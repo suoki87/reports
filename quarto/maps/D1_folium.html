@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_25806298dbd9a3f7c90c05b79af4fa15 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+<div style="position: fixed; top: 10px; left: 50px; z-index: 9999;
+            background: rgba(255,255,255,0.95); padding: 10px 18px;
+            border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-family: 'Hiragino Sans', sans-serif;">
+  <h3 style="margin:0;color:#333;">D1 동선 · 5/19 (화) 도쿄 도착 첫날</h3>
+  <p style="margin:4px 0 0;font-size:13px;color:#666;">
+    NRT → 도쿄역 → 오지·아스카야마 → 마이하마 → 호텔 · 가족 3명
+  </p>
+</div>
+    
+<div style="position: fixed; bottom: 30px; right: 20px; z-index: 9999;
+            background: rgba(255,255,255,0.95); padding: 10px 14px;
+            border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-family: 'Hiragino Sans', sans-serif; font-size:12px;">
+  <b>범례</b><br>
+  <span style="color:blue;">●</span> 공항 (NRT)<br>
+  <span style="color:red;">●</span> 도쿄역<br>
+  <span style="color:green;">●</span> 오지·아스카야마<br>
+  <span style="color:purple;">●</span> 마이하마<br>
+  <span style="color:orange;">●</span> 호텔<br>
+  <span style="color:#E53935;">- - -</span> 동선
+</div>
+    
+            <div class="folium-map" id="map_25806298dbd9a3f7c90c05b79af4fa15" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_25806298dbd9a3f7c90c05b79af4fa15 = L.map(
+                "map_25806298dbd9a3f7c90c05b79af4fa15",
+                {
+                    center: [35.68, 139.85],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 11,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_9505407bf9d413dd71c34710ebec7dcb = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_9505407bf9d413dd71c34710ebec7dcb.addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var marker_d75d5235f87b09a8cf4bf95a717fcb53 = L.marker(
+                [35.7656, 140.385],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var icon_9835f57b21ac8c3aabb52fc3b113e7fc = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "plane",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_9d9e813f5ef35620443cbe6b1cbadc95 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_84d0390ed63598b190b54fd85ea2668b = $(`<div id="html_84d0390ed63598b190b54fd85ea2668b" style="width: 100.0%; height: 100.0%;">     <div style="font-family: 'Hiragino Sans', sans-serif; min-width:220px;">       <h4 style="margin:0;color:blue;">① NRT T2 (나리타공항 T2)</h4>       <p style="margin:4px 0;font-size:13px;"><b>일본어</b>: 成田空港 第2ターミナル</p>       <p style="margin:4px 0;font-size:13px;"><b>시간</b>: 10:30-12:35</p>       <p style="margin:4px 0;font-size:12px;color:#555;">JAL ABC 짐 드롭 + 東京食賓館 도시락 + B5F N'EX</p>     </div>     </div>`)[0];
+                popup_9d9e813f5ef35620443cbe6b1cbadc95.setContent(html_84d0390ed63598b190b54fd85ea2668b);
+            
+        
+
+        marker_d75d5235f87b09a8cf4bf95a717fcb53.bindPopup(popup_9d9e813f5ef35620443cbe6b1cbadc95)
+        ;
+
+        
+    
+    
+            marker_d75d5235f87b09a8cf4bf95a717fcb53.bindTooltip(
+                `<div>
+                     1. ① NRT T2 (나리타공항 T2) (10:30-12:35)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_d75d5235f87b09a8cf4bf95a717fcb53.setIcon(icon_9835f57b21ac8c3aabb52fc3b113e7fc);
+            
+    
+            var marker_33960761ffe8e38ff924e6bb084b0370 = L.marker(
+                [35.6812, 139.7671],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var icon_b3201169fdd0c4b6d3e1c016cef105cb = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "train",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_721267725b5d11b95cdac139d4916a73 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_9db8d156a9d6784af10c04c7e0c7e630 = $(`<div id="html_9db8d156a9d6784af10c04c7e0c7e630" style="width: 100.0%; height: 100.0%;">     <div style="font-family: 'Hiragino Sans', sans-serif; min-width:220px;">       <h4 style="margin:0;color:red;">② 도쿄역 (東京駅)</h4>       <p style="margin:4px 0;font-size:13px;"><b>일본어</b>: 東京駅 (Tokyo Station)</p>       <p style="margin:4px 0;font-size:13px;"><b>시간</b>: 13:45-15:00</p>       <p style="margin:4px 0;font-size:12px;color:#555;">야에스 B1 토미카+소프트 → 마루노우치 B1 사자코히 디카페인</p>     </div>     </div>`)[0];
+                popup_721267725b5d11b95cdac139d4916a73.setContent(html_9db8d156a9d6784af10c04c7e0c7e630);
+            
+        
+
+        marker_33960761ffe8e38ff924e6bb084b0370.bindPopup(popup_721267725b5d11b95cdac139d4916a73)
+        ;
+
+        
+    
+    
+            marker_33960761ffe8e38ff924e6bb084b0370.bindTooltip(
+                `<div>
+                     2. ② 도쿄역 (東京駅) (13:45-15:00)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_33960761ffe8e38ff924e6bb084b0370.setIcon(icon_b3201169fdd0c4b6d3e1c016cef105cb);
+            
+    
+            var marker_c619fc11a398b74d2388aaa8544d818b = L.marker(
+                [35.753, 139.7376],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var icon_814498a76942aee1122bf6e72f7ffa6c = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "green",
+  "iconColor": "white",
+  "icon": "tree-conifer",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_573a7eefff1237014e0d82dcd680c839 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_bc20d7bd208791d6fdf5b944f7e4b7cc = $(`<div id="html_bc20d7bd208791d6fdf5b944f7e4b7cc" style="width: 100.0%; height: 100.0%;">     <div style="font-family: 'Hiragino Sans', sans-serif; min-width:220px;">       <h4 style="margin:0;color:green;">③ 王子 / 飛鳥山公園 (오지·아스카야마)</h4>       <p style="margin:4px 0;font-size:13px;"><b>일본어</b>: 王子・飛鳥山公園</p>       <p style="margin:4px 0;font-size:13px;"><b>시간</b>: 15:35-16:35</p>       <p style="margin:4px 0;font-size:12px;color:#555;">아스카루고 모노레일 (상행) + SL D51 + 도덴 6080 + 놀이터</p>     </div>     </div>`)[0];
+                popup_573a7eefff1237014e0d82dcd680c839.setContent(html_bc20d7bd208791d6fdf5b944f7e4b7cc);
+            
+        
+
+        marker_c619fc11a398b74d2388aaa8544d818b.bindPopup(popup_573a7eefff1237014e0d82dcd680c839)
+        ;
+
+        
+    
+    
+            marker_c619fc11a398b74d2388aaa8544d818b.bindTooltip(
+                `<div>
+                     3. ③ 王子 / 飛鳥山公園 (오지·아스카야마) (15:35-16:35)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_c619fc11a398b74d2388aaa8544d818b.setIcon(icon_814498a76942aee1122bf6e72f7ffa6c);
+            
+    
+            var marker_36f252abb678001a203242f6c7f9005c = L.marker(
+                [35.6336, 139.88],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var icon_8a5fc0d738f7587a5bb92a5ce11a9d07 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "purple",
+  "iconColor": "white",
+  "icon": "star",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_644f88f741b0529d92c19f05c15aa694 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_77ac900b570e55489a64ab3e66219ed9 = $(`<div id="html_77ac900b570e55489a64ab3e66219ed9" style="width: 100.0%; height: 100.0%;">     <div style="font-family: 'Hiragino Sans', sans-serif; min-width:220px;">       <h4 style="margin:0;color:purple;">④ 舞浜駅 (마이하마역)</h4>       <p style="margin:4px 0;font-size:13px;"><b>일본어</b>: 舞浜駅 (Maihama Station)</p>       <p style="margin:4px 0;font-size:13px;"><b>시간</b>: 17:30-18:05</p>       <p style="margin:4px 0;font-size:12px;color:#555;">디즈니 리조트라인 한 바퀴 (13분) + 호텔 셔틀</p>     </div>     </div>`)[0];
+                popup_644f88f741b0529d92c19f05c15aa694.setContent(html_77ac900b570e55489a64ab3e66219ed9);
+            
+        
+
+        marker_36f252abb678001a203242f6c7f9005c.bindPopup(popup_644f88f741b0529d92c19f05c15aa694)
+        ;
+
+        
+    
+    
+            marker_36f252abb678001a203242f6c7f9005c.bindTooltip(
+                `<div>
+                     4. ④ 舞浜駅 (마이하마역) (17:30-18:05)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_36f252abb678001a203242f6c7f9005c.setIcon(icon_8a5fc0d738f7587a5bb92a5ce11a9d07);
+            
+    
+            var marker_1176562f4691cf45a195fca659f25d39 = L.marker(
+                [35.648, 139.909],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var icon_967b560708a315957e258a6cd4a873a1 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "home",
+  "prefix": "glyphicon",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_1416f1a8f32b0852d98859389a4d7c07 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_7cf56eb823b400265d4d61ddb022d0e6 = $(`<div id="html_7cf56eb823b400265d4d61ddb022d0e6" style="width: 100.0%; height: 100.0%;">     <div style="font-family: 'Hiragino Sans', sans-serif; min-width:220px;">       <h4 style="margin:0;color:orange;">⑤ 三井ガーデンホテルプラナ東京ベイ (호텔)</h4>       <p style="margin:4px 0;font-size:13px;"><b>일본어</b>: 三井ガーデンホテル プラナ東京ベイ</p>       <p style="margin:4px 0;font-size:13px;"><b>시간</b>: 18:05-21:30</p>       <p style="margin:4px 0;font-size:12px;color:#555;">임시 체크인 → 라멘 → 7F 욕탕 → 취침</p>     </div>     </div>`)[0];
+                popup_1416f1a8f32b0852d98859389a4d7c07.setContent(html_7cf56eb823b400265d4d61ddb022d0e6);
+            
+        
+
+        marker_1176562f4691cf45a195fca659f25d39.bindPopup(popup_1416f1a8f32b0852d98859389a4d7c07)
+        ;
+
+        
+    
+    
+            marker_1176562f4691cf45a195fca659f25d39.bindTooltip(
+                `<div>
+                     5. ⑤ 三井ガーデンホテルプラナ東京ベイ (호텔) (18:05-21:30)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_1176562f4691cf45a195fca659f25d39.setIcon(icon_967b560708a315957e258a6cd4a873a1);
+            
+    
+            var poly_line_1eed386aa7f9b366058bc7e9a06cfda4 = L.polyline(
+                [[35.7656, 140.385], [35.6812, 139.7671], [35.753, 139.7376], [35.6336, 139.88], [35.648, 139.909]],
+                {"bubblingMouseEvents": true, "color": "#E53935", "dashArray": "10, 10", "dashOffset": null, "fill": false, "fillColor": "#E53935", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.7, "smoothFactor": 1.0, "stroke": true, "weight": 4}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            poly_line_1eed386aa7f9b366058bc7e9a06cfda4.bindTooltip(
+                `<div>
+                     D1 동선
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_221207d572e965ba598bb78381e15443 = L.marker(
+                [35.7234, 140.07605],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var div_icon_2c26b731e1a8eb1d5bb3e18ab12f95c6 = L.divIcon({
+  "html": "\u003cdiv style=\"font-size:14px; color:#333; background:rgba(255,255,255,0.85); padding:2px 8px; border-radius:12px; border:1px solid #999; font-weight:bold;\"\u003e\u2192 1\u003c/div\u003e",
+  "className": "empty",
+});
+        
+    
+                marker_221207d572e965ba598bb78381e15443.setIcon(div_icon_2c26b731e1a8eb1d5bb3e18ab12f95c6);
+            
+    
+            var marker_3e40eeb7c60764552741fa6a8e0f5168 = L.marker(
+                [35.7171, 139.75234999999998],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var div_icon_687e495b7d2a51eb874ac0ec02e9e660 = L.divIcon({
+  "html": "\u003cdiv style=\"font-size:14px; color:#333; background:rgba(255,255,255,0.85); padding:2px 8px; border-radius:12px; border:1px solid #999; font-weight:bold;\"\u003e\u2192 2\u003c/div\u003e",
+  "className": "empty",
+});
+        
+    
+                marker_3e40eeb7c60764552741fa6a8e0f5168.setIcon(div_icon_687e495b7d2a51eb874ac0ec02e9e660);
+            
+    
+            var marker_dae79f50995c180147a19b7e50423289 = L.marker(
+                [35.6933, 139.8088],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var div_icon_a63610fab5efdc1f28da38a431346dba = L.divIcon({
+  "html": "\u003cdiv style=\"font-size:14px; color:#333; background:rgba(255,255,255,0.85); padding:2px 8px; border-radius:12px; border:1px solid #999; font-weight:bold;\"\u003e\u2192 3\u003c/div\u003e",
+  "className": "empty",
+});
+        
+    
+                marker_dae79f50995c180147a19b7e50423289.setIcon(div_icon_a63610fab5efdc1f28da38a431346dba);
+            
+    
+            var marker_0ca40b3ee5fb148dbe57a9406cda2023 = L.marker(
+                [35.6408, 139.8945],
+                {
+}
+            ).addTo(map_25806298dbd9a3f7c90c05b79af4fa15);
+        
+    
+            var div_icon_7cdb259f39e79d5820fbe21dccfc54f4 = L.divIcon({
+  "html": "\u003cdiv style=\"font-size:14px; color:#333; background:rgba(255,255,255,0.85); padding:2px 8px; border-radius:12px; border:1px solid #999; font-weight:bold;\"\u003e\u2192 4\u003c/div\u003e",
+  "className": "empty",
+});
+        
+    
+                marker_0ca40b3ee5fb148dbe57a9406cda2023.setIcon(div_icon_7cdb259f39e79d5820fbe21dccfc54f4);
+            
+</script>
+</html>

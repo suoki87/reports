@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+<title>D2 동선 · 5/20 (수) 도쿄 디즈니랜드 풀데이</title>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<style>
+html, body { width:100%; height:100%; margin:0; padding:0; font-family:'Hiragino Sans','Apple SD Gothic Neo',sans-serif; }
+#map { position:absolute; top:0; bottom:0; right:0; left:0; }
+.title-box { position:fixed; top:10px; left:50px; z-index:9999; background:rgba(255,255,255,0.95);
+  padding:10px 18px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); }
+.title-box h3 { margin:0; color:#333; font-size:18px; }
+.title-box p { margin:4px 0 0; font-size:13px; color:#666; }
+.legend { position:fixed; bottom:30px; right:20px; z-index:9999; background:rgba(255,255,255,0.95);
+  padding:10px 14px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15); font-size:12px; }
+.legend b { font-size:13px; color:#333; }
+.popup-name { font-weight:700; font-size:14px; color:#1976D2; }
+.popup-meta { font-size:12px; color:#555; margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="title-box">
+  <h3>D2 동선 · 5/20 (수) 도쿄 디즈니랜드 풀데이</h3>
+  <p>호텔 (8:15 셔틀) → TDL (9:00 입장) → 21:00 셔틀 → 호텔 · 임산부 16주 + 5세</p>
+</div>
+<div class="legend">
+  <b>범례</b><br>
+  <span style="color:orange;">●</span> 호텔 (미츠이 가든 PRANA)<br>
+  <span style="color:purple;">●</span> 마이하마 (舞浜)역<br>
+  <span style="color:red;">●</span> TDL 메인 게이트<br>
+  <span style="color:#1976D2;">●</span> TDL 내부 명소<br>
+  <span style="color:#E53935;">- - -</span> 셔틀 동선
+</div>
+<div id="map"></div>
+<script>
+var map = L.map('map', { center:[35.6390, 139.8870], zoom:14, zoomControl:true });
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom:19, attribution:'&copy; OpenStreetMap' }).addTo(map);
+
+function mk(color, icon) {
+  return L.AwesomeMarkers.icon({ icon:icon, prefix:'fa', markerColor:color, iconColor:'white' });
+}
+
+// 핀
+var hotel = L.marker([35.6480, 139.9090], { icon: mk('orange','bed') })
+  .bindPopup('<div class="popup-name">미츠이 가든 PRANA 호텔</div><div class="popup-meta">우라야스시 아케미 6-2-1<br>三井ガーデンホテル プラナ 東京ベイ<br>출발/귀가 베이스</div>').addTo(map);
+
+var maihama = L.marker([35.6336, 139.8800], { icon: mk('purple','train') })
+  .bindPopup('<div class="popup-name">마이하마 (舞浜)역</div><div class="popup-meta">JR 케이요선<br>디즈니 리조트라인 환승<br>호텔 셔틀 대체 동선</div>').addTo(map);
+
+var gate = L.marker([35.6329, 139.8804], { icon: mk('red','star') })
+  .bindPopup('<div class="popup-name">⭐ TDL 메인 게이트 (メインゲート)</div><div class="popup-meta">9:00 입장 1분 시퀀스<br>DPA 미녀와 야수 + PP 푸의 허니헌트</div>').addTo(map);
+
+// 파크 내부 (대략 위치)
+var bazaar = L.marker([35.6336, 139.8810], { icon: mk('blue','utensils') })
+  .bindPopup('<div class="popup-name">월드 바자르 (ワールドバザール)</div><div class="popup-meta">🚼 베비센터 메인<br>🍱 호쿠사이 (北斎) 15:00 ⭐<br>임산부 휴식 동선 척추</div>').addTo(map);
+
+var castle = L.marker([35.6345, 139.8810], { icon: mk('cadetblue','crown') })
+  .bindPopup('<div class="popup-name">신데렐라성 (シンデレラ城)</div><div class="popup-meta">파크 중앙 랜드마크</div>').addTo(map);
+
+var fantasy = L.marker([35.6353, 139.8806], { icon: mk('blue','heart') })
+  .bindPopup('<div class="popup-name">⭐ 판타지랜드 (ファンタジーランド)</div><div class="popup-meta">미녀와 야수 (DPA 11:00)<br>푸의 허니헌트 (PP 11:30)<br>잇츠 어 스몰 월드<br>캐슬 카루셀 / 필하매직</div>').addTo(map);
+
+var toontown = L.marker([35.6360, 139.8810], { icon: mk('green','child') })
+  .bindPopup('<div class="popup-name">툰타운 (トゥーンタウン)</div><div class="popup-meta">⭐ 미키의 집 (09:15 인생샷)<br>🚼 베비센터 보조<br>굿타임 카페 (모바일 오더)</div>').addTo(map);
+
+var tomorrow = L.marker([35.6342, 139.8820], { icon: mk('darkblue','rocket') })
+  .bindPopup('<div class="popup-name">⭐⭐ 트모로우랜드 테라스</div><div class="popup-meta">18:00 모바일 오더 저녁<br>19:30 일렉트리컬 명당 자유석<br>벤치 좌석 + 시작점 가까움</div>').addTo(map);
+
+var western = L.marker([35.6342, 139.8795], { icon: mk('darkred','hat-cowboy') })
+  .bindPopup('<div class="popup-name">웨스턴랜드 (ウェスタンランド)</div><div class="popup-meta">컨트리 베어 시어터<br>임산부 좌식 회복 ⭐</div>').addTo(map);
+
+// 셔틀 경로
+L.polyline([[35.6480,139.9090],[35.6390,139.8920],[35.6336,139.8800],[35.6329,139.8804]],
+  { color:'#E53935', weight:4, dashArray:'8,8', opacity:0.85 }).addTo(map);
+
+// 디즈니 리조트라인 대체 동선
+L.polyline([[35.6336,139.8800],[35.6329,139.8804]],
+  { color:'#7E57C2', weight:3, opacity:0.7 }).addTo(map);
+</script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_f0e504793bb5b11918bc1d61f27e31d7 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+<div style="position: fixed; top: 10px; left: 50px; z-index: 9999;
+            background: rgba(255,255,255,0.95); padding: 10px 18px;
+            border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-family: 'Hiragino Sans', sans-serif;">
+  <h3 style="margin:0;color:#333;">D5 동선 · 5/23 (토) 출국일</h3>
+  <p style="margin:4px 0 0;font-size:13px;color:#666;">
+    호텔 → (Plan B 우라야스 교통공원) → 이스피아리 → 리무진 직행 → NRT T3 · 가족 3명
+  </p>
+</div>
+    
+<div style="position: fixed; bottom: 30px; right: 20px; z-index: 9999;
+            background: rgba(255,255,255,0.95); padding: 10px 14px;
+            border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-family: 'Hiragino Sans', sans-serif; font-size:12px;">
+  <b>범례</b><br>
+  <span style="color:orange;">●</span> 호텔 (미츠이 가든 PRANA)<br>
+  <span style="color:green;">●</span> 우라야스 교통공원 (Plan B)<br>
+  <span style="color:red;">●</span> 이스피아리 イクスピアリ<br>
+  <span style="color:blue;">●</span> NRT T3 (이스타 ZE608)<br>
+  <span style="color:#E53935;">━━</span> 리무진 직행 (60-80분)<br>
+  <span style="color:#1E88E5;">- - -</span> 셔틀·도보
+</div>
+    
+            <div class="folium-map" id="map_f0e504793bb5b11918bc1d61f27e31d7" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_f0e504793bb5b11918bc1d61f27e31d7 = L.map(
+                "map_f0e504793bb5b11918bc1d61f27e31d7",
+                {
+                    center: [35.70975, 140.15075000000002],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 10,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_887c98e356cde972c301a5b1ec995d11 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_887c98e356cde972c301a5b1ec995d11.addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            var marker_fa8b73eec03007f22386abd6274e6c32 = L.marker(
+                [35.648, 139.909],
+                {
+}
+            ).addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            var icon_c4b2e64ebf2b47b5b89f9fa44715a993 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "bed",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_5b0d95be881b3bb951cdd521e82488c5 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_9fcddafa4985b2a0dc70f70f419b9dfa = $(`<div id="html_9fcddafa4985b2a0dc70f70f419b9dfa" style="width: 100.0%; height: 100.0%;"><b>호텔 미츠이 가든 PRANA 도쿄베이</b><br>三井ガーデンホテルプラナ東京ベイ<br>7F 大浴場(다이요쿠죠) 5-9 / 18-25시<br>1F 리무진 정류장 (부지 내)<br>06:30 욕탕 · 08:00 조식 · 12:00 체크아웃 · 13:00 리무진 탑승</div>`)[0];
+                popup_5b0d95be881b3bb951cdd521e82488c5.setContent(html_9fcddafa4985b2a0dc70f70f419b9dfa);
+            
+        
+
+        marker_fa8b73eec03007f22386abd6274e6c32.bindPopup(popup_5b0d95be881b3bb951cdd521e82488c5)
+        ;
+
+        
+    
+    
+            marker_fa8b73eec03007f22386abd6274e6c32.bindTooltip(
+                `<div>
+                     호텔 미츠이 가든 PRANA 도쿄베이
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_fa8b73eec03007f22386abd6274e6c32.setIcon(icon_c4b2e64ebf2b47b5b89f9fa44715a993);
+            
+    
+            var marker_b7f9dea27600c5ff6e2a5dd39a2744e8 = L.marker(
+                [35.6498, 139.9038],
+                {
+}
+            ).addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            var icon_65969df7a13fd864cef026d1c1af49ba = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "green",
+  "iconColor": "white",
+  "icon": "bicycle",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_99926598df7ca86876cae99263081251 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_dd5933162aac7becbd11feec6be806e7 = $(`<div id="html_dd5933162aac7becbd11feec6be806e7" style="width: 100.0%; height: 100.0%;"><b>浦安市交通公園 (우라야스시 교통공원)</b><br>도보 8-10분 (호텔에서)<br>09:00-16:30 · 무료 · 휴무 月曜<br>5/23 토 = 정상 운영<br>자전거·동물 광장 (카피바라·왈라비)<br>포니 = 평일 14:30 (토 X)<br>Plan B 발동 슬롯 09:00-10:00</div>`)[0];
+                popup_99926598df7ca86876cae99263081251.setContent(html_dd5933162aac7becbd11feec6be806e7);
+            
+        
+
+        marker_b7f9dea27600c5ff6e2a5dd39a2744e8.bindPopup(popup_99926598df7ca86876cae99263081251)
+        ;
+
+        
+    
+    
+            marker_b7f9dea27600c5ff6e2a5dd39a2744e8.bindTooltip(
+                `<div>
+                     우라야스시 교통공원 浦安市交通公園 (Plan B)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_b7f9dea27600c5ff6e2a5dd39a2744e8.setIcon(icon_65969df7a13fd864cef026d1c1af49ba);
+            
+    
+            var marker_235886e72d17ce988eb6e12e921bf57e = L.marker(
+                [35.6332, 139.881],
+                {
+}
+            ).addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            var icon_dff8f83cebbbe9b8f07fb1bcc3aed043 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "utensils",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_4ac439b989f1b50278c0313596e30890 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_1e825feeef5068a452c534009e02c9dc = $(`<div id="html_1e825feeef5068a452c534009e02c9dc" style="width: 100.0%; height: 100.0%;"><b>이스피아리 イクスピアリ (Ikspiari)</b><br>마이하마역 舞浜駅 동측·디즈니리조트 입구 옆<br>영업 10:00-22:30 · 입장권 X<br>4F 다이닝 街(가이) · 3F 디즈니 스토어<br>10:00-12:00 가벼운 점심 + 디즈니 굿즈 마지막<br>호텔 무료 셔틀 15분</div>`)[0];
+                popup_4ac439b989f1b50278c0313596e30890.setContent(html_1e825feeef5068a452c534009e02c9dc);
+            
+        
+
+        marker_235886e72d17ce988eb6e12e921bf57e.bindPopup(popup_4ac439b989f1b50278c0313596e30890)
+        ;
+
+        
+    
+    
+            marker_235886e72d17ce988eb6e12e921bf57e.bindTooltip(
+                `<div>
+                     이스피아리 イクスピアリ / 마이하마역 舞浜駅
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_235886e72d17ce988eb6e12e921bf57e.setIcon(icon_dff8f83cebbbe9b8f07fb1bcc3aed043);
+            
+    
+            var marker_d89e6952d6c5cab4692ef17494294d8e = L.marker(
+                [35.7715, 140.3925],
+                {
+}
+            ).addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            var icon_40538510a164dde1f47c26291187788b = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "plane-departure",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+        var popup_b257b1ffe7d41538b81e15703bc9f6e0 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_6310501259c1155736a0d546572dad59 = $(`<div id="html_6310501259c1155736a0d546572dad59" style="width: 100.0%; height: 100.0%;"><b>나리타공항 T3 (LCC 전용)</b><br>成田空港 第3 ターミナル<br>이스타항공 ZE608 17:30 → ICN T1 20:20<br>PNR S2VHUL · 위탁 15kg×3 무료 (일반석)<br>체크인 권고 = 출발 3시간 전 (14:30 도착)<br>리무진 직행 60-80분 · 환승 0회</div>`)[0];
+                popup_b257b1ffe7d41538b81e15703bc9f6e0.setContent(html_6310501259c1155736a0d546572dad59);
+            
+        
+
+        marker_d89e6952d6c5cab4692ef17494294d8e.bindPopup(popup_b257b1ffe7d41538b81e15703bc9f6e0)
+        ;
+
+        
+    
+    
+            marker_d89e6952d6c5cab4692ef17494294d8e.bindTooltip(
+                `<div>
+                     NRT T3 (LCC 전용) — 이스타 ZE608
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_d89e6952d6c5cab4692ef17494294d8e.setIcon(icon_40538510a164dde1f47c26291187788b);
+            
+    
+            var poly_line_251a1878ff79367388a31cd41842bc40 = L.polyline(
+                [[35.648, 139.909], [35.6332, 139.881]],
+                {"bubblingMouseEvents": true, "color": "#1E88E5", "dashArray": "6, 10", "dashOffset": null, "fill": false, "fillColor": "#1E88E5", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.7, "smoothFactor": 1.0, "stroke": true, "weight": 4}
+            ).addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            poly_line_251a1878ff79367388a31cd41842bc40.bindTooltip(
+                `<div>
+                     호텔 → 이스피아리 (셔틀 15분)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var poly_line_7bf7423840ef11df56b848d39717e2f8 = L.polyline(
+                [[35.648, 139.909], [35.6498, 139.9038]],
+                {"bubblingMouseEvents": true, "color": "#43A047", "dashArray": "2, 8", "dashOffset": null, "fill": false, "fillColor": "#43A047", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.6, "smoothFactor": 1.0, "stroke": true, "weight": 3}
+            ).addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            poly_line_7bf7423840ef11df56b848d39717e2f8.bindTooltip(
+                `<div>
+                     호텔 → 우라야스 교통공원 (도보 8-10분, Plan B)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var poly_line_86a517a1367f177cedce6b6e36b421e5 = L.polyline(
+                [[35.648, 139.909], [35.7715, 140.3925]],
+                {"bubblingMouseEvents": true, "color": "#E53935", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "#E53935", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.85, "smoothFactor": 1.0, "stroke": true, "weight": 5}
+            ).addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            poly_line_86a517a1367f177cedce6b6e36b421e5.bindTooltip(
+                `<div>
+                     리무진 버스 직행 60-80분 (환승 0) — 임산부 1순위
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var marker_bb7130feb0db5113ec86767d31191e0e = L.marker(
+                [35.70975, 140.15075000000002],
+                {
+}
+            ).addTo(map_f0e504793bb5b11918bc1d61f27e31d7);
+        
+    
+            var div_icon_0b0c78f632493563acaf96db76bf2a49 = L.divIcon({
+  "html": "\u003cdiv style=\"font-size:22px;color:#E53935;font-weight:bold;transform: rotate(35deg);\"\u003e\u27a4\u003c/div\u003e",
+  "className": "empty",
+});
+        
+    
+            marker_bb7130feb0db5113ec86767d31191e0e.bindTooltip(
+                `<div>
+                     리무진 직행 (호텔 → NRT T3)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_bb7130feb0db5113ec86767d31191e0e.setIcon(div_icon_0b0c78f632493563acaf96db76bf2a49);
+            
+</script>
+</html>
