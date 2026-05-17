@@ -3,6 +3,8 @@ description: "Claude Code 작업 결과·결론·공유 보고서"
 theme: minima
 markdown: kramdown
 permalink: /:year/:month/:day/:title/
+future: true
+timezone: Asia/Seoul
 
 plugins:
   - jekyll-feed
