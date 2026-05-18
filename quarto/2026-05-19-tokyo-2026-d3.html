@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ko" xml:lang="ko"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>D3 — 5월 21일 (목) 해리포터·몽벨 쇼핑·오사카나 디너</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="2026-05-19-tokyo-2026-d3_files/libs/clipboard/clipboard.min.js"></script>
+<script src="2026-05-19-tokyo-2026-d3_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="2026-05-19-tokyo-2026-d3_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="2026-05-19-tokyo-2026-d3_files/libs/quarto-html/popper.min.js"></script>
+<script src="2026-05-19-tokyo-2026-d3_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="2026-05-19-tokyo-2026-d3_files/libs/quarto-html/anchor.min.js"></script>
+<link href="2026-05-19-tokyo-2026-d3_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="2026-05-19-tokyo-2026-d3_files/libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="2026-05-19-tokyo-2026-d3_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="2026-05-19-tokyo-2026-d3_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="2026-05-19-tokyo-2026-d3_files/libs/bootstrap/bootstrap-178dd2d91410387b38c0b8b2409d3e7a.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<style>html{ scroll-behavior: smooth; }</style>
+<link rel="stylesheet" as="style" crossorigin="" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  body { font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+  h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.01em; }
+  .callout { border-radius: 10px; }
+  table { font-size: 0.95em; }
+  thead { background: #f6f8fa; }
+  tbody tr:nth-child(odd) { background: #fafbfc; }
+  blockquote { border-left: 4px solid #0969da; background: #f6f8fa; padding: 0.6em 1em; }
+  .quarto-title-banner { background: linear-gradient(135deg, #0969da, #1f6feb); }
+  .big-number { font-size: 2.4em; font-weight: 800; color: #0969da; }
+  @media (max-width: 768px) {
+    #quarto-margin-sidebar, #quarto-toc-sidebar { display: none; }
+    .quarto-title-banner { padding: 1em; }
+  }
+</style>
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article toc-left">
+<div id="quarto-sidebar-toc-left" class="sidebar toc-left">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">목차</h2>
+   
+  <ul>
+  <li><a href="#d3-5월-21일-목-해리포터몽벨-쇼핑오사카나-디너" id="toc-d3-5월-21일-목-해리포터몽벨-쇼핑오사카나-디너" class="nav-link active" data-scroll-target="#d3-5월-21일-목-해리포터몽벨-쇼핑오사카나-디너">D3 — 5월 21일 (목) 해리포터·몽벨 쇼핑·오사카나 디너</a>
+  <ul class="collapse">
+  <li><a href="#그날-요약" id="toc-그날-요약" class="nav-link" data-scroll-target="#그날-요약">① 그날 요약</a></li>
+  <li><a href="#동선" id="toc-동선" class="nav-link" data-scroll-target="#동선">② 동선</a></li>
+  <li><a href="#시간순-일정-메인" id="toc-시간순-일정-메인" class="nav-link" data-scroll-target="#시간순-일정-메인">③ 시간순 일정 (메인)</a>
+  <ul class="collapse">
+  <li><a href="#호텔-조식셔틀-준비" id="toc-호텔-조식셔틀-준비" class="nav-link" data-scroll-target="#호텔-조식셔틀-준비">07:00-09:00 · 호텔 조식·셔틀 준비</a></li>
+  <li><a href="#호텔-마이하마-도쿄역-이케부쿠로-도시마엔마에" id="toc-호텔-마이하마-도쿄역-이케부쿠로-도시마엔마에" class="nav-link" data-scroll-target="#호텔-마이하마-도쿄역-이케부쿠로-도시마엔마에">09:00-11:25 · 호텔 → 마이하마 → 도쿄역 → 이케부쿠로 → 도시마엔마에</a></li>
+  <li><a href="#해리포터-스튜디오-4시간-코스" id="toc-해리포터-스튜디오-4시간-코스" class="nav-link" data-scroll-target="#해리포터-스튜디오-4시간-코스">11:30-15:30 · ⭐ 해리포터 스튜디오 (4시간 코스)</a></li>
+  <li><a href="#도시마엔마에-이케부쿠로-西出口-서출구" id="toc-도시마엔마에-이케부쿠로-西出口-서출구" class="nav-link" data-scroll-target="#도시마엔마에-이케부쿠로-西出口-서출구">15:30-15:45 · 도시마엔마에 → 이케부쿠로 西出口 (서출구)</a></li>
+  <li><a href="#몽벨-池袋東武店-모음벨-이케부쿠로-도부점mont-bell-ikebukuro-tobu-아기띠-쇼핑-45분" id="toc-몽벨-池袋東武店-모음벨-이케부쿠로-도부점mont-bell-ikebukuro-tobu-아기띠-쇼핑-45분" class="nav-link" data-scroll-target="#몽벨-池袋東武店-모음벨-이케부쿠로-도부점mont-bell-ikebukuro-tobu-아기띠-쇼핑-45분">15:45-16:30 · ⭐ 몽벨 池袋東武店 (모음벨 이케부쿠로 도부점·mont-bell Ikebukuro Tobu) — 아기띠 쇼핑 45분</a></li>
+  <li><a href="#이케부쿠로-西出口-서출구-오사카나-매장" id="toc-이케부쿠로-西出口-서출구-오사카나-매장" class="nav-link" data-scroll-target="#이케부쿠로-西出口-서출구-오사카나-매장">16:30-17:00 · 이케부쿠로 西出口 (서출구) → 오사카나 매장</a></li>
+  <li><a href="#오사카나-お魚総本家-디너-81607" id="toc-오사카나-お魚総本家-디너-81607" class="nav-link" data-scroll-target="#오사카나-お魚総本家-디너-81607">17:00-19:00 · ⭐ 오사카나 (お魚総本家) 디너 #81607</a></li>
+  <li><a href="#이케부쿠로-호텔-귀가" id="toc-이케부쿠로-호텔-귀가" class="nav-link" data-scroll-target="#이케부쿠로-호텔-귀가">19:00-21:30 · 이케부쿠로 → 호텔 귀가</a></li>
+  </ul></li>
+  <li><a href="#별첨-자료" id="toc-별첨-자료" class="nav-link" data-scroll-target="#별첨-자료">④ 별첨 자료</a>
+  <ul class="collapse">
+  <li><a href="#사용자-컨펌재확인-큐-d-2-519d-day" id="toc-사용자-컨펌재확인-큐-d-2-519d-day" class="nav-link" data-scroll-target="#사용자-컨펌재확인-큐-d-2-519d-day">🚨 1. 사용자 컨펌·재확인 큐 (D-2 5/19·D-Day)</a></li>
+  <li><a href="#차-출처-검증" id="toc-차-출처-검증" class="nav-link" data-scroll-target="#차-출처-검증">🔍 2. 1차 출처 검증</a></li>
+  <li><a href="#임산부-아람-안전-점검" id="toc-임산부-아람-안전-점검" class="nav-link" data-scroll-target="#임산부-아람-안전-점검">🤰 3. 임산부 (아람) 안전 점검</a></li>
+  <li><a href="#세-준혁-페이스" id="toc-세-준혁-페이스" class="nav-link" data-scroll-target="#세-준혁-페이스">👶 4. 5세 (준혁) 페이스</a></li>
+  <li><a href="#베비카휠체어-동선" id="toc-베비카휠체어-동선" class="nav-link" data-scroll-target="#베비카휠체어-동선">🚼 5. 베비카·휠체어 동선</a></li>
+  <li><a href="#화장실-매핑" id="toc-화장실-매핑" class="nav-link" data-scroll-target="#화장실-매핑">🚻 6. 화장실 매핑</a></li>
+  <li><a href="#변수-대비" id="toc-변수-대비" class="nav-link" data-scroll-target="#변수-대비">🎯 7. 변수 대비</a></li>
+  <li><a href="#핸드캐리-d3" id="toc-핸드캐리-d3" class="nav-link" data-scroll-target="#핸드캐리-d3">📦 8. 핸드캐리 (D3)</a></li>
+  <li><a href="#일본어-핵심-문구-풀" id="toc-일본어-핵심-문구-풀" class="nav-link" data-scroll-target="#일본어-핵심-문구-풀">🇯🇵 9. 일본어 핵심 문구 풀</a></li>
+  <li><a href="#구글맵공식-url" id="toc-구글맵공식-url" class="nav-link" data-scroll-target="#구글맵공식-url">🗺️ 10. 구글맵·공식 URL</a></li>
+  <li><a href="#가족-코멘트" id="toc-가족-코멘트" class="nav-link" data-scroll-target="#가족-코멘트">💡 11. 가족 코멘트</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">D3 — 5월 21일 (목) 해리포터·몽벨 쇼핑·오사카나 디너</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">공개</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">2026년 5월 19일</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="d3-5월-21일-목-해리포터몽벨-쇼핑오사카나-디너" class="level1">
+<h1>D3 — 5월 21일 (목) 해리포터·몽벨 쇼핑·오사카나 디너</h1>
+<blockquote class="blockquote">
+<p><strong>해리포터 워너 브라더스 스튜디오 도쿄 (ワーナー ブラザース スタジオ ツアー 東京·와-나- 부라자-스 스타지오 츠아- 토우쿄우·Warner Bros.&nbsp;Studio Tour Tokyo) 11:30 입장 / 몽벨 池袋東武店 (모음벨 이케부쿠로 도부 호점·mont-bell Ikebukuro Tobu) 아기띠 쇼핑 / 오사카나 소혼케 이케부쿠로 서출구점 (お魚総本家 池袋西口店·오사카나 소-혼케 이케부쿠로 니시구치텐) 17:00 디너 #81607</strong></p>
+<p>가족 3명 (수억·아람·준혁) / 임산부 16주 + 5세</p>
+</blockquote>
+<hr>
+<section id="그날-요약" class="level2">
+<h2 class="anchored" data-anchor-id="그날-요약">① 그날 요약</h2>
+<p>D3 = <strong>마법 + 쇼핑 + 일식 풀데이</strong> · 메인 = ① <strong>해리포터 스튜디오 4시간 (11:30-15:30)</strong> ② <strong>몽벨 池袋東武店 (이케부쿠로 도부) 아기띠 쇼핑</strong> (西出口·서출구·역 직결·15:45~16:30 약 45분) ③ <strong>오사카나 #81607 17:00 디너</strong> (트레타 파고타츠석·셋 E 점원 추천 오마카세 ¥10,000-15,000). 동선 = 호텔 → 마이하마 → 도쿄역 → 야마노테선 → 이케부쿠로 (西口) → 서부센 (西武線·세이부센) 6분 → 도시마엔마에 → 해리포터 → 이케부쿠로 (西口) → 몽벨 → 오사카나 → 호텔.</p>
+<blockquote class="blockquote">
+<p>⚠️ <strong>MUJI = D1 긴자 旗艦店 (세계 최대 7층) 결정 락으로 D3 슬롯 제거.</strong> 旗艦店 임팩트 우선. ⚠️ <strong>돈키호테 = D1 緊巧靈本館 (24h) 결정 락으로 D3 슬롯 제외.</strong> D3 = 몽벨만 단일 쇼핑.</p>
+</blockquote>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/D3_01_briefing.png" class="img-fluid figure-img"></p>
+<figcaption>D3 핵심 브리핑 카드</figcaption>
+</figure>
+</div>
+<p><em>6 슬롯 흐름 = 호텔 조식 → 환승 → 해리포터 → 몽벨 (이케부쿠로 서출구·도부 본점) → 오사카나 → 호텔 취침</em></p>
+<hr>
+</section>
+<section id="동선" class="level2">
+<h2 class="anchored" data-anchor-id="동선">② 동선</h2>
+<p>호텔 → 마이하마역 → JR 케이요선 30분 → 도쿄역 → 야마노테선 환승 → 이케부쿠로 (西口·서출구) → 서부센 (西武線·세이부센·Seibu Line) 6분 → 도시마엔마에 (豊島園前·토시마엔마에·Toshimaen-mae)역 → 해리포터 스튜디오 (도보 1분). 귀로 = 도시마엔마에 → 이케부쿠로 → 西出口 → 몽벨 池袋東武店 (도부 본점·역 직결) → 도보 5-7분 → 오사카나 소혼케 → 同 동선 역방향 마이하마.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/D3_02_route.png" class="img-fluid figure-img"></p>
+<figcaption>D3 동선 지도</figcaption>
+</figure>
+</div>
+<blockquote class="blockquote">
+<p>🌐 <strong>인터랙티브 동선 지도</strong>: <a href="./maps/D3_folium.html">D3_folium.html</a> — 8 핀 (호텔·마이하마·도쿄역·이케부쿠로·몽벨 도부·오사카나·도시마엔마에·해리포터).</p>
+</blockquote>
+<hr>
+</section>
+<section id="시간순-일정-메인" class="level2">
+<h2 class="anchored" data-anchor-id="시간순-일정-메인">③ 시간순 일정 (메인)</h2>
+<section id="호텔-조식셔틀-준비" class="level3">
+<h3 class="anchored" data-anchor-id="호텔-조식셔틀-준비">07:00-09:00 · 호텔 조식·셔틀 준비</h3>
+<ul>
+<li><strong>07:00-07:50</strong> 호텔 7F 욕탕 (간단)</li>
+<li><strong>07:50-08:30</strong> 호텔 1F 조식</li>
+<li><strong>08:30-09:00</strong> 짐 정리·베비카·핸드캐리</li>
+</ul>
+<hr>
+</section>
+<section id="호텔-마이하마-도쿄역-이케부쿠로-도시마엔마에" class="level3">
+<h3 class="anchored" data-anchor-id="호텔-마이하마-도쿄역-이케부쿠로-도시마엔마에">09:00-11:25 · 호텔 → 마이하마 → 도쿄역 → 이케부쿠로 → 도시마엔마에</h3>
+<ul>
+<li><strong>09:00-09:20</strong> 호텔 → 마이하마역 셔틀 (15분)</li>
+<li><strong>09:20-09:50</strong> JR 케이요선 마이하마 → 도쿄역 (30분)</li>
+<li><strong>09:50-10:00</strong> 도쿄역 야마노테선 환승 (지상 평지·엘리베이터)</li>
+<li><strong>10:00-10:25</strong> JR 야마노테선 (山手線) 도쿄 → 이케부쿠로 (25분 직통)</li>
+<li><strong>10:25-11:00</strong> 이케부쿠로역 → 서부센 (西武線·세이부센) 환승</li>
+<li><strong>11:00-11:06</strong> 서부센 이케부쿠로 → 도시마엔마에 (6분)</li>
+<li><strong>11:06-11:20</strong> 도시마엔마에역 → 해리포터 스튜디오 (도보 1분)</li>
+<li><strong>11:20-11:30</strong> 입장 대기</li>
+</ul>
+<p><strong>일본어 1줄</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>한국어</th>
+<th>일본어</th>
+<th>발음</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>이케부쿠로까지</td>
+<td>池袋 まで</td>
+<td>이케부쿠로 마데</td>
+</tr>
+<tr class="even">
+<td>도시마엔마에역 어디예요?</td>
+<td>豊島園前駅 どこ ですか?</td>
+<td>토시마엔마에 에키 도코데스카?</td>
+</tr>
+<tr class="odd">
+<td>임산부 좌석 있나요?</td>
+<td>妊婦 席 ありますか?</td>
+<td>닌푸 세키 아리마스카?</td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="해리포터-스튜디오-4시간-코스" class="level3">
+<h3 class="anchored" data-anchor-id="해리포터-스튜디오-4시간-코스">11:30-15:30 · ⭐ 해리포터 스튜디오 (4시간 코스)</h3>
+<section id="해리포터-4시간-마법-동선" class="level4">
+<h4 class="anchored" data-anchor-id="해리포터-4시간-마법-동선">해리포터 4시간 마법 동선</h4>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/D3_03_hp_studio.png" class="img-fluid figure-img"></p>
+<figcaption>해리포터 스튜디오 4시간 코스</figcaption>
+</figure>
+</div>
+<p><em>5 스테이션 = 마법부 아트리움 → 호그스미드 → 다이아곤 앨리 → 백로트 카페 → 출구 매장</em></p>
+<p><strong>스튜디오 정보</strong>: - <strong>면적</strong> = 30,000㎡ (워크스루 포맷) - <strong>소요</strong> = 표준 3-4시간 (우리 = 4시간 풀) - <strong>베비카</strong> = <strong>무료 대여</strong> (입구)·휠체어 접근 OK·임산부 좌석 풀 - <strong>마법부 아트리움</strong> + <strong>버터비어 바</strong> = 세계 최대 (도쿄 한정)</p>
+<p><strong>5스테이션 동선</strong></p>
+<p><strong>① 11:30-12:30 마법부 아트리움 (魔法省 アトリウム·마호우쇼 아토리우무)</strong> - 입구·그레이트 홀 (大広間·오히로마) - 9¾ 플랫폼 (호그와트 익스프레스) - 사진 인생샷 잭팟 - ⚠️ <strong>입장 후 약 50분간 화장실 없음</strong> = 시작 전 화장실 의무</p>
+<p><strong>② 12:30-13:30 호그스미드 마을·버터비어 바</strong> - 호그스미드 (ホグズミード 마을) - <strong>バタービールバー (버터비어 바)</strong> = 세계 최대·음료만·시그니처 사진 - 5세 잭팟·임산부 = 음료만 (알콜 무함량)</p>
+<p><strong>③ 13:30-14:30 ⭐ 백로트 카페 (バックロット カフェ) 점심</strong> - 중간 위치·<strong>90분제·라스트 오더 60분 후</strong> - 메뉴 = 4 기숙사 플레이트 (그리핀도르·슬리데린·래번클로·후플푸프) - 키즈 메뉴 = 확인 못 함·D-Day 매장 - 임산부 안전 = 완전 익힘 메뉴 (회·생달걀 X) - 다목적 화장실·수유실 옆</p>
+<p><strong>④ 14:30-15:30 다이아곤 앨리·기념품</strong> - 다이아곤 앨리 (ダイアゴン 横丁·요코쵸) - 올리밴더 (オリバンダー) 지팡이 - 기념품 풀</p>
+<p><strong>⑤ 15:30 출구·프로그 카페 (フロッグ カフェ)</strong> - 테이크아웃 간식 - 기념 굿즈 마지막 픽업</p>
+</section>
+<section id="점심간식화장실-가이드-편의시설" class="level4">
+<h4 class="anchored" data-anchor-id="점심간식화장실-가이드-편의시설">점심·간식·화장실 가이드 (편의시설)</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>시설</th>
+<th>위치·정보</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>다목적 화장실 (バリアフリートイレ)</strong></td>
+<td>2실·휠체어 + 간호자 2명·기저귀대·갈아입을 대</td>
+</tr>
+<tr class="even">
+<td><strong>모든 화장실 기저귀대</strong></td>
+<td>비치</td>
+</tr>
+<tr class="odd">
+<td><strong>수유실 (授乳室·쥬뉴-시츠)</strong></td>
+<td>2곳·온수기</td>
+</tr>
+<tr class="even">
+<td><strong>갈아입을 룸 (更衣室·코우이시츠)</strong></td>
+<td>코스프레용</td>
+</tr>
+<tr class="odd">
+<td><strong>임산부 좌석</strong></td>
+<td>풀데이 풀</td>
+</tr>
+<tr class="even">
+<td><strong>베비카</strong></td>
+<td>무료 대여</td>
+</tr>
+</tbody>
+</table>
+<p><strong>가족 룰 — “화장실 시작 전 룰”</strong>: 입장 직전 11:25 가족 모두 화장실 사이클 의무 (입장 후 약 50분간 화장실 X).</p>
+<p><strong>일본어 1줄 (해리포터 입장)</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>한국어</th>
+<th>일본어</th>
+<th>발음</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>입장 시간 11:30입니다</td>
+<td>入場時間 11:30 です</td>
+<td>뉴-죠- 지칸 쥬이치지 산쥬뿐 데스</td>
+</tr>
+<tr class="even">
+<td>베비카 대여 어디에서?</td>
+<td>ベビーカー レンタル どこ ですか?</td>
+<td>베비카- 렌타루 도코데스카?</td>
+</tr>
+<tr class="odd">
+<td>임산부 좌석 있나요?</td>
+<td>妊婦 席 ありますか?</td>
+<td>닌푸 세키 아리마스카?</td>
+</tr>
+<tr class="even">
+<td>키즈 메뉴 있나요?</td>
+<td>キッズメニュー ありますか?</td>
+<td>킷즈메뉴- 아리마스카?</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="blockquote">
+<p><a href="https://www.wbstudiotour.jp/">해리포터 스튜디오 공식</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Toshimaen-mae+Station">도시마엔마에역</a></p>
+</blockquote>
+<hr>
+</section>
+<section id="d3-쇼핑-동선-약도" class="level4">
+<h4 class="anchored" data-anchor-id="d3-쇼핑-동선-약도">D3 쇼핑 동선 약도</h4>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/D3_03_ikebukuro_shopping.png" class="img-fluid figure-img"></p>
+<figcaption>D3 이케부쿠로 西出口 쇼핑 동선</figcaption>
+</figure>
+</div>
+<p><em>해리포터 15:30 → 도시마엔마에 → 이케부쿠로 西出口 → 몽벨 池袋東武店 (도부 본점) → 오사카나 17:00. 임산부+5세 단일 동선 1시간 30분.</em></p>
+<hr>
+</section>
+</section>
+<section id="도시마엔마에-이케부쿠로-西出口-서출구" class="level3">
+<h3 class="anchored" data-anchor-id="도시마엔마에-이케부쿠로-西出口-서출구">15:30-15:45 · 도시마엔마에 → 이케부쿠로 西出口 (서출구)</h3>
+<ul>
+<li><strong>15:30-15:36</strong> <strong>西武池袋線 (세이부 이케부쿠로센·Seibu Ikebukuro Line)</strong> 도시마엔마에 → 이케부쿠로 (6분)</li>
+<li><strong>15:36-15:45</strong> 이케부쿠로 西出口 도부 백화점 (東武百貨店·도부 햑카텐·Tobu Department Store) <strong>本店 (호점·본점)</strong> 직결 도보 9분</li>
+</ul>
+<hr>
+</section>
+<section id="몽벨-池袋東武店-모음벨-이케부쿠로-도부점mont-bell-ikebukuro-tobu-아기띠-쇼핑-45분" class="level3">
+<h3 class="anchored" data-anchor-id="몽벨-池袋東武店-모음벨-이케부쿠로-도부점mont-bell-ikebukuro-tobu-아기띠-쇼핑-45분">15:45-16:30 · ⭐ 몽벨 池袋東武店 (모음벨 이케부쿠로 도부점·mont-bell Ikebukuro Tobu) — 아기띠 쇼핑 45분</h3>
+<p><strong>무엇?</strong>: 일본 최대 아웃도어 브랜드 <strong>mont-bell (몽벨·モンベル·モンベル)</strong> 도쿄 본점급 큰 매장. <strong>東武百貨店 池袋本店 (도부 백화점 이케부쿠로 본점)</strong> 입점. <strong>둘째 (축복이) 출산 후 사용</strong> 위한 베비 캐리어 (Baby Carrier·ベビーキャリア·베비-캬리아) 구매.</p>
+<p><strong>위치·접근</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>항목</th>
+<th>정보</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>주소</strong></td>
+<td>東京都 豊島区 西池袋 1-1-25 東武百貨店 池袋本店 (도쿄토 토시마쿠 니시이케부쿠로 1-1-25 도부 햑카텐 이케부쿠로 호점)</td>
+</tr>
+<tr class="even">
+<td><strong>층</strong></td>
+<td>도부 백화점 본관 내 (정확 층 D-1 매장 전화 확인 03-3981-2211)</td>
+</tr>
+<tr class="odd">
+<td><strong>역</strong></td>
+<td>池袋駅 (이케부쿠로역·Ikebukuro Station) 西出口 (西口·니시구치·West Exit) 直結</td>
+</tr>
+<tr class="even">
+<td><strong>영업</strong></td>
+<td>月~土 10:00-20:00 · 日祝 10:00-19:30 (도부 영업 시간 따름·D-1 매장 영업 확인 권장)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>시그니처 베비 캐리어</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>모델</th>
+<th>특성</th>
+<th>가격</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>ポケッタブル ベビーキャリア (포케타부루 베비키아리아·Pocketable Baby Carrier)</strong></td>
+<td>휴대용·포켓 수납·5세까지 사용·세탁기 OK·앞안기 + 백 안기 2 방식</td>
+<td>¥6,000~</td>
+</tr>
+<tr class="even">
+<td><strong>ポケッタブル ベビーキャリア ウォーマー (워-마-·Warmer)</strong></td>
+<td>동절기 보온 옵션</td>
+<td>¥3,500~</td>
+</tr>
+<tr class="odd">
+<td><strong>ベビーキャリア サンシェイド (산시에이도·Sunshade)</strong></td>
+<td>햇볕 차단·하이킹용</td>
+<td>¥3,300</td>
+</tr>
+</tbody>
+</table>
+<p><strong>왜 우리?</strong> - 둘째 (축복이·2026년 11월 예정) 출산 후 사용·도쿄 트립 = 한국 가격 대비 일본 정가 약 20% 저렴 - <strong>mont-bell = 일본 정통 아웃도어</strong>·우리 가족 평소 산책·등산·캠핑 시 사용</p>
+<p><strong>일본어 1줄 (몽벨 매장)</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>한국어</th>
+<th>일본어</th>
+<th>발음</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>베비 캐리어 어디예요?</td>
+<td>ベビーキャリア どこ ですか?</td>
+<td>베비-캬리아 도코데스카?</td>
+</tr>
+<tr class="even">
+<td>포케타부루 베비 캐리어 보여 주세요</td>
+<td>ポケッタブル ベビーキャリア 見せて ください</td>
+<td>포케타부루 베비-캬리아 미세테 쿠다사이</td>
+</tr>
+<tr class="odd">
+<td>일본인 정가입니다·면세 가능?</td>
+<td>日本人 価格 です・免税 できますか?</td>
+<td>니혼진 카카쿠데스·멘제이 데키마스카?</td>
+</tr>
+</tbody>
+</table>
+<p><strong>🆗 감수 가능 불편</strong>: 도부 백화점 점포 = 좌석 多·5세 자유·임산부 휴식 OK / 도부 = 이케부쿠로역 직결·계단 0개·엘리베이터 OK. 단 임산부 16주 = 매장 둘러보기 30분 이내·짐 무게 X 권장.</p>
+<p>🔗 미리보기: - <a href="https://store.montbell.jp/search/shopinfo/?shop_no=678596">mont-bell 池袋東武店 공식</a> - <a href="https://en.montbell.jp/products/goods/list.php?category=269000">mont-bell 베비 캐리어 라인업</a> - <a href="https://www.google.com/maps/search/?api=1&amp;query=モンベル+池袋東武店">구글맵 (池袋東武店·평점 4.0+)</a> - <a href="https://www.fashion-press.net/maps/pref_13/area_4/bline_2452">Fashion Press 매장 정보</a> - <a href="https://search.naver.com/search.naver?query=몽벨+아기띠+포케타블+후기">네이버 블로그 몽벨 아기띠 후기 검색</a> - <a href="https://www.youtube.com/results?search_query=mont-bell+baby+carrier+pocketable">유튜브 mont-bell 베비 캐리어 영상</a></p>
+<hr>
+</section>
+<section id="이케부쿠로-西出口-서출구-오사카나-매장" class="level3">
+<h3 class="anchored" data-anchor-id="이케부쿠로-西出口-서출구-오사카나-매장">16:30-17:00 · 이케부쿠로 西出口 (서출구) → 오사카나 매장</h3>
+<ul>
+<li><strong>16:30-17:00</strong> 도부 본점 → 도보 5-10분 (이케부쿠로 서출구·임산부 페이스)</li>
+<li><strong>돈키 池袋駅西口店 보너스 슬롯</strong> (옵션 X·D1 銀座本館 결정 락) = D3엔 들리지 않음. 만약 D1 銀座 슬롯 마진 부족 시 = D3 16:30~16:50 추가 가능 (몽벨 → 돈키 西口店 도보 4분·동전파스 25분·오사카나 도보 10분)</li>
+</ul>
+<hr>
+</section>
+<section id="오사카나-お魚総本家-디너-81607" class="level3">
+<h3 class="anchored" data-anchor-id="오사카나-お魚総本家-디너-81607">17:00-19:00 · ⭐ 오사카나 (お魚総本家) 디너 #81607</h3>
+<p><strong>예약 정보</strong>: - <strong>5/21 17:00 트레타 #81607</strong> - <strong>파고타츠석 (掘りごたつ)</strong> = 5세·임산부 친화 (다리 펴기) - <strong>셋 E = 점원 추천 오마카세</strong> ¥10,000-15,000/명 가드레일</p>
+<p><strong>일본어 1줄 (오사카나 첫 한 마디)</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>한국어</th>
+<th>일본어</th>
+<th>발음</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>17시 예약·이수억입니다</td>
+<td>17時 予約·李秀億 です</td>
+<td>쥬-시치지 요야쿠·리 슈오쿠데스</td>
+</tr>
+<tr class="even">
+<td>임산부라서 회 빼고 부탁드립니다</td>
+<td>妊娠中 で、生魚 抜いて お願いします</td>
+<td>닌신추데·나마자카나 누이테 오네가이시마스</td>
+</tr>
+<tr class="odd">
+<td>점원 추천 오마카세 부탁드립니다 (¥10,000-15,000)</td>
+<td>お任せ コース お願いします、1万-1.5万円 ぐらい</td>
+<td>오마카세 코-스 오네가이시마스·이치만~이치만고쎈엔 구라이</td>
+</tr>
+<tr class="even">
+<td>어린이 알레르기 있나요?</td>
+<td>お子様 アレルギー 情報 ありますか?</td>
+<td>오코사마 아레루기- 죠-호 아리마스카?</td>
+</tr>
+<tr class="odd">
+<td>변경·취소 정책</td>
+<td>変更·キャンセル ポリシー</td>
+<td>헨코- 캰세루 포리시-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>임산부 회피</strong> = 회·생어 초밥·생달걀·간 풀. 점원에 명시 의무.</p>
+<p><strong>5세 친화</strong> = 잇폰 아나고 (一本穴子)·계란 마키 (玉子巻き·완전 익힘)·새우 튀김.</p>
+<p><strong>매장 전화</strong> = <strong>03-3987-9861</strong> (D-2 5/19 변경·취소·알레르기 확인)</p>
+<blockquote class="blockquote">
+<p><a href="https://www.google.com/maps/search/?api=1&amp;query=お魚総本家+池袋西口">오사카나 소혼케 이케부쿠로 서출구점</a> · <a href="https://t.tableai.jp/">트레타 예약</a></p>
+</blockquote>
+<hr>
+</section>
+<section id="이케부쿠로-호텔-귀가" class="level3">
+<h3 class="anchored" data-anchor-id="이케부쿠로-호텔-귀가">19:00-21:30 · 이케부쿠로 → 호텔 귀가</h3>
+<ul>
+<li><strong>19:00-19:25</strong> 이케부쿠로 야마노테선 환승·도쿄역</li>
+<li><strong>19:25-19:55</strong> JR 케이요선 도쿄 → 마이하마 (30분)</li>
+<li><strong>19:55-20:15</strong> 마이하마 → 호텔 셔틀</li>
+<li><strong>20:15-21:00</strong> 호텔 7F 욕탕 (간단)</li>
+<li><strong>21:00-21:30</strong> 객실·취침 준비</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="별첨-자료" class="level2">
+<h2 class="anchored" data-anchor-id="별첨-자료">④ 별첨 자료</h2>
+<section id="사용자-컨펌재확인-큐-d-2-519d-day" class="level3">
+<h3 class="anchored" data-anchor-id="사용자-컨펌재확인-큐-d-2-519d-day">🚨 1. 사용자 컨펌·재확인 큐 (D-2 5/19·D-Day)</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>#</th>
+<th>항목</th>
+<th>방법</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>해리포터 5/21 (목) 운영시간 캘린더</td>
+<td>D-1 <a href="https://www.wbstudiotour.jp/">공식</a></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>오사카나 트레타 변경·취소·알레르기 정책</td>
+<td><strong>03-3987-9861 전화</strong> (D-2 5/19)</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><strong>몽벨 池袋東武店 정확 층·5/21 영업·베비 캐리어 재고</strong></td>
+<td><strong>03-3981-2211 전화 (도부) 또는 mont-bell 공식</strong> D-1</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>백로트 카페 메뉴·가격·결제</td>
+<td>D-Day 현장</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td>베비센터·수유실 정확 위치 (해리포터 내부)</td>
+<td>D-Day 입구 안내</td>
+</tr>
+<tr class="even">
+<td>6</td>
+<td>돈키 D1 슬롯 매진 시 D3 池袋駅西口店 대체 (보너스 옵션)</td>
+<td>D1 디너 후 결정</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="차-출처-검증" class="level3">
+<h3 class="anchored" data-anchor-id="차-출처-검증">🔍 2. 1차 출처 검증</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>사실</th>
+<th>검증</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>해리포터 스튜디오·도시마엔마에 도보 1분</td>
+<td>✅ Wikipedia</td>
+</tr>
+<tr class="even">
+<td>면적 30,000㎡·소요 3시간 30분·워크스루 포맷</td>
+<td>✅ Wikipedia</td>
+</tr>
+<tr class="odd">
+<td>베비카 무료·휠체어 접근·임산부 좌석 풀</td>
+<td>✅ 공식</td>
+</tr>
+<tr class="even">
+<td>마법부 아트리움·세계 최대 버터비어 바 = 도쿄 한정</td>
+<td>✅ Wikipedia</td>
+</tr>
+<tr class="odd">
+<td>도쿄 ↔︎ 이케부쿠로 야마노테 25분 직통</td>
+<td>✅ Yahoo 노선</td>
+</tr>
+<tr class="even">
+<td>몽벨 池袋東武店 도부 백화점 본점 입점·역 직결</td>
+<td>✅ mont-bell 공식·Fashion Press</td>
+</tr>
+<tr class="odd">
+<td>오사카나 영업 평일 17:00-04:00·연중무휴</td>
+<td>✅ menu.md</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="임산부-아람-안전-점검" class="level3">
+<h3 class="anchored" data-anchor-id="임산부-아람-안전-점검">🤰 3. 임산부 (아람) 안전 점검</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>카테고리</th>
+<th>결과</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>낙상</td>
+<td>✅ 평지·해리포터 베비카·휠체어</td>
+</tr>
+<tr class="even">
+<td>충격·진동</td>
+<td>✅ 워크스루·진동 없음</td>
+</tr>
+<tr class="odd">
+<td>고열</td>
+<td>✅ 5월 평년·실내 위주</td>
+</tr>
+<tr class="even">
+<td>균형</td>
+<td>✅</td>
+</tr>
+<tr class="odd">
+<td>식이</td>
+<td>✅ 백로트 카페 (확인 못 함·키즈 메뉴 가능)·오사카나 회 빼고·완전 익힘</td>
+</tr>
+<tr class="even">
+<td>격렬도</td>
+<td>✅ 평지 산책·해리포터 4시간 워크스루</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="세-준혁-페이스" class="level3">
+<h3 class="anchored" data-anchor-id="세-준혁-페이스">👶 4. 5세 (준혁) 페이스</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>슬롯</th>
+<th>평가</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>환승 3-4회</td>
+<td>△ 베비카·휠체어·임산부 옆</td>
+</tr>
+<tr class="even">
+<td>해리포터 4시간</td>
+<td>⭐⭐⭐⭐⭐ 9¾·버터비어·매장·5세 잭팟</td>
+</tr>
+<tr class="odd">
+<td>몽벨 도부 45분</td>
+<td>⭐⭐ 5세 = 매장 둘러보기 (5세 직접 잭팟 X·아빠·엄마 쇼핑 시간)</td>
+</tr>
+<tr class="even">
+<td>오사카나 2시간</td>
+<td>⭐⭐⭐⭐ 파고타츠·키즈 메뉴·잇폰 아나고</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="베비카휠체어-동선" class="level3">
+<h3 class="anchored" data-anchor-id="베비카휠체어-동선">🚼 5. 베비카·휠체어 동선</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>구간</th>
+<th>권장</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>마이하마 → 도쿄역</td>
+<td>케이요선 4호차 후미 (엘리베이터 가까움)</td>
+</tr>
+<tr class="even">
+<td>도쿄역 → 이케부쿠로</td>
+<td>야마노테 = 지상 평지·엘리베이터</td>
+</tr>
+<tr class="odd">
+<td>이케부쿠로 → 도시마엔마에</td>
+<td>서부센 = 베비카 OK</td>
+</tr>
+<tr class="even">
+<td>해리포터 내부</td>
+<td>무료 대여 베비카·임산부 휠체어 (옵션)</td>
+</tr>
+<tr class="odd">
+<td>오사카나 매장</td>
+<td>파고타츠 = 베비카 옆에 보관</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="화장실-매핑" class="level3">
+<h3 class="anchored" data-anchor-id="화장실-매핑">🚻 6. 화장실 매핑</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>슬롯</th>
+<th>위치</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>호텔 1F·객실</td>
+<td>–</td>
+</tr>
+<tr class="even">
+<td>마이하마역</td>
+<td>개찰 안·바깥</td>
+</tr>
+<tr class="odd">
+<td>도쿄역</td>
+<td>야마노테 환승 통로·다목적 풀</td>
+</tr>
+<tr class="even">
+<td>이케부쿠로역</td>
+<td>서출구 직후·다목적</td>
+</tr>
+<tr class="odd">
+<td>해리포터 스튜디오</td>
+<td>5 스테이션마다·다목적·기저귀대·수유실 (위치 확인 못 함·D-Day 입구)</td>
+</tr>
+<tr class="even">
+<td>백로트 카페</td>
+<td>매장 내</td>
+</tr>
+<tr class="odd">
+<td>몽벨 池袋東武店 (도부 백화점)</td>
+<td>도부 백화점 화장실 풀·기저귀대</td>
+</tr>
+<tr class="even">
+<td>오사카나</td>
+<td>매장 내</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="변수-대비" class="level3">
+<h3 class="anchored" data-anchor-id="변수-대비">🎯 7. 변수 대비</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>변수</th>
+<th>대응</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>해리포터 4시간 초과</td>
+<td>몽벨 단축·호텔 직행</td>
+</tr>
+<tr class="even">
+<td>5세 컨디션 ↓</td>
+<td>베비카·휠체어 활용·해리포터 베비센터</td>
+</tr>
+<tr class="odd">
+<td>임산부 부종 ↑</td>
+<td>호텔 일찍 귀가·욕탕 단축</td>
+</tr>
+<tr class="even">
+<td>오사카나 예약 변경</td>
+<td>03-3987-9861 직접 전화 (D-1 권장)</td>
+</tr>
+<tr class="odd">
+<td>우천</td>
+<td>해리포터·MUJI 실내 = 무관</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="핸드캐리-d3" class="level3">
+<h3 class="anchored" data-anchor-id="핸드캐리-d3">📦 8. 핸드캐리 (D3)</h3>
+<ul>
+<li>임산부 압박 양말·자외선차단제</li>
+<li>준혁 갈아입을 옷 1세트·캡 모자·비상 간식</li>
+<li>마타니티 마크</li>
+<li>보조 배터리 1-2개·일본 어댑터</li>
+<li>물병</li>
+<li>해리포터 굿즈 보관 비닐 1-2개</li>
+<li>오사카나 메뉴 PDF (스마트폰)</li>
+</ul>
+</section>
+<section id="일본어-핵심-문구-풀" class="level3">
+<h3 class="anchored" data-anchor-id="일본어-핵심-문구-풀">🇯🇵 9. 일본어 핵심 문구 풀</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>한국어</th>
+<th>일본어</th>
+<th>발음</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>임산부입니다</td>
+<td>妊婦 です</td>
+<td>닌푸데스</td>
+</tr>
+<tr class="even">
+<td>화장실 어디예요?</td>
+<td>お手洗い どこですか?</td>
+<td>오테아라이 도코데스카?</td>
+</tr>
+<tr class="odd">
+<td>회 빼고 부탁드립니다</td>
+<td>生魚 抜いて お願いします</td>
+<td>나마자카나 누이테 오네가이시마스</td>
+</tr>
+<tr class="even">
+<td>점원 추천 오마카세 부탁드립니다 (¥10,000-15,000)</td>
+<td>お任せ コース お願いします、1万-1.5万円 ぐらい</td>
+<td>오마카세 코-스 오네가이시마스</td>
+</tr>
+<tr class="odd">
+<td>키즈 메뉴 있나요?</td>
+<td>キッズメニュー ありますか?</td>
+<td>킷즈메뉴- 아리마스카?</td>
+</tr>
+<tr class="even">
+<td>카드 결제 됩니까?</td>
+<td>カード 払い できますか?</td>
+<td>카-도 바라이 데키마스카?</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="구글맵공식-url" class="level3">
+<h3 class="anchored" data-anchor-id="구글맵공식-url">🗺️ 10. 구글맵·공식 URL</h3>
+<ul>
+<li><a href="https://www.wbstudiotour.jp/">해리포터 스튜디오 공식</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Toshimaen-mae+Station">도시마엔마에역</a></li>
+<li><a href="https://store.montbell.jp/search/shopinfo/?shop_no=678596">몽벨 池袋東武店 공식</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=モンベル+池袋東武店">구글맵</a> · <a href="https://en.montbell.jp/products/goods/list.php?category=269000">베비 캐리어 라인업</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Ikebukuro+Station">이케부쿠로역</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=ドンキホーテ+池袋駅西口店">돈키 池袋駅西口店 (보너스)</a></li>
+<li><a href="./images/D3_03_ikebukuro_shopping.png">③ D3 이케부쿠로 쇼핑 동선 약도 (신규)</a></li>
+<li><a href="https://www.google.com/maps/search/?api=1&amp;query=お魚総本家+池袋西口">오사카나 소혼케 이케부쿠로 서출구점</a></li>
+<li><a href="https://www.google.com/maps/search/?api=1&amp;query=Tokyo+Station">도쿄역</a> · <a href="https://www.google.com/maps/search/?api=1&amp;query=Maihama+Station">마이하마역</a></li>
+<li>오사카나 매장 전화 = <strong>03-3987-9861</strong></li>
+</ul>
+</section>
+<section id="가족-코멘트" class="level3">
+<h3 class="anchored" data-anchor-id="가족-코멘트">💡 11. 가족 코멘트</h3>
+<p><strong>“오늘의 메인 카드”</strong>: - 🪄 <strong>해리포터 4시간</strong> = 마법부 아트리움·9¾ 플랫폼·버터비어·5세 인생샷 잭팟 - 🍣 <strong>오사카나 셋 E</strong> = 점원 추천 오마카세·임산부 회 빼기·잇폰 아나고 5세 친화 - 🛍️ <strong>MUJI 35분</strong> = 임산부 휴식·5세 자유 시간 가족 룰</p>
+<p><strong>“D3 컨셉”</strong>: &gt; <em>“마법 + 일식 = 가족 환승 풀데이의 가장 큰 보상 = 해리포터 4시간·오사카나 디너 2시간 = 가족 별도 잭팟”</em></p>
+<hr>
+<blockquote class="blockquote">
+<p>📅 작성: 2026-05-18 D-1 / v4 풀 재작성 (룰 28·29·30 적용·D1 디자인 모방) / 가족 컨시어지</p>
+</blockquote>
+</section>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "복사완료!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "복사완료!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<script src="2026-05-19-tokyo-2026-d3_files/libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
