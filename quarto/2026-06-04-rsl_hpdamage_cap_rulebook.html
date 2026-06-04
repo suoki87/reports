@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ko" xml:lang="ko"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>RSL 체력비례 데미지 캡 — 룰북 (Reference)</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/clipboard/clipboard.min.js"></script>
+<script src="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/quarto-html/popper.min.js"></script>
+<script src="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/quarto-html/anchor.min.js"></script>
+<link href="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/bootstrap/bootstrap-a7d4e792afa3acb8633513a98956af4b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<style>html{ scroll-behavior: smooth; }</style>
+<link rel="stylesheet" as="style" crossorigin="" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article toc-left">
+<div id="quarto-sidebar-toc-left" class="sidebar toc-left">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">목차</h2>
+   
+  <ul>
+  <li><a href="#rsl-체력비례-데미지-캡-룰북-reference" id="toc-rsl-체력비례-데미지-캡-룰북-reference" class="nav-link active" data-scroll-target="#rsl-체력비례-데미지-캡-룰북-reference">RSL 체력비례 데미지 캡 — 룰북 (Reference)</a>
+  <ul class="collapse">
+  <li><a href="#공통-캡이-걸리는-이유-공식" id="toc-공통-캡이-걸리는-이유-공식" class="nav-link" data-scroll-target="#공통-캡이-걸리는-이유-공식">0. 공통 — 캡이 걸리는 이유 (공식)</a></li>
+  <li><a href="#독-poison-단독" id="toc-독-poison-단독" class="nav-link" data-scroll-target="#독-poison-단독">1. 독 (Poison) — 단독</a>
+  <ul class="collapse">
+  <li><a href="#기본-동작" id="toc-기본-동작" class="nav-link" data-scroll-target="#기본-동작">1-1. 기본 동작</a></li>
+  <li><a href="#클랜보스-캡-난이도별" id="toc-클랜보스-캡-난이도별" class="nav-link" data-scroll-target="#클랜보스-캡-난이도별">1-2. 클랜보스 캡 (난이도별)</a></li>
+  <li><a href="#독-데미지는-고정fixed" id="toc-독-데미지는-고정fixed" class="nav-link" data-scroll-target="#독-데미지는-고정fixed">1-3. 독 데미지는 “고정(fixed)”</a></li>
+  </ul></li>
+  <li><a href="#hp번-hp-burn-단독" id="toc-hp번-hp-burn-단독" class="nav-link" data-scroll-target="#hp번-hp-burn-단독">2. HP번 (HP Burn) — 단독</a>
+  <ul class="collapse">
+  <li><a href="#기본-동작-1" id="toc-기본-동작-1" class="nav-link" data-scroll-target="#기본-동작-1">2-1. 기본 동작</a></li>
+  <li><a href="#클랜보스-캡-챔프-등급별-난이도-거의-무관" id="toc-클랜보스-캡-챔프-등급별-난이도-거의-무관" class="nav-link" data-scroll-target="#클랜보스-캡-챔프-등급별-난이도-거의-무관">2-2. 클랜보스 캡 — <strong>챔프 등급별</strong> (난이도 거의 무관)</a></li>
+  </ul></li>
+  <li><a href="#누크-적-최대hp-직접타-단독" id="toc-누크-적-최대hp-직접타-단독" class="nav-link" data-scroll-target="#누크-적-최대hp-직접타-단독">3. 누크 (적 최대HP 직접타) — 단독</a>
+  <ul class="collapse">
+  <li><a href="#기본-동작-2" id="toc-기본-동작-2" class="nav-link" data-scroll-target="#기본-동작-2">3-1. 기본 동작</a></li>
+  <li><a href="#컨텐츠별-캡" id="toc-컨텐츠별-캡" class="nav-link" data-scroll-target="#컨텐츠별-캡">3-2. 컨텐츠별 캡</a></li>
+  <li><a href="#캡은-타hit당-적용-다단히트-보상" id="toc-캡은-타hit당-적용-다단히트-보상" class="nav-link" data-scroll-target="#캡은-타hit당-적용-다단히트-보상">3-3. 캡은 <strong>타(hit)당</strong> 적용 → 다단히트 보상</a></li>
+  </ul></li>
+  <li><a href="#컨텐츠별-단독-가로-비교" id="toc-컨텐츠별-단독-가로-비교" class="nav-link" data-scroll-target="#컨텐츠별-단독-가로-비교">4. 컨텐츠별 — 단독 (가로 비교)</a></li>
+  <li><a href="#캡-초과-메커니즘-단독" id="toc-캡-초과-메커니즘-단독" class="nav-link" data-scroll-target="#캡-초과-메커니즘-단독">5. 캡 초과 메커니즘 — 단독</a>
+  <ul class="collapse">
+  <li><a href="#캡을-못-넘기는-것-오해-방지" id="toc-캡을-못-넘기는-것-오해-방지" class="nav-link" data-scroll-target="#캡을-못-넘기는-것-오해-방지">캡을 <strong>못</strong> 넘기는 것 (오해 방지)</a></li>
+  </ul></li>
+  <li><a href="#미파악-추정-근거-부족-단정-금지" id="toc-미파악-추정-근거-부족-단정-금지" class="nav-link" data-scroll-target="#미파악-추정-근거-부족-단정-금지">6. 미파악 / 추정 (근거 부족 — 단정 금지)</a></li>
+  <li><a href="#우리-시스템버섯커과의-차이-시사점" id="toc-우리-시스템버섯커과의-차이-시사점" class="nav-link" data-scroll-target="#우리-시스템버섯커과의-차이-시사점">7. 우리 시스템(버섯커)과의 차이 — 시사점</a></li>
+  <li><a href="#출처-목록" id="toc-출처-목록" class="nav-link" data-scroll-target="#출처-목록">출처 목록</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">RSL 체력비례 데미지 캡 — 룰북 (Reference)</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">공개</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">2026년 6월 4일</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="rsl-체력비례-데미지-캡-룰북-reference" class="level1">
+<h1>RSL 체력비례 데미지 캡 — 룰북 (Reference)</h1>
+<div class="callout callout-style-default callout-note callout-titled" title="TL;DR">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">노트</span>TL;DR
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<ul>
+<li><strong>결론</strong>: RSL은 maxHP 데미지(독·HP번·누크)에 <strong>유형·컨텐츠·챔프등급별로 다른 캡</strong>을 건다. 공식은 “캡 존재”만 명시, <strong>수치는 전부 커뮤니티 측정</strong>.</li>
+<li><strong>핵심 수치(클랜보스)</strong>: 독 40k(Hard)/50k(Brutal+) · HP번 50k(Rare)/75k(Epic·Leg) · 누크 ~75k raw 후 크리.</li>
+<li><strong>다음 액션</strong>: 우리 시스템(최종 flat 10000 단일캡) → RSL식 <code>% 기반 + 컨텐츠 차등 + base캡(외부곱 후적용)</code>으로 전환 검토.</li>
+</ul>
+</div>
+</div>
+<blockquote class="blockquote">
+<p>목적: Raid: Shadow Legends의 <em>최대체력 비례 데미지</em>(독·HP번·누크) 캡 규칙을 <strong>신뢰 가능한 근거와 함께</strong> 정리. 우리 게임 캡 설계 판단용 레퍼런스.</p>
+<p><strong>출처 신뢰도 등급</strong> - <strong>공식(★★★)</strong>: Plarium 게임 내 스킬 원문 / fandom wiki 스킬 텍스트. - <strong>권위 커뮤니티(★★)</strong>: ayumilove·hellhades·deadwoodjedi (데이터마이닝/장기 검증 사이트). - <strong>개별 측정(★)</strong>: reddit 스레드·댓글, 개인 실측 (교차검증 수에 따라 가감).</p>
+<p>⚠ <strong>공통 전제</strong>: Plarium은 <em>“캡이 존재한다”</em>만 공식화(클랜보스 패시브). <strong>모든 구체 수치는 커뮤니티 측정값</strong>이며 패치·난이도 티어로 변동 가능.</p>
+</blockquote>
+<hr>
+<section id="공통-캡이-걸리는-이유-공식" class="level2">
+<h2 class="anchored" data-anchor-id="공통-캡이-걸리는-이유-공식">0. 공통 — 캡이 걸리는 이유 (공식)</h2>
+<p>클랜보스(데몬로드) 패시브 <strong>Infernal Resilience</strong> 원문: &gt; “Decreases the damage the Demon Lord receives from <strong>HP Burn</strong> and <strong>Poison</strong> debuffs, <strong>as well as Skills that inflict damage based on enemy MAX HP</strong>.” &gt; — fandom wiki, Clan Boss 스킬 텍스트 (★★★ 공식)</p>
+<p>→ 독·HP번·누크 3종 maxHP 기반 데미지를 <em>모두</em> 감소시키는 패시브가 공식 존재. <strong>단 수치·방식(flat vs %)은 원문에 없음</strong> → 이하 수치는 전부 커뮤니티 측정(★~★★).</p>
+<p>추가 공식 제약: - <strong>디버프 슬롯 10개 한도</strong> — 독 스택 총량 상한. (fandom Clan Boss, ★★★)</p>
+<hr>
+</section>
+<section id="독-poison-단독" class="level2">
+<h2 class="anchored" data-anchor-id="독-poison-단독">1. 독 (Poison) — 단독</h2>
+<section id="기본-동작" class="level3">
+<h3 class="anchored" data-anchor-id="기본-동작">1-1. 기본 동작</h3>
+<ul>
+<li>1틱 = <strong>대상 MAX HP의 2.5% 또는 5%</strong> (스킬 버전별). 적이 턴 시작할 때 발동.</li>
+<li><strong>중첩 가능</strong> (디버프바 10칸 한도 내).</li>
+<li>출처: hellhades “Poison vs HP Burn” (★★)</li>
+</ul>
+</section>
+<section id="클랜보스-캡-난이도별" class="level3">
+<h3 class="anchored" data-anchor-id="클랜보스-캡-난이도별">1-2. 클랜보스 캡 (난이도별)</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>CB 난이도</th>
+<th>5% 독 캡/틱</th>
+<th>2.5% 독 캡/틱</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Hard</td>
+<td>40,000</td>
+<td>20,000</td>
+</tr>
+<tr class="even">
+<td>Brutal / Nightmare / Ultra-Nightmare</td>
+<td><strong>50,000</strong></td>
+<td>25,000</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>출처: ayumilove 독 페이지 — <em>“Hard: 40k damage per turn. Brutal/Ultra Nightmare: 50k damage per turn. These are 5% poison damage. 2.5% poison damage deal halves of the above values.”</em> (★★)</li>
+<li>교차검증: deadwoodjedi(<em>“poison capped at 50,000 at the highest tiers”</em>), hellhades Ultimate CB Guide(<em>“max out at 50,000 for poison”</em>), reddit g4rji4(<em>“maxed out at 50.000 … lower it is 40.000”</em>), <strong>사내 동료 실측(악몽·초악몽 모두 50k)</strong>. → <strong>신뢰 높음 ★★</strong> (5중+실측 일치)</li>
+<li><strong>핵심</strong>: 독 캡은 <strong>난이도(보스 HP)에 따라 상승하다 50k에서 고정</strong>.</li>
+</ul>
+</section>
+<section id="독-데미지는-고정fixed" class="level3">
+<h3 class="anchored" data-anchor-id="독-데미지는-고정fixed">1-3. 독 데미지는 “고정(fixed)”</h3>
+<ul>
+<li><strong>Weaken·Decrease DEF는 독 데미지를 못 올린다.</strong> (독은 fixed %maxHP)</li>
+<li>출처: reddit iqptt8 — <em>“Poison damage is fixed, weaken and Decrease defense increases your damage of other champs and also the warmaster mastery.”</em> (★, 단 커뮤니티 통념과 일치)</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="hp번-hp-burn-단독" class="level2">
+<h2 class="anchored" data-anchor-id="hp번-hp-burn-단독">2. HP번 (HP Burn) — 단독</h2>
+<section id="기본-동작-1" class="level3">
+<h3 class="anchored" data-anchor-id="기본-동작-1">2-1. 기본 동작</h3>
+<ul>
+<li>1턴당 = <strong>대상 MAX HP의 3%</strong>. 적 턴 시 발동. <strong>AoE 스플래시</strong>(모든 적).</li>
+<li><strong>중첩 불가</strong> (1대상 1개). 즉시 발동 가능(Ninja·Artak 등).</li>
+<li>출처: hellhades “Poison vs HP Burn” (★★)</li>
+</ul>
+</section>
+<section id="클랜보스-캡-챔프-등급별-난이도-거의-무관" class="level3">
+<h3 class="anchored" data-anchor-id="클랜보스-캡-챔프-등급별-난이도-거의-무관">2-2. 클랜보스 캡 — <strong>챔프 등급별</strong> (난이도 거의 무관)</h3>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>적용 챔프 등급</th>
+<th>HP번 캡/턴</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Rare</td>
+<td>50,000</td>
+</tr>
+<tr class="even">
+<td>Epic / Legendary</td>
+<td><strong>75,000</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>출처: ayumilove HP번 페이지 — <em>“Rare champions deal 50K damage from HP Burn per turn, while Epic and Legendary champions deal 75K damage from HP burn per turn.”</em> + 댓글 <em>“Bulwark(Rare) tic at 50K and Epic/Leggo apply it tic at 75K per turn”</em> (★★)</li>
+<li>난이도 무관 정황: ayumilove 댓글 <em>“HP burn does 75k on hard boss”</em> + <em>“does same against hard and brutal even though brutal has way more max HP”</em> → <strong>Hard에서 이미 75k 도달, 난이도 올라도 동일</strong> = 사실상 등급별 flat 캡. (★)</li>
+<li>HP번 캡 &gt; 독 캡인 보스 존재(예: Amius) → 거기선 3% HP번이 5% 독보다 셈. 출처: hellhades “Poison vs HP Burn” (★★)</li>
+<li><strong>핵심</strong>: HP번 캡은 <strong>챔프 레어도</strong>로 갈림(50k/75k), 난이도 스케일 거의 없음. (독과 분기 기준 다름!)</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="누크-적-최대hp-직접타-단독" class="level2">
+<h2 class="anchored" data-anchor-id="누크-적-최대hp-직접타-단독">3. 누크 (적 최대HP 직접타) — 단독</h2>
+<section id="기본-동작-2" class="level3">
+<h3 class="anchored" data-anchor-id="기본-동작-2">3-1. 기본 동작</h3>
+<ul>
+<li>damage = <strong>적 MAX HP × 스킬계수(%)</strong>. 자기 HP 아님.</li>
+<li><strong>크리 가능</strong>(C.DMG 스케일), <strong>방어로 거의 항상 감소</strong>(ignore-DEF로 증가).</li>
+<li>일부 챔프는 ATK 혼합: 예) Othorion = <code>(1.5 × ATK) + (적maxHP × 0.035)</code>.</li>
+<li>출처: hellhades “Best Enemy MAX HP Champions”(★★); Othorion 식 = reddit 1jg7bfm(★)</li>
+</ul>
+</section>
+<section id="컨텐츠별-캡" class="level3">
+<h3 class="anchored" data-anchor-id="컨텐츠별-캡">3-2. 컨텐츠별 캡</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>컨텐츠</th>
+<th>누크 캡</th>
+<th>비고</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>초기 던전(1~20)·<strong>잡몹 웨이브</strong>·둠타워 웨이브</td>
+<td><strong>무캡</strong></td>
+<td>원샷 가능</td>
+</tr>
+<tr class="even">
+<td>후기 던전 보스 (Dragon Hard 등)</td>
+<td>적maxHP <strong>10%</strong> / 타</td>
+<td>Plarium이 후에 추가</td>
+</tr>
+<tr class="odd">
+<td>Amius (Lunar Archon)</td>
+<td>적maxHP <strong>5%</strong> / 타</td>
+<td>더 강한 누커 등장 후 추가</td>
+</tr>
+<tr class="even">
+<td>클랜보스</td>
+<td><strong>~75,000 raw / 타</strong> 후 크리 곱</td>
+<td>패시브 명시(수치는 측정)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>출처: hellhades “Best Enemy MAX HP Champions” — <em>“10% MAX HP damage cap (e.g.&nbsp;Dragon Hard), followed by 5% caps (e.g.&nbsp;Amius) … Clan Bosses … explicit caps listed in their passive skills”</em> (★★)</li>
+<li>CB 75k·“크리 전 raw”: reddit 15p1tbb — <em>“clan boss sets all max HP hits on the front end at 75k (raw damage), then it’s multiplied by Crit damage”</em> (★, 단일 메인 스레드)</li>
+<li>보강: reddit 15mop6a — <em>“max HP champs C.DMG 220~250 … typically hit for cap”</em> (★)</li>
+</ul>
+</section>
+<section id="캡은-타hit당-적용-다단히트-보상" class="level3">
+<h3 class="anchored" data-anchor-id="캡은-타hit당-적용-다단히트-보상">3-3. 캡은 <strong>타(hit)당</strong> 적용 → 다단히트 보상</h3>
+<ul>
+<li>3히트 스킬 = 각 10% → 캐스트당 30%. 다단히트 챔프(Gnut 3-hit)가 핵심.</li>
+<li>출처: hellhades — <em>“due to damage caps, more hits is essentially a massive boost”</em> (Gnut 3×10%, 2-Gnut=60%) (★★)</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="컨텐츠별-단독-가로-비교" class="level2">
+<h2 class="anchored" data-anchor-id="컨텐츠별-단독-가로-비교">4. 컨텐츠별 — 단독 (가로 비교)</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>컨텐츠</th>
+<th>독</th>
+<th>HP번</th>
+<th>누크</th>
+<th>캡 방식</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>잡몹 웨이브</td>
+<td>%maxHP</td>
+<td>%maxHP(AoE 강력)</td>
+<td><strong>무캡</strong></td>
+<td>없음</td>
+</tr>
+<tr class="even">
+<td>초기 던전(1~20)</td>
+<td>%maxHP</td>
+<td>%maxHP</td>
+<td><strong>무캡</strong>(원샷)</td>
+<td>없음</td>
+</tr>
+<tr class="odd">
+<td>후기 던전·둠타워 보스</td>
+<td>%maxHP</td>
+<td>%maxHP</td>
+<td><strong>10%/타</strong> (Amius 5%)</td>
+<td><strong>% 캡</strong></td>
+</tr>
+<tr class="even">
+<td><strong>클랜보스</strong></td>
+<td><strong>40k/50k</strong>(난이도)</td>
+<td><strong>50k/75k</strong>(등급)</td>
+<td><strong>~75k raw</strong>(측정)</td>
+<td><strong>flat 절대캡</strong></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>설계 원리</strong>: HP 유한한 컨텐츠 = <strong>%캡</strong>(스케일 유지), HP 극대 클랜보스 = <strong>flat캡</strong>(붕괴 방지).</li>
+<li>클랜보스 난이도: Easy/Normal/Hard/Brutal/Nightmare/Ultra-Nightmare (fandom ★★★). 캡은 <em>“varies by boss level”</em> (deadwoodjedi ★★).</li>
+</ul>
+<hr>
+</section>
+<section id="캡-초과-메커니즘-단독" class="level2">
+<h2 class="anchored" data-anchor-id="캡-초과-메커니즘-단독">5. 캡 초과 메커니즘 — 단독</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>#</th>
+<th>수단</th>
+<th>효과</th>
+<th>적용 대상</th>
+<th>출처 / 신뢰</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><strong>Poison Sensitivity +25%</strong></td>
+<td>독 50k → <strong>62,500</strong> (캡 위 곱)</td>
+<td>독</td>
+<td>reddit oqnqm1 <em>“instead of 50k its 62500”</em> / <strong>★★</strong>(직접 측정+다중 정황)</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><strong>크리티컬 (누크)</strong></td>
+<td>캡이 raw면 ×(1+C.DMG) → 캡 초과</td>
+<td>누크</td>
+<td>reddit 15p1tbb / ★</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><strong>Giant Slayer / Warmaster 마스터리</strong></td>
+<td>스킬과 <strong>별개 데미지 인스턴스</strong>(자기 hit, def 감소받음) → 합산이 단일 스킬캡 무관</td>
+<td>별도</td>
+<td>reddit lnjfd1 <em>“def always reducing Warmaster/Giant Slayer damage”</em> / <strong>★★</strong></td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><strong>다단히트</strong></td>
+<td>타마다 캡 따로 → N×캡</td>
+<td>누크</td>
+<td>hellhades / ★★</td>
+</tr>
+</tbody>
+</table>
+<section id="캡을-못-넘기는-것-오해-방지" class="level3">
+<h3 class="anchored" data-anchor-id="캡을-못-넘기는-것-오해-방지">캡을 <strong>못</strong> 넘기는 것 (오해 방지)</h3>
+<ul>
+<li><strong>Weaken / Decrease DEF</strong> → 독·HP번(DoT) 데미지 <strong>못 올림</strong> (DoT는 fixed). 일반타·Warmaster 마스터리에만 작용. 출처: reddit iqptt8 / ★</li>
+</ul>
+<p>→ <strong>패턴(확정된 1번이 증명)</strong>: 캡은 <strong>base(%maxHP)에 걸리고</strong>, <em>그 효과 전용 곱</em>(Poison Sensitivity=독 전용, Crit=누크)이 캡 <em>뒤</em> 적용되면 초과. 일반 데미지 증폭(Weaken)은 DoT엔 무효.</p>
+<hr>
+</section>
+</section>
+<section id="미파악-추정-근거-부족-단정-금지" class="level2">
+<h2 class="anchored" data-anchor-id="미파악-추정-근거-부족-단정-금지">6. 미파악 / 추정 (근거 부족 — 단정 금지)</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>항목</th>
+<th>현 상태</th>
+<th>막힌 이유</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>CB <strong>누크 캡의 정확 수치 &amp; 난이도별 차등</strong></td>
+<td>“~75k” 단일 언급뿐</td>
+<td>reddit 15p1tbb 1개 + <em>“varies by boss level”</em>만. 티어별 표 없음</td>
+</tr>
+<tr class="even">
+<td>누크 캡 <strong>크리 전(raw) vs 후(천장)</strong> 순서</td>
+<td>보스별 다를 수 있음</td>
+<td>15p1tbb(raw 후 크리) vs Hydra “크리뎀으로 캡 도달”(천장) 상충</td>
+</tr>
+<tr class="odd">
+<td>HP번 캡의 <strong>난이도 스케일 여부</strong></td>
+<td>등급별 flat로 보임</td>
+<td>“Hard에서 75k” 정황뿐, 난이도 표 없음</td>
+</tr>
+<tr class="even">
+<td>Weaken/증뎀의 <strong>비-DoT 적용 정확 순서</strong></td>
+<td>DoT엔 무효 확인</td>
+<td>일반타 파이프라인 위치 미측정</td>
+</tr>
+</tbody>
+</table>
+<p>→ 확정 필요 시: <strong>게임 내 직접 실측</strong>(고크리뎀 누커로 CB 1히트 관찰) 또는 <strong>HellHades/ayumilove 스킬 multiplier DB 직접 조회</strong>.</p>
+<hr>
+</section>
+<section id="우리-시스템버섯커과의-차이-시사점" class="level2">
+<h2 class="anchored" data-anchor-id="우리-시스템버섯커과의-차이-시사점">7. 우리 시스템(버섯커)과의 차이 — 시사점</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>축</th>
+<th>RSL</th>
+<th>우리 (<code>DamageCalc.ApplyDamageCap</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>캡 형태</td>
+<td>%(던전) + flat(CB), 효과·등급·난이도 차등</td>
+<td><strong>flat 10000 단일</strong></td>
+</tr>
+<tr class="even">
+<td>캡 위치</td>
+<td>base에 적용(독·누크) → 외부 곱이 초과 가능</td>
+<td><strong>최종(크리·방어·상성 후) 클램프</strong> → 초과 불가</td>
+</tr>
+<tr class="odd">
+<td>컨텐츠 차등</td>
+<td>웨이브 무캡/던전%/CB flat</td>
+<td><strong>없음</strong></td>
+</tr>
+<tr class="even">
+<td>초과 여지</td>
+<td>Poison Sensitivity·크리·마스터리</td>
+<td><strong>없음</strong> (어떤 곱도 10000 못 넘음)</td>
+</tr>
+</tbody>
+</table>
+<p>→ 개선 방향: (a) 캡을 <strong>% maxHP 기반</strong>으로 (b) <strong>컨텐츠/보스별 차등</strong> (c) 최고HP 컨텐츠만 flat (d) 캡을 <strong>base에 걸어</strong> 크리·증폭이 보상받게 — 가 RSL 정합 설계.</p>
+<hr>
+</section>
+<section id="출처-목록" class="level2">
+<h2 class="anchored" data-anchor-id="출처-목록">출처 목록</h2>
+<ul>
+<li><strong>fandom Clan Boss wiki</strong> (Infernal Resilience 패시브·디버프 10칸) — 공식 스킬 텍스트 ★★★ : https://raidshadowlegends.fandom.com/wiki/Clan_Boss</li>
+<li><strong>ayumilove 독 페이지</strong> (Hard 40k / Brutal·UNM 50k, 2.5%=절반) ★★ : ayumilove.net/raid-shadow-legends-poison-skill-champions/</li>
+<li><strong>ayumilove HP번 페이지</strong> (Rare 50k / Epic·Leg 75k) ★★ : ayumilove.net/raid-shadow-legends-hp-burn-skill-champions/</li>
+<li><strong>hellhades “Poison vs HP Burn”</strong> (독 2.5/5%·중첩, HP번 3%·비중첩, Amius HP번 캡&gt;독) ★★ : hellhades.com/poison-vs-hp-burn-in-raid-shadow-legends-which-is-better/</li>
+<li><strong>hellhades “Best Enemy MAX HP Champions”</strong> (던전 10%/Amius 5%/CB flat, 타당 캡, 크리·ignore-DEF) ★★ : hellhades.com/best-enemy-max-hp-champions-in-raid-shadow-legends/</li>
+<li><strong>hellhades “Poison Sensitivity”</strong> (+25%, 5%→6.25%) ★★ : hellhades.com/poison-sensitivity-raid-shadow-legends/</li>
+<li><strong>deadwoodjedi CB 가이드</strong> (Infernal Resilience 요약, 캡 varies by level, 독 50k) ★★ : deadwoodjedi.com/raids-ultimate-beginner-clan-boss-guide/</li>
+<li><strong>reddit g4rji4</strong> (독 50k/40k) ★ ; <strong>oqnqm1</strong> (Poison Sensitivity → 62,500) ★ ; <strong>15p1tbb</strong> (CB 누크 75k raw 후 크리) ★ ; <strong>15mop6a</strong> (누커 C.DMG 220~250 hit for cap) ★ ; <strong>lnjfd1</strong> (Warmaster/Giant Slayer def 감소·별도) ★ ; <strong>iqptt8</strong> (독 fixed, weaken 무효) ★ ; <strong>1jg7bfm</strong> (Othorion 누크식) ★</li>
+<li><strong>사내 동료 실측</strong> (독 NM·UNM 모두 50k) — 1차 실측, ayumilove와 일치</li>
+</ul>
+<blockquote class="blockquote">
+<p>본 룰북 수치는 ⚠ 대부분 커뮤니티 측정. Plarium 공식 확정은 “캡 존재”(패시브)·“디버프 10칸”까지. 패치로 변동 가능 — 갱신 시 출처 재확인 필요.</p>
+</blockquote>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "복사완료!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "복사완료!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<script src="2026-06-04-rsl_hpdamage_cap_rulebook_files/libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
