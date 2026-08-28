@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ko" xml:lang="ko"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>AFK Arena vs RAID — 스킬 구조 비교</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="2026-08-28-afk-vs-rsl-skill-structure_files/libs/clipboard/clipboard.min.js"></script>
+<script src="2026-08-28-afk-vs-rsl-skill-structure_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="2026-08-28-afk-vs-rsl-skill-structure_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="2026-08-28-afk-vs-rsl-skill-structure_files/libs/quarto-html/popper.min.js"></script>
+<script src="2026-08-28-afk-vs-rsl-skill-structure_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="2026-08-28-afk-vs-rsl-skill-structure_files/libs/quarto-html/anchor.min.js"></script>
+<link href="2026-08-28-afk-vs-rsl-skill-structure_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="2026-08-28-afk-vs-rsl-skill-structure_files/libs/quarto-html/quarto-syntax-highlighting-acf12a64177840b8d86f2d4f01b2e9fb.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="2026-08-28-afk-vs-rsl-skill-structure_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="2026-08-28-afk-vs-rsl-skill-structure_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="2026-08-28-afk-vs-rsl-skill-structure_files/libs/bootstrap/bootstrap-a699dc4f48f3d559d6d2fd3ffd871bd9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<style>html{ scroll-behavior: smooth; }</style>
+<link rel="stylesheet" as="style" crossorigin="" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&amp;display=swap">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article toc-left">
+<div id="quarto-sidebar-toc-left" class="sidebar toc-left">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">목차</h2>
+   
+  <ul>
+  <li><a href="#afk-arena-vs-raid-스킬-구조-비교" id="toc-afk-arena-vs-raid-스킬-구조-비교" class="nav-link active" data-scroll-target="#afk-arena-vs-raid-스킬-구조-비교">AFK Arena vs RAID — 스킬 구조 비교</a>
+  <ul class="collapse">
+  <li><a href="#한-줄-결론" id="toc-한-줄-결론" class="nav-link" data-scroll-target="#한-줄-결론">한 줄 결론</a></li>
+  <li><a href="#프레임-교정-턴제-vs-실시간은-절반만-맞다" id="toc-프레임-교정-턴제-vs-실시간은-절반만-맞다" class="nav-link" data-scroll-target="#프레임-교정-턴제-vs-실시간은-절반만-맞다">프레임 교정 — “턴제 vs 실시간”은 절반만 맞다</a></li>
+  <li><a href="#시계를-두-개로-쪼갰다" id="toc-시계를-두-개로-쪼갰다" class="nav-link" data-scroll-target="#시계를-두-개로-쪼갰다">1. 시계를 두 개로 쪼갰다</a>
+  <ul class="collapse">
+  <li><a href="#이게-만드는-것-캐릭터-사분면" id="toc-이게-만드는-것-캐릭터-사분면" class="nav-link" data-scroll-target="#이게-만드는-것-캐릭터-사분면">이게 만드는 것 — 캐릭터 사분면</a></li>
+  </ul></li>
+  <li><a href="#에너지는-딜량이-아니라-행동-횟수를-센다" id="toc-에너지는-딜량이-아니라-행동-횟수를-센다" class="nav-link" data-scroll-target="#에너지는-딜량이-아니라-행동-횟수를-센다">2. 에너지는 딜량이 아니라 행동 횟수를 센다</a>
+  <ul class="collapse">
+  <li><a href="#파생-아키타입-2종" id="toc-파생-아키타입-2종" class="nav-link" data-scroll-target="#파생-아키타입-2종">파생 아키타입 2종</a></li>
+  </ul></li>
+  <li><a href="#캐릭터-안에-ai-스크립트가-박혀-있다-핵심" id="toc-캐릭터-안에-ai-스크립트가-박혀-있다-핵심" class="nav-link" data-scroll-target="#캐릭터-안에-ai-스크립트가-박혀-있다-핵심">3. 캐릭터 안에 AI 스크립트가 박혀 있다 ← 핵심</a>
+  <ul class="collapse">
+  <li><a href="#부작용까지-설계에-넣었다" id="toc-부작용까지-설계에-넣었다" class="nav-link" data-scroll-target="#부작용까지-설계에-넣었다">부작용까지 설계에 넣었다</a></li>
+  </ul></li>
+  <li><a href="#공간을-자원으로-만들었다" id="toc-공간을-자원으로-만들었다" class="nav-link" data-scroll-target="#공간을-자원으로-만들었다">4. 공간을 자원으로 만들었다</a></li>
+  <li><a href="#궁극기-시간-정지-순간을-인공-생성" id="toc-궁극기-시간-정지-순간을-인공-생성" class="nav-link" data-scroll-target="#궁극기-시간-정지-순간을-인공-생성">5. 궁극기 = 시간 정지 → “순간”을 인공 생성</a></li>
+  <li><a href="#성장이-스킬-텍스트를-다시-쓴다" id="toc-성장이-스킬-텍스트를-다시-쓴다" class="nav-link" data-scroll-target="#성장이-스킬-텍스트를-다시-쓴다">6. 성장이 스킬 텍스트를 다시 쓴다</a></li>
+  <li><a href="#전체-대조표" id="toc-전체-대조표" class="nav-link" data-scroll-target="#전체-대조표">전체 대조표</a></li>
+  <li><a href="#실패-모드-이-구조를-가져올-때" id="toc-실패-모드-이-구조를-가져올-때" class="nav-link" data-scroll-target="#실패-모드-이-구조를-가져올-때">실패 모드 — 이 구조를 가져올 때</a>
+  <ul class="collapse">
+  <li><a href="#밸런싱-자유도가-급감한다" id="toc-밸런싱-자유도가-급감한다" class="nav-link" data-scroll-target="#밸런싱-자유도가-급감한다">① 밸런싱 자유도가 급감한다</a></li>
+  <li><a href="#콘텐츠-제작-비용이-계속-든다" id="toc-콘텐츠-제작-비용이-계속-든다" class="nav-link" data-scroll-target="#콘텐츠-제작-비용이-계속-든다">② 콘텐츠 제작 비용이 계속 든다</a></li>
+  <li><a href="#이-분석이-틀릴-조건" id="toc-이-분석이-틀릴-조건" class="nav-link" data-scroll-target="#이-분석이-틀릴-조건">③ 이 분석이 틀릴 조건</a></li>
+  <li><a href="#후속작-신호" id="toc-후속작-신호" class="nav-link" data-scroll-target="#후속작-신호">④ 후속작 신호</a></li>
+  </ul></li>
+  <li><a href="#출처" id="toc-출처" class="nav-link" data-scroll-target="#출처">출처</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">AFK Arena vs RAID — 스킬 구조 비교</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">공개</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">2026년 8월 28일</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="afk-arena-vs-raid-스킬-구조-비교" class="level1">
+<h1>AFK Arena vs RAID — 스킬 구조 비교</h1>
+<blockquote class="blockquote">
+<p>실시간 전투가 전략을 어디에 숨기는가 작성 2026-08-28 · 대상 독자: 메타 디자이너</p>
+</blockquote>
+<hr>
+<section id="한-줄-결론" class="level2">
+<h2 class="anchored" data-anchor-id="한-줄-결론">한 줄 결론</h2>
+<p><strong>RSL은 “순서”를 전략 자원으로 쓰고, AFK Arena는 “동시성”을 전략 자원으로 쓴다.</strong></p>
+<p>그래서 AFK 캐릭터의 스킬은 <em>플레이어가 골라 쓰는 도구</em>가 아니라, <strong>조건이 맞으면 알아서 터지도록 미리 조립된 기계</strong>다.</p>
+<hr>
+</section>
+<section id="프레임-교정-턴제-vs-실시간은-절반만-맞다" class="level2">
+<h2 class="anchored" data-anchor-id="프레임-교정-턴제-vs-실시간은-절반만-맞다">프레임 교정 — “턴제 vs 실시간”은 절반만 맞다</h2>
+<p>두 게임 다 사실상 자동 전투다. RSL도 대부분 오토로 돌린다.</p>
+<p>진짜 차이는 <strong>결정 해상도</strong>다 — 한 전투에서 플레이어가 개입할 수 있는 지점의 개수.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th></th>
+<th>RSL</th>
+<th>AFK Arena</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>전투 중 개입</td>
+<td>매 턴 (20~60회)</td>
+<td>궁극기 5회 (대부분 오토)</td>
+</tr>
+<tr class="even">
+<td>전투 전 개입</td>
+<td>챔피언·기어·마스터리</td>
+<td>조합·배치·SI·가구·각인·팩션</td>
+</tr>
+<tr class="odd">
+<td>전략 무게중심</td>
+<td><strong>실행</strong></td>
+<td><strong>조립</strong></td>
+</tr>
+</tbody>
+</table>
+<p>AFK Arena가 한 일은 “실시간이라 전략을 못 넣는 문제를 푼 것”이 아니라, <strong>빼앗긴 결정 해상도를 다른 곳으로 이전한 것</strong>이다.</p>
+<p>이전 경로가 아래 5개다.</p>
+<hr>
+</section>
+<section id="시계를-두-개로-쪼갰다" class="level2">
+<h2 class="anchored" data-anchor-id="시계를-두-개로-쪼갰다">1. 시계를 두 개로 쪼갰다</h2>
+<p><strong>RSL의 시계는 하나다.</strong> 턴 미터가 차면 턴이 오고, 쿨다운도 턴 단위로 깎인다. SPD 하나가 행동 빈도와 스킬 사이클을 동시에 지배한다. 스피드 튜닝이 강력한 이유가 이것 — 축이 하나라서 완전히 계산 가능하다.</p>
+<p><strong>AFK Arena는 둘이다.</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>시계</th>
+<th>자원</th>
+<th>지배 스탯</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td>에너지 0→1000</td>
+<td>행동 <em>횟수</em> (간접)</td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td>실초 쿨다운</td>
+<td>Haste</td>
+</tr>
+</tbody>
+</table>
+<p>평타조차 쿨다운을 가진 스킬로 취급된다 (대부분 1.8초).</p>
+<p>Haste는 시계 B만 직접 압축한다: <code>최종 CD = 기본 CD / (1 + Haste/150)</code></p>
+<section id="이게-만드는-것-캐릭터-사분면" class="level3">
+<h3 class="anchored" data-anchor-id="이게-만드는-것-캐릭터-사분면">이게 만드는 것 — 캐릭터 사분면</h3>
+<ul>
+<li>궁극기 빠름 + 보조 느림 → <strong>한 방 폭발형</strong></li>
+<li>궁극기 느림 + 보조 빠름 → <strong>지속 압박형</strong></li>
+<li>둘 다 빠름 → 다른 데서 코스트 회수</li>
+<li>둘 다 느림 → 한 번에 판을 끝내는 결전형</li>
+</ul>
+<p><strong>RSL에서는 이 사분면이 원리적으로 안 만들어진다.</strong> 축이 하나라 “빠른 챔프↔︎느린 챔프” 1차원 스펙트럼뿐이고, 스킬 회전 속도는 그 축의 종속 변수다.</p>
+<hr>
+</section>
+</section>
+<section id="에너지는-딜량이-아니라-행동-횟수를-센다" class="level2">
+<h2 class="anchored" data-anchor-id="에너지는-딜량이-아니라-행동-횟수를-센다">2. 에너지는 딜량이 아니라 행동 횟수를 센다</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>획득 경로</th>
+<th>규칙</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>시전</td>
+<td><strong>고정값</strong> (평타 약 70~120). 준 피해량 무관</td>
+</tr>
+<tr class="even">
+<td>피격</td>
+<td><strong>고정값</strong>. 받은 피해량 무관, <em>0만 아니면</em> 됨</td>
+</tr>
+<tr class="odd">
+<td>처치</td>
+<td><strong>200 고정</strong> (소환수 제외)</td>
+</tr>
+<tr class="even">
+<td>회피·실드로 막힘</td>
+<td><strong>에너지 안 들어옴</strong></td>
+</tr>
+</tbody>
+</table>
+<section id="파생-아키타입-2종" class="level3">
+<h3 class="anchored" data-anchor-id="파생-아키타입-2종">파생 아키타입 2종</h3>
+<p><strong>에너지 배터리</strong> — 다단히트로 아군 궁극기를 밀어 올리는 서포터. RSL의 턴 미터 부스트와 목적은 같으나 성질이 다르다. RSL은 <em>즉발</em>(한 번에 30% 밀기), AFK는 <em>지속 압력</em>(전투 내내 팀 사이클 단축).</p>
+<p><strong>에너지 파괴</strong> — CC로 상대 행동을 끊는다. 여기서 AFK의 CC는 <strong>두 번 이득</strong>을 본다.</p>
+<ol type="1">
+<li>상대가 행동을 못 하니 시전 에너지가 안 쌓임</li>
+<li>결정타 — <strong>시전 중 인터럽트되면 그 스킬은 쿨다운에 들어가고 회전은 다음으로 넘어간다</strong></li>
+</ol>
+<p>즉 <strong>CC가 상대 자원을 소각한다.</strong> 늦추는 게 아니다.</p>
+<p>RSL의 스턴은 턴 하나를 뺏지만 쿨다운은 보존된다. AFK의 CC는 시간 축 위의 생산량 자체를 지운다.</p>
+<blockquote class="blockquote">
+<p>CC 우선순위 계층: <strong>Freeze &gt; Move &gt; Stun &gt; Fear</strong></p>
+</blockquote>
+<hr>
+</section>
+</section>
+<section id="캐릭터-안에-ai-스크립트가-박혀-있다-핵심" class="level2">
+<h2 class="anchored" data-anchor-id="캐릭터-안에-ai-스크립트가-박혀-있다-핵심">3. 캐릭터 안에 AI 스크립트가 박혀 있다 ← 핵심</h2>
+<blockquote class="blockquote">
+<p>쿨다운이 돈 스킬이 여러 개면, <strong>영웅마다 고유한 우선순위 순서</strong>에 따라 높은 것부터 시전된다. 궁극기가 항상 최우선.</p>
+</blockquote>
+<p>RSL에서 “이번 턴에 A2를 쓸까 A3을 쓸까”는 플레이어의 결정이다. AFK에서 그 결정은 <strong>캐릭터 디자인 시점에 이미 구워져 있다.</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>RSL 캐릭터</th>
+<th>AFK 캐릭터</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>정체</td>
+<td><strong>카드 4장</strong> (도구 상자)</td>
+<td><strong>회전 기계 1대</strong></td>
+</tr>
+<tr class="even">
+<td>강함</td>
+<td>결정적 순간에 쓸 강한 카드</td>
+<td>방치했을 때 좋은 결과를 내는 순서</td>
+</tr>
+<tr class="odd">
+<td>플레이어 실력</td>
+<td>상황 판단·실행</td>
+<td>기계 선정·배치</td>
+</tr>
+</tbody>
+</table>
+<p><strong>AFK 영웅의 개성은 “스킬이 세다”가 아니라 “이 기계는 이렇게 돈다”에서 온다.</strong> 스킬 목록이 캐릭터가 아니라, 스킬 <strong>순서</strong>가 캐릭터다.</p>
+<section id="부작용까지-설계에-넣었다" class="level3">
+<h3 class="anchored" data-anchor-id="부작용까지-설계에-넣었다">부작용까지 설계에 넣었다</h3>
+<blockquote class="blockquote">
+<p>Haste를 올리면 <strong>회전 순서가 바뀌어</strong> 의도하지 않은 스킬이 나갈 수 있다.</p>
+</blockquote>
+<p><strong>스탯 최적화가 단조 증가가 아니다.</strong> 올릴수록 무조건 좋아지지 않는다.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th></th>
+<th>RSL 스피드 오버슈트</th>
+<th>AFK Haste 오버슈트</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>깨지는 것</td>
+<td><strong>팀 간 동기화</strong></td>
+<td><strong>캐릭터 내부 회전</strong></td>
+</tr>
+<tr class="even">
+<td>성격</td>
+<td>수학 퍼즐 (스프레드시트로 풀림)</td>
+<td>실험 퍼즐 (반결정적)</td>
+</tr>
+</tbody>
+</table>
+<p>목표(최적화할 거리를 준다)는 같고, 요구하는 플레이어 유형이 다르다.</p>
+<hr>
+</section>
+</section>
+<section id="공간을-자원으로-만들었다" class="level2">
+<h2 class="anchored" data-anchor-id="공간을-자원으로-만들었다">4. 공간을 자원으로 만들었다</h2>
+<p><strong>RSL에는 위치가 없다.</strong> 자리 번호는 있으나 전투 결과에 영향이 없고, 타겟팅은 랜덤 또는 조건(최고 HP 등)이다.</p>
+<p>AFK Arena는 위치를 실제 시스템으로 쓴다.</p>
+<ul>
+<li><strong>근접/원거리가 영웅 고유 속성</strong> — 개별 스킬 사거리로 정해지는 게 아니다</li>
+<li>전열 2명이 개전 즉시 맞붙는다</li>
+<li><strong>시작과 동시에 적 후열로 순간이동하는 암살자</strong> 존재</li>
+<li>위치 기반 타겟팅이 스킬 텍스트에 들어간다 — “정면 위치의 적”, “가장 먼 적”</li>
+<li><strong>위치 조작 자체가 스킬 효과</strong> — 넉업, 붙잡아 던지기, 밀치기</li>
+</ul>
+<p>이건 축 하나 추가가 아니라, <strong>RSL 스킬 사전에 존재할 수 없는 효과 카테고리가 통째로 열린 것</strong>이다. “적을 던진다”는 좌표 없는 시스템에서는 쓸 수 없는 문장이다.</p>
+<p>그리고 이 축은 <strong>배치 화면</strong>이라는 전투 전 결정 지점을 하나 더 만든다.</p>
+<hr>
+</section>
+<section id="궁극기-시간-정지-순간을-인공-생성" class="level2">
+<h2 class="anchored" data-anchor-id="궁극기-시간-정지-순간을-인공-생성">5. 궁극기 = 시간 정지 → “순간”을 인공 생성</h2>
+<p>실시간 전투의 근본 문제: <strong>모든 일이 동시에 일어나서 아무것도 특별해 보이지 않는다.</strong> 턴제는 극적 순간을 공짜로 얻는다 — 매 턴이 명시적 사건이니까.</p>
+<p>AFK의 해법은 궁극기 연출 중 <strong>프리즈</strong>다.</p>
+<ul>
+<li>시전 영웅만 행동, 나머지 정지</li>
+<li>단 <strong>버프 지속시간은 계속 흐른다</strong></li>
+<li>다른 아군 궁극기는 이 창 안에서도 발동 가능</li>
+</ul>
+<p><strong>앞의 두 항목이 세트로 중요하다.</strong> 프리즈는 연출 장치인 동시에 <strong>버프를 소각하는 비용</strong>이다. 무료가 아니다.</p>
+<p>그래서 “지금 쓸까, 아군 버프가 걸린 뒤에 쓸까”라는 판단이 성립한다 — 실시간에서 플레이어에게 남은 거의 유일한 실행 결정이 여기 걸려 있다.</p>
+<hr>
+</section>
+<section id="성장이-스킬-텍스트를-다시-쓴다" class="level2">
+<h2 class="anchored" data-anchor-id="성장이-스킬-텍스트를-다시-쓴다">6. 성장이 스킬 텍스트를 다시 쓴다</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>RSL</th>
+<th>AFK Arena</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>성장이 바꾸는 것</td>
+<td>주로 <strong>스탯</strong>·<strong>쿨다운 턴 수</strong></td>
+<td>스탯 + <strong>스킬 조건문 자체</strong></td>
+</tr>
+</tbody>
+</table>
+<p>SI(시그니처 아이템)와 가구는 특정 임계점에서 <strong>스킬의 동작 규칙</strong>을 바꾼다. 가이드가 하나같이 “SI+30 필수”, “가구 9/9”를 말하는 이유 — 그 지점 전후로 캐릭터가 다른 기계가 된다.</p>
+<p><strong>설계적 의미</strong>: 성장을 “강해지는 것”이 아니라 <strong>“캐릭터가 완성되는 것”</strong> 으로 재정의한다.</p>
+<p>실시간 자동 전투에서는 플레이어가 실행으로 실력을 표현할 수 없으니, 대신 <strong>투자 대상 선정</strong>이 실력이 된다.</p>
+<hr>
+</section>
+<section id="전체-대조표" class="level2">
+<h2 class="anchored" data-anchor-id="전체-대조표">전체 대조표</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>축</th>
+<th>RSL</th>
+<th>AFK Arena</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>시간 자원</td>
+<td>턴 미터 1축</td>
+<td>에너지 + 실초 쿨다운 2축</td>
+</tr>
+<tr class="even">
+<td>스킬 선택</td>
+<td>플레이어가 매 턴</td>
+<td><strong>고정 우선순위 회전</strong> (캐릭터 내장)</td>
+</tr>
+<tr class="odd">
+<td>자원 획득</td>
+<td>SPD 비례</td>
+<td><strong>행동 횟수</strong> 비례 (딜량 무관)</td>
+</tr>
+<tr class="even">
+<td>CC 효과</td>
+<td>턴 1회 손실 (쿨다운 보존)</td>
+<td><strong>행동 중단 + 쿨다운 소각</strong></td>
+</tr>
+<tr class="odd">
+<td>위치</td>
+<td>없음</td>
+<td>전열/후열·근접/원거리·변위</td>
+</tr>
+<tr class="even">
+<td>극적 순간</td>
+<td>턴이 공짜 제공</td>
+<td><strong>프리즈</strong>로 인공 생성</td>
+</tr>
+<tr class="odd">
+<td>성장</td>
+<td>스탯·쿨다운 턴 수</td>
+<td>스탯 + <strong>스킬 조건문</strong></td>
+</tr>
+<tr class="even">
+<td>최적화</td>
+<td>수학 퍼즐</td>
+<td>실험 퍼즐 (오버슈트 함정)</td>
+</tr>
+<tr class="odd">
+<td>전투의 역할</td>
+<td>실행</td>
+<td><strong>검증</strong></td>
+</tr>
+</tbody>
+</table>
+<p>마지막 줄이 결론을 요약한다.</p>
+<p><strong>AFK Arena는 전투를 “플레이하는 것”이 아니라 “제출하는 것”으로 만들었다.</strong> 플레이어는 조합·배치·투자로 답안을 쓰고, 전투는 채점이다. 틀리면 고쳐서 다시 낸다.</p>
+<p>그래서 이 게임에서는 <strong>재시도 비용이 낮게 유지되는 것</strong>이 시스템 무결성의 전제 조건이다.</p>
+<hr>
+</section>
+<section id="실패-모드-이-구조를-가져올-때" class="level2">
+<h2 class="anchored" data-anchor-id="실패-모드-이-구조를-가져올-때">실패 모드 — 이 구조를 가져올 때</h2>
+<section id="밸런싱-자유도가-급감한다" class="level3">
+<h3 class="anchored" data-anchor-id="밸런싱-자유도가-급감한다">① 밸런싱 자유도가 급감한다</h3>
+<p>우선순위 회전을 캐릭터에 박아넣으면, 스킬 하나의 쿨다운을 건드리는 순간 회전 순서가 뒤집혀 <strong>캐릭터 정체성 자체가 변한다.</strong></p>
+<p>RSL은 A3 배율을 10% 깎아도 A2는 그대로다. AFK 구조에서는 국소 수정이 전역 효과를 낸다. 라이브 운영에서 상당한 부채다.</p>
+</section>
+<section id="콘텐츠-제작-비용이-계속-든다" class="level3">
+<h3 class="anchored" data-anchor-id="콘텐츠-제작-비용이-계속-든다">② 콘텐츠 제작 비용이 계속 든다</h3>
+<p>결정이 전투 전으로 몰리면, “정답 조합”이 발견되는 순간 그 콘텐츠는 죽는다.</p>
+<p>AFK Arena가 팩션 상성·스테이지 기믹을 계속 찍어내야 했던 게 그 대가다. 반면 RSL의 스피드 튜닝은 <strong>플레이어 실력이 자체적으로 다양성을 생산</strong>하므로 같은 콘텐츠가 더 오래 산다.</p>
+<p><strong>AFK 방식은 다양성을 개발팀이 매번 사서 넣어야 한다.</strong></p>
+</section>
+<section id="이-분석이-틀릴-조건" class="level3">
+<h3 class="anchored" data-anchor-id="이-분석이-틀릴-조건">③ 이 분석이 틀릴 조건</h3>
+<p>구조 해석은 커뮤니티 가이드(afk.guide · Kosh Gaming · Fandom Wiki) 기반이고, <strong>게임 내부 데이터나 개발사 문서로 교차 검증하지 않았다.</strong></p>
+<p>특히 “우선순위 회전이 완전 고정”은 출처 한 곳의 관찰이다. 실제로는 HP 임계값 같은 조건부 분기가 섞여 있을 수 있고, 그렇다면 3번 논지는 <strong>더 강해진다</strong> (회전이 아니라 행동 트리라는 뜻이므로).</p>
+<p>확정하려면 특정 영웅의 스킬 발동 로그를 직접 채집하는 게 가장 빠르다.</p>
+</section>
+<section id="후속작-신호" class="level3">
+<h3 class="anchored" data-anchor-id="후속작-신호">④ 후속작 신호</h3>
+<p><strong>AFK Journey</strong>(2024)는 <strong>그리드 타일 배치</strong>를 도입했다. 위 5번 축(공간)을 시스템 전면으로 끌어올린 셈이다.</p>
+<p>실시간 자동 전투에서 전략을 어디에 심을지에 대한 릴리즈 게임즈 자신의 답이 “공간”이었다는 신호로 읽을 수 있다.</p>
+<hr>
+</section>
+</section>
+<section id="출처" class="level2">
+<h2 class="anchored" data-anchor-id="출처">출처</h2>
+<ul>
+<li><a href="https://afk-arena.fandom.com/wiki/Energy">Energy | AFK Arena Wiki</a></li>
+<li><a href="https://afk.guide/game-mechanics/">Top 30 AFK Arena Mechanics</a></li>
+<li><a href="https://thesovietgaming.com/afk-arena/afk-arena-hidden-stats-and-mechanics-guide/">AFK Arena Hidden Stats and Mechanics — Kosh Gaming</a></li>
+<li><a href="https://afk.guide/signature-items/">Signature Items Tier List</a></li>
+<li><a href="https://afk.guide/best-team/">Best AFK Arena Team Formations</a></li>
+<li><a href="https://hellhades.com/best-turn-meter-control-champions-in-raid-shadow-legends/">Turn Meter Control Champions — HellHades</a></li>
+<li><a href="https://hellhades.com/what-increase-skill-cooldown-does-in-raid-shadow-legends/">Increase Skill Cooldown — HellHades</a></li>
+<li><a href="https://www.inteleria.com/raid-speed-tuned-clan-boss-teams/">Speed-Tuned Clan Boss Teams — InTeleria</a></li>
+</ul>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "복사완료!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "복사완료!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+<script src="2026-08-28-afk-vs-rsl-skill-structure_files/libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
