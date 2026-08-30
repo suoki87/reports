@@ -225,6 +225,399 @@ function groundShadow(ctx, cx, cy, rx, ry = rx * 0.32, alpha = 0.85) {
 }
 
 
+/* ===== src/game/art/icons.js ===== */
+
+
+
+/**
+ * 유전자 노드 픽토그램.
+ *
+ * 【화풍 규칙】 이 게임의 그림은 전부 **굵은 먹선 + 삐뚤삐뚤한 손그림**이다.
+ * 캐릭터도 총도 그렇게 그렸는데 아이콘만 매끈한 벡터면 혼자 딴 데서 온 것처럼 보인다.
+ *
+ * 그래서 두 가지를 지킨다:
+ *  1. **먹선을 두른다.** 같은 그림을 검정으로 굵게 한 번 깔고, 그 위에 색을 얹는다.
+ *  2. **살짝 비뚤다.** 아이콘마다 고정된 각도로 조금 기울이고 크기를 흔든다.
+ *     정점마다 떨면 24px 안에서 뭉개지므로, 전체를 기울이는 쪽이 값도 싸고 잘 보인다.
+ *
+ * 좌표계는 −1..+1 정규 공간이다. 크기와 색은 호출자가 정한다.
+ *
+ * 이미지 파일을 쓰지 않는 이유는 캐릭터와 같다 — 크기가 계속 바뀌고,
+ * 상태마다 색이 달라지고, 번들 용량을 아껴야 한다.
+ */
+
+/** 지금 먹선을 까는 중인가. shape 함수가 F·L 을 통해 참조한다. */
+let OUTLINE = false;
+const OUTLINE_W = 0.34;
+
+/** 채우기. 먹선 패스에서는 굵게 두르기까지 한다. */
+function F(ctx) {
+  ctx.fill();
+  if (OUTLINE) ctx.stroke();
+}
+
+/** 선 굵기. 먹선 패스에서는 그만큼 더 굵어진다. */
+function L(ctx, w) {
+  ctx.lineWidth = OUTLINE ? w + OUTLINE_W : w;
+}
+
+function begin(ctx, cx, cy, r, color, seed) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  // 손그림 흔들림 — 아이콘마다 고정된 기울기와 크기 차이
+  const tilt = (hash01(seed, 11) - 0.5) * 0.16;
+  const sx = 1 + (hash01(seed, 12) - 0.5) * 0.07;
+  const sy = 1 + (hash01(seed, 13) - 0.5) * 0.07;
+  ctx.rotate(tilt);
+  ctx.scale(r * sx, r * sy);
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  L(ctx, 0.17);
+}
+
+/* --------------------------------------------------------- 그림들 */
+
+/** 주사기 — 각성. 스스로 몸에 바늘을 꽂는 일이다. */
+function icoSyringe(ctx) {
+  ctx.save();
+  ctx.rotate(-0.72);
+  ctx.beginPath(); ctx.roundRect(-0.30, -0.62, 0.60, 1.02, 0.10); F(ctx);
+  ctx.beginPath(); ctx.roundRect(-0.46, -0.80, 0.92, 0.22, 0.09); F(ctx);
+  L(ctx, 0.16);
+  ctx.beginPath(); ctx.moveTo(0, 0.40); ctx.lineTo(0, 0.92); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(-0.13, -0.52, 0.26, 0.36, 0.06); F(ctx);
+  ctx.restore();
+}
+
+/** 하트 — 체력 */
+function icoHeart(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(0, 0.72);
+  ctx.bezierCurveTo(-1.22, -0.16, -0.48, -1.00, 0, -0.26);
+  ctx.bezierCurveTo(0.48, -1.00, 1.22, -0.16, 0, 0.72);
+  ctx.closePath();
+  F(ctx);
+}
+
+/** 주먹 — 피해 */
+function icoFist(ctx) {
+  ctx.beginPath(); ctx.roundRect(-0.58, -0.30, 1.06, 0.82, 0.22); F(ctx);
+  ctx.beginPath(); ctx.roundRect(-0.78, -0.06, 0.30, 0.46, 0.13); F(ctx);
+  for (let i = 0; i < 3; i += 1) {
+    ctx.beginPath();
+    ctx.roundRect(-0.26 + i * 0.30, -0.56, 0.22, 0.32, 0.10);
+    F(ctx);
+  }
+}
+
+/** 방패 — 피해 감소 */
+function icoShield(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(0, -0.78);
+  ctx.lineTo(0.70, -0.48);
+  ctx.lineTo(0.70, 0.14);
+  ctx.quadraticCurveTo(0.70, 0.60, 0, 0.84);
+  ctx.quadraticCurveTo(-0.70, 0.60, -0.70, 0.14);
+  ctx.lineTo(-0.70, -0.48);
+  ctx.closePath();
+  F(ctx);
+}
+
+/** 군화 — 이동 속도 */
+function icoBoot(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(-0.32, -0.76);
+  ctx.lineTo(0.16, -0.76);
+  ctx.lineTo(0.16, 0.08);
+  ctx.lineTo(0.74, 0.40);
+  ctx.lineTo(0.74, 0.78);
+  ctx.lineTo(-0.58, 0.78);
+  ctx.lineTo(-0.58, 0.28);
+  ctx.lineTo(-0.32, 0.08);
+  ctx.closePath();
+  F(ctx);
+}
+
+/** 번개 — 발사 간격 */
+function icoBolt(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(0.22, -0.86);
+  ctx.lineTo(-0.54, 0.08);
+  ctx.lineTo(-0.04, 0.08);
+  ctx.lineTo(-0.22, 0.86);
+  ctx.lineTo(0.56, -0.14);
+  ctx.lineTo(0.04, -0.14);
+  ctx.closePath();
+  F(ctx);
+}
+
+/** 탄창 — 재장전 */
+function icoMag(ctx) {
+  ctx.beginPath(); ctx.roundRect(-0.38, -0.70, 0.76, 1.40, 0.15); F(ctx);
+  if (!OUTLINE) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 3; i += 1) {
+      ctx.beginPath();
+      ctx.roundRect(-0.22, -0.40 + i * 0.40, 0.44, 0.17, 0.07);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/** 조준경 — 사거리 */
+function icoScope(ctx) {
+  L(ctx, 0.21);
+  ctx.beginPath(); ctx.arc(0, 0, 0.54, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, -0.92); ctx.lineTo(0, -0.32);
+  ctx.moveTo(0, 0.32); ctx.lineTo(0, 0.92);
+  ctx.moveTo(-0.92, 0); ctx.lineTo(-0.32, 0);
+  ctx.moveTo(0.32, 0); ctx.lineTo(0.92, 0);
+  ctx.stroke();
+}
+
+/** 밀치는 화살 — 넉백 */
+function icoPush(ctx) {
+  L(ctx, 0.23);
+  ctx.beginPath(); ctx.moveTo(-0.84, -0.42); ctx.lineTo(-0.84, 0.42); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-0.50, 0); ctx.lineTo(0.36, 0); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0.84, 0); ctx.lineTo(0.26, -0.44); ctx.lineTo(0.26, 0.44);
+  ctx.closePath(); F(ctx);
+}
+
+/** 꿰뚫는 탄 — 철갑탄 */
+function icoPierce(ctx) {
+  L(ctx, 0.15);
+  for (const x of [-0.34, 0.06]) {
+    ctx.beginPath();
+    ctx.moveTo(x, -0.62); ctx.lineTo(x, 0.62);
+    ctx.stroke();
+  }
+  L(ctx, 0.21);
+  ctx.beginPath(); ctx.moveTo(-0.90, 0); ctx.lineTo(0.32, 0); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0.90, 0); ctx.lineTo(0.28, -0.42); ctx.lineTo(0.28, 0.42);
+  ctx.closePath(); F(ctx);
+}
+
+/** 시계 — 쿨타임 */
+function icoClock(ctx) {
+  L(ctx, 0.21);
+  ctx.beginPath(); ctx.arc(0, 0.04, 0.70, 0, Math.PI * 2); ctx.stroke();
+  L(ctx, 0.18);
+  ctx.beginPath();
+  ctx.moveTo(0, 0.04); ctx.lineTo(0, -0.40);
+  ctx.moveTo(0, 0.04); ctx.lineTo(0.38, 0.22);
+  ctx.stroke();
+}
+
+/** 동심원 — 폭발 범위 */
+function icoRings(ctx) {
+  L(ctx, 0.17);
+  for (const r of [0.32, 0.62, 0.92]) {
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(0, 0, 0.15, 0, Math.PI * 2); F(ctx);
+}
+
+/** 폭발 — 폭발 피해 */
+function icoBurst(ctx) {
+  ctx.beginPath();
+  for (let i = 0; i < 12; i += 1) {
+    const a = (i / 12) * Math.PI * 2;
+    const r = i % 2 === 0 ? 0.90 : 0.40;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); F(ctx);
+}
+
+/** 파동 — 밀치는 힘 */
+function icoWave(ctx) {
+  L(ctx, 0.20);
+  for (let i = 0; i < 3; i += 1) {
+    ctx.beginPath();
+    ctx.arc(-0.48, 0, 0.30 + i * 0.28, -0.95, 0.95);
+    ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(-0.60, 0, 0.17, 0, Math.PI * 2); F(ctx);
+}
+
+/** 폭탄 두 개 — 이중 기폭 */
+function icoTwoBombs(ctx) {
+  for (const [x, y, r] of [[-0.32, 0.22, 0.44], [0.36, -0.06, 0.38]]) {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); F(ctx);
+    L(ctx, 0.14);
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.5, y - r * 0.8);
+    ctx.quadraticCurveTo(x + r * 1.3, y - r * 1.7, x + r * 0.5, y - r * 2.1);
+    ctx.stroke();
+  }
+}
+
+/** 동전 — 돈 */
+function icoCoin(ctx) {
+  ctx.beginPath(); ctx.arc(0, 0, 0.80, 0, Math.PI * 2); F(ctx);
+  if (!OUTLINE) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineWidth = 0.20;
+    ctx.beginPath(); ctx.moveTo(0, -0.44); ctx.lineTo(0, 0.44); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -0.20, 0.23, Math.PI * 0.9, Math.PI * 2.2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0.20, 0.23, Math.PI * 1.9, Math.PI * 1.2); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/** 이중나선 — 유전자 조각 */
+function icoHelix(ctx) {
+  L(ctx, 0.20);
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(s * 0.44, -0.86);
+    ctx.bezierCurveTo(s * -0.58, -0.32, s * 0.58, 0.32, s * -0.44, 0.86);
+    ctx.stroke();
+  }
+  L(ctx, 0.14);
+  for (const y of [-0.48, 0, 0.48]) {
+    const w = y === 0 ? 0.48 : 0.30;
+    ctx.beginPath(); ctx.moveTo(-w, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+}
+
+/** 자루 — 시작 자금 */
+function icoPouch(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(-0.44, -0.32);
+  ctx.quadraticCurveTo(-0.92, 0.46, 0, 0.82);
+  ctx.quadraticCurveTo(0.92, 0.46, 0.44, -0.32);
+  ctx.closePath(); F(ctx);
+  L(ctx, 0.19);
+  ctx.beginPath(); ctx.moveTo(-0.54, -0.40); ctx.lineTo(0.54, -0.40); ctx.stroke();
+}
+
+/** 자석 — 촉수 감각 · 흡인장 */
+function icoMagnet(ctx) {
+  L(ctx, 0.36);
+  ctx.beginPath(); ctx.arc(0, 0.12, 0.58, Math.PI, 0); ctx.stroke();
+  L(ctx, OUTLINE ? 0.30 : 0.01);
+  ctx.beginPath(); ctx.rect(-0.76, 0.12, 0.32, 0.50); F(ctx);
+  ctx.beginPath(); ctx.rect(0.44, 0.12, 0.32, 0.50); F(ctx);
+}
+
+/** 십자 뚫린 하트 — 재생 조직 */
+function icoRegen(ctx) {
+  ctx.save();
+  ctx.scale(0.88, 0.88);
+  icoHeart(ctx);
+  ctx.restore();
+  if (!OUTLINE) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.roundRect(-0.13, -0.46, 0.26, 0.74, 0.05);
+    ctx.roundRect(-0.37, -0.22, 0.74, 0.26, 0.05);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+/** 별 — 예비 */
+function icoStar(ctx) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i += 1) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const r = i % 2 === 0 ? 0.90 : 0.38;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); F(ctx);
+}
+
+/**
+ * 【번들 이름 충돌 방지 — 실제로 났던 사고】
+ * 그림 함수 이름을 그대로 두면 번들에서 다른 모듈과 부딪힌다.
+ * `boot`(군화) 가 main.js 의 `boot()`(부트 시퀀스) 와 충돌해
+ * **번들 전체가 SyntaxError 로 죽었다.** 로컬 dev 는 모듈 스코프라 멀쩡했고
+ * 배포본만 로딩 화면에서 멈췄다 — 그래서 늦게 발견됐다.
+ * 그래서 함수는 `ico*` 접두사를 쓰고, 바깥에는 이 표만 노출한다.
+ */
+const SHAPES = {
+  syringe: icoSyringe, heart: icoHeart, fist: icoFist, shield: icoShield,
+  boot: icoBoot, bolt: icoBolt, mag: icoMag, scope: icoScope, push: icoPush,
+  pierce: icoPierce, clock: icoClock, rings: icoRings, burst: icoBurst,
+  wave: icoWave, twoBombs: icoTwoBombs, coin: icoCoin, helix: icoHelix,
+  pouch: icoPouch, magnet: icoMagnet, regen: icoRegen, star: icoStar,
+};
+
+/**
+ * 노드 → 픽토그램 이름.
+ * 효과가 무엇을 건드리는지에서 뽑는다. 새 노드를 넣어도 알아서 따라온다.
+ */
+function iconForNode(n) {
+  if (!n) return 'star';
+  if (n.id === 'root') return 'syringe';
+  const e = n.eff ?? {};
+  if (e.lifesteal) return 'regen';
+  if (e.pierce) return 'pierce';
+  if (e.charges) return 'twoBombs';
+  if (e.magnet || e.magR) return 'magnet';
+  if (e.hp) return 'heart';
+  if (e.dr) return 'shield';
+  if (e.spd) return 'boot';
+  if (e.dmg) return 'fist';
+  if (e.itv) return 'bolt';
+  if (e.rld) return 'mag';
+  if (e.rng) return 'scope';
+  if (e.kb) return 'push';
+  if (e.skCd) return 'clock';
+  if (e.skR) return 'rings';
+  if (e.skDmg) return 'burst';
+  if (e.skKb) return 'wave';
+  if (e.startMoney) return 'pouch';
+  if (e.money && e.bio) return 'helix';
+  if (e.money) return 'coin';
+  if (e.bio) return 'helix';
+  return 'star';
+}
+
+/** 아이콘마다 고정된 흔들림을 주기 위한 씨앗. 같은 아이콘은 늘 같은 각도다. */
+function seedOf(name) {
+  let h = 2166136261;
+  for (let i = 0; i < name.length; i += 1) {
+    h ^= name.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * 픽토그램 하나. r 은 그림이 차지할 반경.
+ * 먹선을 먼저 깔고 그 위에 색을 얹는다 — 캐릭터·총과 같은 순서다.
+ */
+function drawIcon(ctx, name, cx, cy, r, color = '#FFFFFF') {
+  const f = SHAPES[name] ?? SHAPES.star;
+  const seed = seedOf(name);
+
+  OUTLINE = true;
+  begin(ctx, cx, cy, r, PALETTE.ink, seed);
+  f(ctx);
+  ctx.restore();
+  OUTLINE = false;
+
+  begin(ctx, cx, cy, r, color, seed);
+  f(ctx);
+  ctx.restore();
+}
+
+const ICON_NAMES = Object.keys(SHAPES);
+
+
 /* ===== src/core/balance.js ===== */
 /**
  * 밸런스 수식 — 단일 진실 공급원.
@@ -1057,7 +1450,7 @@ const WEAPONS = {
     speed: 660, life: 1.5, blast: 0, arm: 0,
     mag: 30, reload: 1.7, burst: 3, burstGap: 0.075,
     bloom: 0.018, bloomMax: 0.14, falloff: null,
-    kick: 6, flash: 0.9, shake: 1.4, muzzle: 43, shape: 'rifle',
+    kick: 6, flash: 0.9, shake: 1.4, muzzle: 43, shape: 'a2',
     desc: '방아쇠 한 번에 3발 · 정확하다',
     style: '짧게 멈춰도 한 뭉치가 나간다',
   },
@@ -2528,6 +2921,22 @@ function drawGun(ctx, x, y, len, dir, seed, lw, kind = 'rifle') {
     box(-L * 0.30, -h * 2.0, -L * 0.06, -h * 0.9, D);       // 곡사 조준기
     poly([[-L * 0.16, h * 0.9], [-L * 0.02, h * 0.9],
           [-L * 0.06, h * 3.0], [-L * 0.22, h * 3.0]]);
+  } else if (kind === 'a2') {
+    // M16A2 계열 — 3점사. 카빈과 실루엣이 같으면 "숫자만 다른 총" 이 된다.
+    // 구분점은 **위로 솟은 캐링 핸들**과 **고정형 긴 개머리판**이다.
+    const h = L * 0.105;
+    box(-L * 0.52, -h, L * 0.28, h);
+    box(L * 0.24, -h * 0.40, L * 0.72, h * 0.40);            // 긴 총열
+    box(L * 0.66, -h * 0.62, L * 0.76, h * 0.62, D);         // 소염기
+    box(-L * 0.22, -h * 2.3, L * 0.14, -h * 1.2, D);         // 캐링 핸들
+    box(-L * 0.20, -h * 1.2, -L * 0.16, -h * 0.9, D);
+    box(L * 0.10, -h * 1.2, L * 0.14, -h * 0.9, D);
+    poly([[-L * 0.66, -h * 0.55], [-L * 0.50, -h],
+          [-L * 0.50, h], [-L * 0.66, h * 0.75]]);           // 고정 개머리판
+    poly([[-L * 0.16, h * 0.85], [-L * 0.02, h * 0.85],
+          [-L * 0.06, h * 3.0], [-L * 0.22, h * 3.0]]);
+    poly([[L * 0.02, h * 0.85], [L * 0.18, h * 0.85],
+          [L * 0.14, h * 2.8], [-L * 0.02, h * 2.8]], D);    // 탄창
   } else {
     // rifle — 카빈 계열 (기본)
     const h = L * 0.115;
