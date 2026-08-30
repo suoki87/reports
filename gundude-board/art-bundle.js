@@ -2785,7 +2785,7 @@ function begin(ctx, cx, cy, r, color, seed) {
 /* --------------------------------------------------------- 그림들 */
 
 /** 주사기 — 각성. 스스로 몸에 바늘을 꽂는 일이다. */
-function syringe(ctx) {
+function icoSyringe(ctx) {
   ctx.save();
   ctx.rotate(-0.72);
   ctx.beginPath(); ctx.roundRect(-0.30, -0.62, 0.60, 1.02, 0.10); F(ctx);
@@ -2797,7 +2797,7 @@ function syringe(ctx) {
 }
 
 /** 하트 — 체력 */
-function heart(ctx) {
+function icoHeart(ctx) {
   ctx.beginPath();
   ctx.moveTo(0, 0.72);
   ctx.bezierCurveTo(-1.22, -0.16, -0.48, -1.00, 0, -0.26);
@@ -2807,7 +2807,7 @@ function heart(ctx) {
 }
 
 /** 주먹 — 피해 */
-function fist(ctx) {
+function icoFist(ctx) {
   ctx.beginPath(); ctx.roundRect(-0.58, -0.30, 1.06, 0.82, 0.22); F(ctx);
   ctx.beginPath(); ctx.roundRect(-0.78, -0.06, 0.30, 0.46, 0.13); F(ctx);
   for (let i = 0; i < 3; i += 1) {
@@ -2818,7 +2818,7 @@ function fist(ctx) {
 }
 
 /** 방패 — 피해 감소 */
-function shield(ctx) {
+function icoShield(ctx) {
   ctx.beginPath();
   ctx.moveTo(0, -0.78);
   ctx.lineTo(0.70, -0.48);
@@ -2831,7 +2831,7 @@ function shield(ctx) {
 }
 
 /** 군화 — 이동 속도 */
-function boot(ctx) {
+function icoBoot(ctx) {
   ctx.beginPath();
   ctx.moveTo(-0.32, -0.76);
   ctx.lineTo(0.16, -0.76);
@@ -2846,7 +2846,7 @@ function boot(ctx) {
 }
 
 /** 번개 — 발사 간격 */
-function bolt(ctx) {
+function icoBolt(ctx) {
   ctx.beginPath();
   ctx.moveTo(0.22, -0.86);
   ctx.lineTo(-0.54, 0.08);
@@ -2859,7 +2859,7 @@ function bolt(ctx) {
 }
 
 /** 탄창 — 재장전 */
-function mag(ctx) {
+function icoMag(ctx) {
   ctx.beginPath(); ctx.roundRect(-0.38, -0.70, 0.76, 1.40, 0.15); F(ctx);
   if (!OUTLINE) {
     ctx.save();
@@ -2874,7 +2874,7 @@ function mag(ctx) {
 }
 
 /** 조준경 — 사거리 */
-function scope(ctx) {
+function icoScope(ctx) {
   L(ctx, 0.21);
   ctx.beginPath(); ctx.arc(0, 0, 0.54, 0, Math.PI * 2); ctx.stroke();
   ctx.beginPath();
@@ -2886,7 +2886,7 @@ function scope(ctx) {
 }
 
 /** 밀치는 화살 — 넉백 */
-function push(ctx) {
+function icoPush(ctx) {
   L(ctx, 0.23);
   ctx.beginPath(); ctx.moveTo(-0.84, -0.42); ctx.lineTo(-0.84, 0.42); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(-0.50, 0); ctx.lineTo(0.36, 0); ctx.stroke();
@@ -2896,7 +2896,7 @@ function push(ctx) {
 }
 
 /** 꿰뚫는 탄 — 철갑탄 */
-function pierce(ctx) {
+function icoPierce(ctx) {
   L(ctx, 0.15);
   for (const x of [-0.34, 0.06]) {
     ctx.beginPath();
@@ -2911,7 +2911,7 @@ function pierce(ctx) {
 }
 
 /** 시계 — 쿨타임 */
-function clock(ctx) {
+function icoClock(ctx) {
   L(ctx, 0.21);
   ctx.beginPath(); ctx.arc(0, 0.04, 0.70, 0, Math.PI * 2); ctx.stroke();
   L(ctx, 0.18);
@@ -2922,7 +2922,7 @@ function clock(ctx) {
 }
 
 /** 동심원 — 폭발 범위 */
-function rings(ctx) {
+function icoRings(ctx) {
   L(ctx, 0.17);
   for (const r of [0.32, 0.62, 0.92]) {
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
@@ -2931,7 +2931,7 @@ function rings(ctx) {
 }
 
 /** 폭발 — 폭발 피해 */
-function burst(ctx) {
+function icoBurst(ctx) {
   ctx.beginPath();
   for (let i = 0; i < 12; i += 1) {
     const a = (i / 12) * Math.PI * 2;
@@ -2943,7 +2943,7 @@ function burst(ctx) {
 }
 
 /** 파동 — 밀치는 힘 */
-function wave(ctx) {
+function icoWave(ctx) {
   L(ctx, 0.20);
   for (let i = 0; i < 3; i += 1) {
     ctx.beginPath();
@@ -2954,7 +2954,7 @@ function wave(ctx) {
 }
 
 /** 폭탄 두 개 — 이중 기폭 */
-function twoBombs(ctx) {
+function icoTwoBombs(ctx) {
   for (const [x, y, r] of [[-0.32, 0.22, 0.44], [0.36, -0.06, 0.38]]) {
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); F(ctx);
     L(ctx, 0.14);
@@ -2966,7 +2966,7 @@ function twoBombs(ctx) {
 }
 
 /** 동전 — 돈 */
-function coin(ctx) {
+function icoCoin(ctx) {
   ctx.beginPath(); ctx.arc(0, 0, 0.80, 0, Math.PI * 2); F(ctx);
   if (!OUTLINE) {
     ctx.save();
@@ -2980,7 +2980,7 @@ function coin(ctx) {
 }
 
 /** 이중나선 — 유전자 조각 */
-function helix(ctx) {
+function icoHelix(ctx) {
   L(ctx, 0.20);
   for (const s of [-1, 1]) {
     ctx.beginPath();
@@ -2996,7 +2996,7 @@ function helix(ctx) {
 }
 
 /** 자루 — 시작 자금 */
-function pouch(ctx) {
+function icoPouch(ctx) {
   ctx.beginPath();
   ctx.moveTo(-0.44, -0.32);
   ctx.quadraticCurveTo(-0.92, 0.46, 0, 0.82);
@@ -3007,7 +3007,7 @@ function pouch(ctx) {
 }
 
 /** 자석 — 촉수 감각 · 흡인장 */
-function magnet(ctx) {
+function icoMagnet(ctx) {
   L(ctx, 0.36);
   ctx.beginPath(); ctx.arc(0, 0.12, 0.58, Math.PI, 0); ctx.stroke();
   L(ctx, OUTLINE ? 0.30 : 0.01);
@@ -3016,10 +3016,10 @@ function magnet(ctx) {
 }
 
 /** 십자 뚫린 하트 — 재생 조직 */
-function regen(ctx) {
+function icoRegen(ctx) {
   ctx.save();
   ctx.scale(0.88, 0.88);
-  heart(ctx);
+  icoHeart(ctx);
   ctx.restore();
   if (!OUTLINE) {
     ctx.save();
@@ -3033,7 +3033,7 @@ function regen(ctx) {
 }
 
 /** 별 — 예비 */
-function star(ctx) {
+function icoStar(ctx) {
   ctx.beginPath();
   for (let i = 0; i < 10; i += 1) {
     const a = -Math.PI / 2 + (i * Math.PI) / 5;
@@ -3044,9 +3044,20 @@ function star(ctx) {
   ctx.closePath(); F(ctx);
 }
 
+/**
+ * 【번들 이름 충돌 방지 — 실제로 났던 사고】
+ * 그림 함수 이름을 그대로 두면 번들에서 다른 모듈과 부딪힌다.
+ * `boot`(군화) 가 main.js 의 `boot()`(부트 시퀀스) 와 충돌해
+ * **번들 전체가 SyntaxError 로 죽었다.** 로컬 dev 는 모듈 스코프라 멀쩡했고
+ * 배포본만 로딩 화면에서 멈췄다 — 그래서 늦게 발견됐다.
+ * 그래서 함수는 `ico*` 접두사를 쓰고, 바깥에는 이 표만 노출한다.
+ */
 const SHAPES = {
-  syringe, heart, fist, shield, boot, bolt, mag, scope, push, pierce,
-  clock, rings, burst, wave, twoBombs, coin, helix, pouch, magnet, regen, star,
+  syringe: icoSyringe, heart: icoHeart, fist: icoFist, shield: icoShield,
+  boot: icoBoot, bolt: icoBolt, mag: icoMag, scope: icoScope, push: icoPush,
+  pierce: icoPierce, clock: icoClock, rings: icoRings, burst: icoBurst,
+  wave: icoWave, twoBombs: icoTwoBombs, coin: icoCoin, helix: icoHelix,
+  pouch: icoPouch, magnet: icoMagnet, regen: icoRegen, star: icoStar,
 };
 
 /**
