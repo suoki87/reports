@@ -284,25 +284,25 @@ const B = {
   // --- 플레이어 ---
   playerR: 15,
   playerSpeed: 172,
-  playerMaxHp: 34,
+  playerMaxHp: 24,
   invulnSec: 0.75,
   strideLen: 26,
 
   // --- 기본 사격 (무기가 이 위에 곱해진다) ---
   fireIntervalBase: 0.62,
-  baseDamage: 11,
+  baseDamage: 6,
   bulletR: 6,
 
   // --- 스킬: 충격파 ---
-  skillCooldown: 8.5,
-  skillRadius: 210,
+  skillCooldown: 50,      // 런당 한 번. 성장으로 줄여 나간다
+  skillRadius: 92,        // 처음엔 발밑만 겨우 쓸어낸다
   skillExpandSec: 0.30,
-  skillDamageMul: 3.0,
-  skillKnockback: 620,
+  skillDamageMul: 1.15,   // 처음엔 밀어내는 용도지 죽이는 용도가 아니다
+  skillKnockback: 250,
   knockbackDrag: 3.2,
 
   // --- 적 공통 ---
-  enemyBaseHp: 26,
+  enemyBaseHp: 20,
   enemyHpGrowthPerWave: 0.22,   // 웨이브당 +22%. 시간이 아니라 진행도가 난이도를 올린다
   enemyDamageGrowthPerWave: 0.13,  // 적 피해도 같이 오른다. 안 그러면 후반에 위협이 사라진다
   enemySeparation: 0.8,
@@ -340,8 +340,8 @@ const B = {
   boss: {
     r: 46,
     speed: 58,
-    hpBase: 340,
-    hpPerWave: 300,
+    hpBase: 130,
+    hpPerWave: 210,
     money: 45,
     bio: 14,
     approachSec: 1.15,          // 패턴 사이 추격 구간
@@ -476,106 +476,191 @@ function shotsToKill(wave, kind, shot, b = B) {
 
 
 /**
- * 메타 성장 — 이 게임의 진행감 전체를 담당한다.
+ * 메타 성장 — 생명에너지로 배우는 유전자 트리.
  *
- * 런 안에서는 아무것도 강해지지 않는다. 죽어서 번 골드로 로비에서 영구 강화를 사고,
- * 다음 런에서 "지난번보다 오래 버텼다" 를 느끼는 것이 유일한 성장 경로다.
- * 따라서 이 파일의 곡선이 곧 게임의 진행 곡선이다.
+ * 시안의 스킬트리 형태를 따른다: 격자 위에 직교 배선, 작은 노드와 큰 노드.
+ * 중앙 하나에서 동서남북 네 갈래로 뻗고, **이전 노드를 배워야 다음이 열린다.**
  *
- * 전부 순수 함수다. 같은 입력 → 같은 출력, 부작용 없음.
+ *   북 — 기본 스펙   (화력·체력·이동·방어)
+ *   동 — 총기 이해   (연사·장전·사거리·탄 넉백)
+ *   남 — 폭탄        (쿨타임·범위·피해·밀치기)
+ *   서 — 자원 획득   (돈·생명에너지)
+ *
+ * 이 게임의 진행감 전체가 이 트리에 있다. 런 안에서는 아무것도 강해지지 않는다.
+ * 전부 순수 함수다.
  */
 
-const UPGRADES = [
-  {
-    id: 'power', name: '화력 유전자', unit: '발당 피해',
-    max: 12, baseCost: 14, costGrowth: 1.34,
-    desc: '탄 한 발의 피해량을 올린다',
-  },
-  {
-    id: 'rate', name: '반사 신경', unit: '발사 간격',
-    max: 10, baseCost: 20, costGrowth: 1.40,
-    desc: '더 자주 쏜다',
-  },
-  {
-    id: 'vigor', name: '세포 강화', unit: '최대 체력',
-    max: 12, baseCost: 16, costGrowth: 1.32,
-    desc: '더 많이 맞고 버틴다',
-  },
-  {
-    id: 'swift', name: '근섬유', unit: '이동 속도',
-    max: 8, baseCost: 22, costGrowth: 1.44,
-    desc: '더 빨리 움직여 공격을 피한다',
-  },
-  {
-    id: 'shock', name: '신경 과부하', unit: '재사용 대기',
-    max: 8, baseCost: 26, costGrowth: 1.46,
-    desc: '충격파를 더 자주 쓴다',
-  },
+const BRANCH = {
+  spec:  { name: '기본 스펙',   color: '#D9534F', desc: '몸 자체를 개조한다' },
+  gun:   { name: '총기 이해',   color: '#4E8FBF', desc: '총을 더 잘 다룬다' },
+  bomb:  { name: '폭탄',        color: '#E8A33D', desc: '충격파를 키운다' },
+  loot:  { name: '자원 획득',   color: '#5FA36A', desc: '더 많이 챙긴다' },
+};
+
+/**
+ * 노드 정의.
+ *  g   : 격자 좌표 [x, y] — 중앙이 (0,0)
+ *  req : 이 노드를 열려면 배워야 하는 노드
+ *  big : 큰 노드 (비싸고 효과가 크다)
+ *  eff : 효과. deriveStats 가 곱하거나 더한다.
+ */
+const NODES = [
+  { id: 'root', branch: null, g: [0, 0], req: null, cost: 0, big: true,
+    name: '각성', eff: {}, desc: '여기서 시작한다' },
+
+  /* ---- 북: 기본 스펙 ---- */
+  { id: 'sp1', branch: 'spec', g: [0, -1], req: 'root', cost: 12,
+    name: '근육 섬유', eff: { dmg: 1.30 }, desc: '피해 +30%' },
+  { id: 'sp2', branch: 'spec', g: [0, -2], req: 'sp1', cost: 16,
+    name: '두꺼운 표피', eff: { hp: 16 }, desc: '최대 체력 +16' },
+  { id: 'sp3', branch: 'spec', g: [-1, -3], req: 'sp2', cost: 22,
+    name: '경련 반사', eff: { spd: 1.09 }, desc: '이동 속도 +9%' },
+  { id: 'sp4', branch: 'spec', g: [1, -3], req: 'sp2', cost: 26,
+    name: '아드레날린', eff: { dmg: 1.34 }, desc: '피해 +34%' },
+  { id: 'sp5', branch: 'spec', g: [-1, -4], req: 'sp3', cost: 34,
+    name: '연골 갑피', eff: { hp: 26 }, desc: '최대 체력 +26' },
+  { id: 'sp6', branch: 'spec', g: [0, -5], req: 'sp5', cost: 56, big: true,
+    name: '경화 세포', eff: { dr: 0.12, hp: 24, dmg: 1.25 }, desc: '받는 피해 −12% · 체력 +24 · 피해 +25%' },
+
+  /* ---- 동: 총기 이해 ---- */
+  { id: 'gn1', branch: 'gun', g: [1, 0], req: 'root', cost: 12,
+    name: '방아쇠 감각', eff: { itv: 0.88 }, desc: '발사 간격 −12%' },
+  { id: 'gn2', branch: 'gun', g: [2, 0], req: 'gn1', cost: 16,
+    name: '탄창 숙련', eff: { rld: 0.84 }, desc: '재장전 −16%' },
+  { id: 'gn3', branch: 'gun', g: [3, -1], req: 'gn2', cost: 22,
+    name: '총열 연장', eff: { rng: 1.25 }, desc: '사거리 +25%' },
+  { id: 'gn4', branch: 'gun', g: [3, 1], req: 'gn2', cost: 26,
+    name: '고압 장약', eff: { kb: 1.8 }, desc: '탄 넉백 +80%' },
+  { id: 'gn5', branch: 'gun', g: [4, -1], req: 'gn3', cost: 34,
+    name: '속사 훈련', eff: { itv: 0.86 }, desc: '발사 간격 −14%' },
+  { id: 'gn6', branch: 'gun', g: [5, 0], req: 'gn5', cost: 56, big: true,
+    name: '총기 일체화', eff: { itv: 0.85, rld: 0.80, dmg: 1.2 }, desc: '간격 −15% · 재장전 −20% · 피해 +20%' },
+
+  /* ---- 남: 폭탄 ---- */
+  { id: 'bm1', branch: 'bomb', g: [0, 1], req: 'root', cost: 14,
+    name: '기폭 회로', eff: { skCd: 0.74 }, desc: '충격파 대기 −26%' },
+  { id: 'bm2', branch: 'bomb', g: [0, 2], req: 'bm1', cost: 18,
+    name: '확산 장약', eff: { skR: 1.45 }, desc: '충격파 범위 +45%' },
+  { id: 'bm3', branch: 'bomb', g: [-1, 3], req: 'bm2', cost: 24,
+    name: '고폭 탄두', eff: { skDmg: 1.9 }, desc: '충격파 피해 +90%' },
+  { id: 'bm4', branch: 'bomb', g: [1, 3], req: 'bm2', cost: 26,
+    name: '충격 증폭', eff: { skKb: 1.9 }, desc: '밀치는 힘 +90%' },
+  { id: 'bm5', branch: 'bomb', g: [-1, 4], req: 'bm3', cost: 36,
+    name: '축전기', eff: { skCd: 0.72 }, desc: '충격파 대기 −28%' },
+  { id: 'bm6', branch: 'bomb', g: [0, 5], req: 'bm5', cost: 58, big: true,
+    name: '연쇄 폭발', eff: { skR: 1.5, skDmg: 2.0, skCd: 0.8 }, desc: '범위 +50% · 피해 +100% · 대기 −20%' },
+
+  /* ---- 서: 자원 획득 ---- */
+  { id: 'lt1', branch: 'loot', g: [-1, 0], req: 'root', cost: 12,
+    name: '전리품 감각', eff: { money: 1.25 }, desc: '돈 획득 +25%' },
+  { id: 'lt2', branch: 'loot', g: [-2, 0], req: 'lt1', cost: 16,
+    name: '조직 채취', eff: { bio: 1.25 }, desc: '생명에너지 +25%' },
+  { id: 'lt3', branch: 'loot', g: [-3, -1], req: 'lt2', cost: 22,
+    name: '약탈 습관', eff: { money: 1.3 }, desc: '돈 획득 +30%' },
+  { id: 'lt4', branch: 'loot', g: [-3, 1], req: 'lt2', cost: 24,
+    name: '유전자 정제', eff: { bio: 1.3 }, desc: '생명에너지 +30%' },
+  { id: 'lt5', branch: 'loot', g: [-4, -1], req: 'lt3', cost: 32,
+    name: '비상 자금', eff: { startMoney: 40 }, desc: '판 시작 시 돈 +40' },
+  { id: 'lt6', branch: 'loot', g: [-5, 0], req: 'lt5', cost: 54, big: true,
+    name: '포식자', eff: { money: 1.35, bio: 1.35 }, desc: '돈·생명에너지 +35%' },
 ];
 
-const UPGRADE_IDS = UPGRADES.map((u) => u.id);
+const NODE_BY_ID = Object.fromEntries(NODES.map((n) => [n.id, n]));
 
-/** 트랙 정의를 id 로 찾는다. */
-function upgradeById(id) {
-  return UPGRADES.find((u) => u.id === id) ?? null;
-}
-
-/** 레벨 n(0-based 현재 레벨) 에서 다음 레벨을 사는 데 드는 생명에너지. */
-function upgradeCost(id, level) {
-  const u = upgradeById(id);
-  if (!u) return Infinity;
-  if (level >= u.max) return Infinity;
-  return Math.ceil(u.baseCost * Math.pow(u.costGrowth, Math.max(0, level)));
-}
-
-/** 세이브의 업그레이드 맵을 항상 유효한 모양으로 정규화한다. 절대 throw 하지 않는다. */
-function normalizeUpgrades(raw) {
-  const out = {};
-  for (const u of UPGRADES) {
-    const v = Number(raw?.[u.id]);
-    out[u.id] = Number.isFinite(v) ? Math.max(0, Math.min(u.max, Math.floor(v))) : 0;
+/** 세이브의 습득 목록을 항상 유효한 모양으로 정규화한다. 절대 throw 하지 않는다. */
+function normalizeOwned(raw) {
+  const set = new Set(['root']);          // 각성은 언제나 보유
+  if (Array.isArray(raw)) {
+    for (const id of raw) if (typeof id === 'string' && NODE_BY_ID[id]) set.add(id);
   }
-  return out;
+  // 선행 노드가 빠져 있으면 잘라낸다 (세이브 오염 방어)
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const id of [...set]) {
+      const n = NODE_BY_ID[id];
+      if (n?.req && !set.has(n.req)) { set.delete(id); changed = true; }
+    }
+  }
+  return [...set];
+}
+
+/** 지금 배울 수 있는가 — 선행 노드를 배웠고 아직 안 배웠으면. */
+function canLearn(id, owned) {
+  const n = NODE_BY_ID[id];
+  if (!n || owned.includes(id)) return false;
+  return !n.req || owned.includes(n.req);
+}
+
+/** 습득 시도. 순수 함수 — 새 상태를 돌려주고 인자를 건드리지 않는다. */
+function learnNode(id, bio, owned) {
+  const own = normalizeOwned(owned);
+  const n = NODE_BY_ID[id];
+  if (!n) return { ok: false, bio, owned: own, reason: 'unknown' };
+  if (own.includes(id)) return { ok: false, bio, owned: own, reason: 'have' };
+  if (!canLearn(id, own)) return { ok: false, bio, owned: own, reason: 'locked' };
+  if (bio < n.cost) return { ok: false, bio, owned: own, reason: 'poor' };
+  return { ok: true, bio: bio - n.cost, owned: [...own, id] };
 }
 
 /**
- * 업그레이드 레벨 → 실제 전투 스탯.
+ * 습득한 노드 → 실제 전투 스탯.
  * 런타임·시뮬레이터·테스트가 전부 이 함수 하나만 본다.
  */
-function deriveStats(upgrades, b = B) {
-  const up = normalizeUpgrades(upgrades);
+function deriveStats(owned, b = B) {
+  const own = normalizeOwned(owned);
+  const m = {
+    dmg: 1, hp: 0, spd: 1, dr: 0,
+    itv: 1, rld: 1, rng: 1, kb: 1,
+    skCd: 1, skR: 1, skDmg: 1, skKb: 1,
+    money: 1, bio: 1, startMoney: 0,
+  };
+  for (const id of own) {
+    const e = NODE_BY_ID[id]?.eff ?? {};
+    for (const k of Object.keys(e)) {
+      if (k === 'hp' || k === 'startMoney') m[k] += e[k];
+      else if (k === 'dr') m.dr = 1 - (1 - m.dr) * (1 - e.dr);   // 감소율은 곱연산
+      else m[k] *= e[k];
+    }
+  }
   return {
-    damage: b.baseDamage * (1 + 0.13 * up.power),
-    fireInterval: Math.max(0.28, b.fireIntervalBase * Math.pow(0.935, up.rate)),
-    maxHp: b.playerMaxHp + 14 * up.vigor,
-    speed: b.playerSpeed * (1 + 0.035 * up.swift),
-    skillCooldown: Math.max(3.2, b.skillCooldown * Math.pow(0.94, up.shock)),
-    levels: up,
-    totalLevels: UPGRADE_IDS.reduce((s, id) => s + up[id], 0),
+    damage: b.baseDamage * m.dmg,
+    fireInterval: Math.max(0.09, b.fireIntervalBase * m.itv),
+    reloadMul: m.rld,
+    rangeMul: m.rng,
+    knockMul: m.kb,
+    maxHp: b.playerMaxHp + m.hp,
+    speed: b.playerSpeed * m.spd,
+    damageReduction: Math.min(0.6, m.dr),
+    skillCooldown: Math.max(7, b.skillCooldown * m.skCd),
+    skillRadius: b.skillRadius * m.skR,
+    skillDamageMul: b.skillDamageMul * m.skDmg,
+    skillKnockback: b.skillKnockback * m.skKb,
+    moneyMul: m.money,
+    bioMul: m.bio,
+    startMoney: m.startMoney,
+    owned: own,
+    learned: own.length - 1,
   };
 }
 
-/**
- * 구매 시도. 순수 함수 — 새 상태를 돌려주고 인자를 건드리지 않는다.
- * @returns {{ok:boolean, gold:number, upgrades:object, reason?:string}}
- */
-function buyUpgrade(id, bio, upgrades) {
-  const up = normalizeUpgrades(upgrades);
-  const u = upgradeById(id);
-  if (!u) return { ok: false, gold: bio, upgrades: up, reason: 'unknown' };
-  if (up[id] >= u.max) return { ok: false, gold: bio, upgrades: up, reason: 'max' };
-  const cost = upgradeCost(id, up[id]);
-  if (bio < cost) return { ok: false, gold: bio, upgrades: up, reason: 'poor' };
-  return { ok: true, gold: bio - cost, upgrades: { ...up, [id]: up[id] + 1 } };
+/** 트리를 전부 배우는 데 드는 생명에너지 — 진행 곡선의 끝점. */
+function totalCost() {
+  return NODES.reduce((s, n) => s + n.cost, 0);
 }
 
-/** 모든 트랙을 만렙까지 올리는 데 필요한 총 생명에너지 — 진행 곡선의 끝점. */
-function totalCostToMax() {
-  let sum = 0;
-  for (const u of UPGRADES) {
-    for (let n = 0; n < u.max; n += 1) sum += upgradeCost(u.id, n);
+/** v4 의 트랙 레벨을 트리 노드로 옮긴다. 진행이 사라지면 안 된다. */
+function migrateFromTracks(upgrades) {
+  const map = {
+    power: ['sp1', 'sp4'], rate: ['gn1', 'gn5'], vigor: ['sp2', 'sp5'],
+    swift: ['sp3'], shock: ['bm1', 'bm5'],
+  };
+  const owned = ['root'];
+  for (const [k, ids] of Object.entries(map)) {
+    const lv = Math.max(0, Math.floor(Number(upgrades?.[k]) || 0));
+    for (let i = 0; i < Math.min(lv, ids.length); i += 1) owned.push(ids[i]);
   }
-  return sum;
+  return normalizeOwned(owned);
 }
 
 
@@ -729,9 +814,10 @@ function weaponStats(weaponId, stats) {
     id: w.id,
     damage: stats.damage * w.dmgMul,
     interval: Math.max(0.09, stats.fireInterval * w.intervalMul),
+    knock: (stats.knockMul ?? 1),
     count: w.count, spread: w.spread, pierce: w.pierce,
     speed: w.speed, life: w.life, blast: w.blast, arm: w.arm,
-    mag: w.mag, reload: w.reload, burst: w.burst, burstGap: w.burstGap,
+    mag: w.mag, reload: w.reload * (stats.reloadMul ?? 1), burst: w.burst, burstGap: w.burstGap,
     bloom: w.bloom, bloomMax: w.bloomMax, falloff: w.falloff,
     kick: w.kick, flash: w.flash, shake: w.shake, muzzle: w.muzzle,
   };
@@ -864,8 +950,8 @@ const ST = Object.freeze({
   FALL: 'fall',
 });
 
-function createWorld(upgrades = {}, b = B) {
-  const stats = deriveStats(upgrades, b);
+function createWorld(owned = [], b = B) {
+  const stats = deriveStats(owned, b);
   const w = {
     b,
     stats,
@@ -896,7 +982,7 @@ function createWorld(upgrades = {}, b = B) {
     shake: 0,
     spawnAcc: 0,
     kills: 0,
-    money: 0,                 // 금색 — 인게임 상점에서 쓴다. 런이 끝나면 사라진다
+    money: stats.startMoney,  // 금색 — 인게임 상점에서 쓴다. 런이 끝나면 사라진다
     bio: 0,                   // 파랑 — 생명에너지. 로비의 유전자 조작에 쓴다. 세이브에 쌓인다
     damageTaken: 0,
     // --- 웨이브 ---
@@ -1087,26 +1173,26 @@ function stepWorld(world, dt, input, rnd) {
   /* --- 3. 충격파 --- */
   if (input.skill && p.skillCd <= 0 && !world.shock) {
     p.skillCd = world.stats.skillCooldown;
-    world.shock = { t: 0, r: 0, hit: new Set(), x: p.x, y: p.y };
-    world.fx.push({ type: 'shockRing', x: p.x, y: p.y, t: 0, life: b.skillExpandSec + 0.2 });
+    world.shock = { t: 0, r: 0, hit: new Set(), x: p.x, y: p.y, R: world.stats.skillRadius };
+    world.fx.push({ type: 'shockRing', x: p.x, y: p.y, t: 0, life: b.skillExpandSec + 0.2, R: world.stats.skillRadius });
     world.shake = Math.max(world.shake, 7);
   }
   if (world.shock) {
     const s = world.shock;
     s.t += dt;
     const prog = Math.min(1, s.t / b.skillExpandSec);
-    s.r = b.skillRadius * (1 - (1 - prog) ** 3);
+    s.r = s.R * (1 - (1 - prog) ** 3);
     for (const e of world.enemies) {
       if (e.state === ST.FALL || e.state === ST.DROP || s.hit.has(e.id)) continue;
       const d = Math.hypot(e.x - s.x, e.y - s.y);
       if (d > s.r) continue;
       s.hit.add(e.id);
-      damageEnemy(world, e, shot.damage * b.skillDamageMul);
+      damageEnemy(world, e, shot.damage * world.stats.skillDamageMul);
       if (!e.isBoss) {
         setState(e, ST.CHASE);
         const a = d < 0.001 ? rnd() * Math.PI * 2 : Math.atan2(e.y - s.y, e.x - s.x);
-        e.vx += Math.cos(a) * b.skillKnockback;
-        e.vy += Math.sin(a) * b.skillKnockback;
+        e.vx += Math.cos(a) * world.stats.skillKnockback;
+        e.vy += Math.sin(a) * world.stats.skillKnockback;
       }
     }
     if (prog >= 1) world.shock = null;
@@ -1127,7 +1213,8 @@ function stepWorld(world, dt, input, rnd) {
           bu.hit.add(e.id);
           const mul = falloffMul(bu, bu.travel);
           damageEnemy(world, e, bu.dmg * mul);
-          if (!e.isBoss) { e.vx += bu.vx * 0.045; e.vy += bu.vy * 0.045; }
+          const kn = 0.045 * (world.shot.knock ?? 1);
+          if (!e.isBoss) { e.vx += bu.vx * kn; e.vy += bu.vy * kn; }
           world.fx.push({ type: 'hit', x: bu.x, y: bu.y, t: 0, life: 0.2 });
           // 유탄 신관은 일정 거리를 날아가야 무장된다. 코앞에서는 안 터진다.
           if (bu.blast > 0 && bu.travel >= (bu.arm ?? 0)) {
@@ -1409,8 +1496,9 @@ function bossVulnerable(e) {
 function hurtPlayer(world, dmg) {
   const p = world.player;
   if (p.invuln > 0) return;
-  p.hp -= dmg;
-  world.damageTaken += dmg;
+  const actual = dmg * (1 - (world.stats.damageReduction ?? 0));
+  p.hp -= actual;
+  world.damageTaken += actual;
   p.invuln = world.b.invulnSec;
   p.hurtFlash = 0.3;
   world.shake = Math.max(world.shake, 8);
@@ -1421,9 +1509,11 @@ function hurtPlayer(world, dmg) {
 function awardKill(world, e, how, rnd) {
   world.kills += 1;
   const src = e.isBoss ? world.b.boss : world.b.kinds[e.kind];
-  world.money += src.money;
-  world.bio += src.bio;
-  world.fx.push({ type: 'drop', x: e.x, y: e.y - e.r, t: 0, life: 0.95, m: src.money, bio: src.bio });
+  const gm = Math.max(1, Math.round(src.money * world.stats.moneyMul));
+  const gb = Math.max(1, Math.round(src.bio * world.stats.bioMul));
+  world.money += gm;
+  world.bio += gb;
+  world.fx.push({ type: 'drop', x: e.x, y: e.y - e.r, t: 0, life: 0.95, m: gm, bio: gb });
   if (how === 'shot') world.fx.push({ type: 'pop', x: e.x, y: e.y, t: 0, life: 0.3 });
 
   if (e.isBoss) {
@@ -2297,7 +2387,7 @@ function createLoop({ update, render, now = () => performance.now(), raf, caf })
  *  I4. migrate(serialize(state)) === state  (왕복 보존)
  */
 
-const SAVE_VERSION = 4;
+const SAVE_VERSION = 5;
 const MAX_SAVE_UTF16_CHARS = 3 * 1024 * 1024;
 
 function defaultSave() {
@@ -2306,7 +2396,7 @@ function defaultSave() {
     bestScore: 0,          // 최고 생존 시간(초). sendScore 로 보내는 값과 항상 같다
     totalRuns: 0,
     bio: 0,                // 생명에너지 — 로비의 유전자 조작에 쓴다
-    upgrades: normalizeUpgrades({}),
+    owned: normalizeOwned([]),
     settings: { muted: false },
   };
 }
@@ -2329,8 +2419,9 @@ const MIGRATIONS = {
   // v2 -> v3 : 런 내 성장을 걷어내고 메타 성장으로 전환
   2: (s) => ({ ...s, version: 3, gold: 0, upgrades: {} }),
   // v3 -> v4 : 재화 분리. 로비 재화가 골드 → 생명에너지(bio) 로 바뀌었다.
-  //            돈(금색) 은 이제 인게임 상점 전용이라 세이브에 남지 않는다.
   3: (s) => ({ ...s, version: 4, bio: Number(s.gold) || 0, gold: undefined }),
+  // v4 -> v5 : 트랙 5개 → 유전자 트리. 배운 만큼 대응 노드를 넘겨준다.
+  4: (s) => ({ ...s, version: 5, owned: migrateFromTracks(s.upgrades), upgrades: undefined }),
 };
 
 /**
@@ -2379,7 +2470,7 @@ function migrateSave(raw) {
     bestScore: toSafeInt(state.bestScore, base.bestScore),
     totalRuns: toSafeInt(state.totalRuns, base.totalRuns),
     bio: toSafeInt(state.bio, base.bio),
-    upgrades: normalizeUpgrades(state.upgrades),
+    owned: normalizeOwned(state.owned),
     settings: { muted: state.settings?.muted === true },
   };
 }
@@ -3068,7 +3159,7 @@ function drawFx(ctx, world) {
       ctx.beginPath(); ctx.roundRect(-3, -1.6, 6, 3.2, 1.4);
       ctx.fill(); ctx.stroke();
     } else if (f.type === 'shockRing') {
-      const r = B.skillRadius * (1 - (1 - Math.min(1, k * 1.3)) ** 3);
+      const r = (f.R ?? B.skillRadius) * (1 - (1 - Math.min(1, k * 1.3)) ** 3);
       ctx.globalAlpha = 0.85 * (1 - k);
       ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 16 * (1 - k) + 3;
       ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, Math.PI * 2); ctx.stroke();
@@ -3417,120 +3508,152 @@ function renderTitle(ctx, state, t, b = B) {
   ctx.textAlign = 'center';
 }
 
-/* ============================================================ 로비 (영구 성장) */
+/* ============================================================ 로비 — 유전자 트리 */
 
-const ROW_H = 106;
-const LIST_TOP = 372;
+const CELL = 56;
+const TREE_CX = 360;
+const TREE_CY = 690;
+
+/** 노드의 화면 좌표. 격자 좌표를 그대로 화면에 편다. */
+function nodePos(n) {
+  return { x: TREE_CX + n.g[0] * CELL, y: TREE_CY + n.g[1] * CELL };
+}
 
 function lobbyLayout(b = B) {
-  return {
-    rows: UPGRADES.map((u, i) => ({
-      id: u.id, x: 40, y: LIST_TOP + i * ROW_H, w: b.designW - 80, h: ROW_H - 14,
-    })),
-    start: { x: 40, y: b.designH - 146, w: b.designW - 80, h: 100 },
-  };
+  return { start: { x: 40, y: b.designH - 118, w: b.designW - 80, h: 86 } };
 }
 
 function lobbyHitTest(x, y, b = B) {
   const L = lobbyLayout(b);
   if (inside(L.start, x, y)) return { type: 'start' };
-  for (const r of L.rows) if (inside(r, x, y)) return { type: 'buy', id: r.id };
-  return { type: 'none' };
+  let best = null, bestD = 34 * 34;
+  for (const n of NODES) {
+    const p = nodePos(n);
+    const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (d < bestD) { bestD = d; best = n.id; }
+  }
+  return best ? { type: 'learn', id: best } : { type: 'none' };
 }
 
-function levelDots(ctx, x, y, level, max) {
-  const r = 5, gap = 14;
-  for (let i = 0; i < max; i += 1) {
-    ctx.beginPath();
-    ctx.arc(x + i * gap, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = i < level ? PALETTE.gold : '#FFFFFF';
-    ctx.fill();
-    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2;
-    ctx.stroke();
-  }
+/** 직교 배선 — 시안의 트리처럼 ㄱ자로 꺾어 잇는다. */
+function wire(ctx, a, b2, on) {
+  const midX = Math.abs(b2.x - a.x) > Math.abs(b2.y - a.y);
+  ctx.strokeStyle = on ? '#F0C64A' : '#3E5568';
+  ctx.lineWidth = on ? 7 : 5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  if (midX) { ctx.lineTo(b2.x, a.y); } else { ctx.lineTo(a.x, b2.y); }
+  ctx.lineTo(b2.x, b2.y);
+  ctx.stroke();
 }
 
 function renderLobby(ctx, state, t, b = B) {
-  const { bio, upgrades, best, lastRun, lastBio, lastWave, lastStage } = state;
-  const up = normalizeUpgrades(upgrades);
+  const { bio, owned: rawOwned, best, lastRun, lastBio, lastWave, lastStage } = state;
+  const owned = normalizeOwned(rawOwned);
   const L = lobbyLayout(b);
 
   ctx.fillStyle = PALETTE.backdrop;
   ctx.fillRect(0, 0, b.designW, b.designH);
 
-  panel(ctx, 28, 40, b.designW - 56, 288, PALETTE.parchment, 6);
+  // 상단 — 결과와 보유 생명에너지
+  panel(ctx, 24, 30, b.designW - 48, 150, PALETTE.parchment, 5);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 36px system-ui, sans-serif';
+  ctx.font = 'bold 26px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText('쓰러졌다', b.designW / 2, 84);
-
-  ctx.font = 'bold 84px system-ui, sans-serif';
-  ctx.fillText(formatTime(lastRun), b.designW / 2, 154);
-
-  ctx.font = 'bold 24px system-ui, sans-serif';
+  ctx.fillText('쓰러졌다', b.designW / 2, 60);
+  ctx.font = 'bold 62px system-ui, sans-serif';
+  ctx.fillText(formatTime(lastRun), b.designW / 2, 104);
+  ctx.font = 'bold 20px system-ui, sans-serif';
   ctx.fillStyle = '#8A7355';
-  ctx.fillText(`스테이지 ${lastStage} · 웨이브 ${lastWave}   ·   최고  ${formatTime(best)}`, b.designW / 2, 208);
+  ctx.fillText(`스테이지 ${lastStage} · 웨이브 ${lastWave}   ·   최고 ${formatTime(best)}`, b.designW / 2, 142);
 
-  panel(ctx, b.designW / 2 - 130, 240, 260, 56, '#FFFFFF', 4, 28);
-  bioIcon(ctx, b.designW / 2 - 88, 268, 30);
-  ctx.font = 'bold 32px system-ui, sans-serif';
+  panel(ctx, b.designW / 2 - 110, 158, 220, 44, '#FFFFFF', 4, 22);
+  bioIcon(ctx, b.designW / 2 - 74, 180, 26);
+  ctx.font = 'bold 26px system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(`${bio}`, b.designW / 2 - 62, 269);
+  ctx.fillText(`${bio}`, b.designW / 2 - 52, 181);
   if (lastBio > 0) {
-    ctx.font = 'bold 22px system-ui, sans-serif';
+    ctx.font = 'bold 19px system-ui, sans-serif';
     ctx.fillStyle = '#1E7A3C';
-    ctx.fillText(`+${lastBio}`, b.designW / 2 + 34, 269);
+    ctx.fillText(`+${lastBio}`, b.designW / 2 + 26, 181);
   }
 
-  for (let i = 0; i < UPGRADES.length; i += 1) {
-    const u = UPGRADES[i], r = L.rows[i];
-    const lv = up[u.id];
-    const maxed = lv >= u.max;
-    const cost = upgradeCost(u.id, lv);
-    const afford = !maxed && bio >= cost;
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 19px system-ui, sans-serif';
+  ctx.fillStyle = '#9FB4C4';
+  ctx.fillText('유전자 조작 — 이어진 것부터 배운다', b.designW / 2, 224);
 
-    panel(ctx, r.x, r.y, r.w, r.h, maxed ? '#E8DCC0' : '#FFFFFF', afford ? 6 : 4);
+  // 배선 먼저
+  for (const n of NODES) {
+    if (!n.req) continue;
+    wire(ctx, nodePos(NODE_BY_ID[n.req]), nodePos(n), owned.includes(n.id));
+  }
+
+  // 노드
+  let focus = null;
+  for (const n of NODES) {
+    const p = nodePos(n);
+    const has = owned.includes(n.id);
+    const open = canLearn(n.id, owned);
+    const afford = open && bio >= n.cost;
+    const col = n.branch ? BRANCH[n.branch].color : '#F0C64A';
+    const r = n.big ? 21 : 14;
+
     if (afford) {
       ctx.save();
-      ctx.globalAlpha = 0.28 + Math.sin(t * 4 + i) * 0.14;
-      ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 8;
-      ctx.beginPath(); ctx.roundRect(r.x - 3, r.y - 3, r.w + 6, r.h + 6, 21); ctx.stroke();
+      ctx.globalAlpha = 0.3 + Math.sin(t * 5) * 0.2;
+      ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 9;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r + 8, 0, Math.PI * 2); ctx.stroke();
       ctx.restore();
     }
-
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.font = 'bold 32px system-ui, sans-serif';
-    ctx.fillStyle = PALETTE.woodDark;
-    ctx.fillText(u.name, r.x + 22, r.y + 30);
-    ctx.font = '19px system-ui, sans-serif';
-    ctx.fillStyle = '#8A7355';
-    ctx.fillText(u.desc, r.x + 22, r.y + 60);
-    levelDots(ctx, r.x + 24, r.y + 78, lv, u.max);
-
-    ctx.textAlign = 'right';
-    if (maxed) {
-      ctx.font = 'bold 28px system-ui, sans-serif';
-      ctx.fillStyle = '#A08A5E';
-      ctx.fillText('MAX', r.x + r.w - 24, r.y + 46);
-    } else {
-      ctx.font = 'bold 34px system-ui, sans-serif';
-      ctx.fillStyle = afford ? '#1E7A3C' : '#B03A3A';
-      ctx.fillText(`${cost}`, r.x + r.w - 50, r.y + 46);
-      bioIcon(ctx, r.x + r.w - 30, r.y + 46, 26);
+    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = has ? col : (open ? '#F4EFE2' : '#2E4356');
+    ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = n.big ? 5 : 3.5;
+    ctx.stroke();
+    if (!has && open) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = col; ctx.fill();
     }
+    if (open && !has) focus = focus ?? n;
   }
 
-  const s = L.start;
+  // 배울 수 있는 노드 하나를 아래에 설명한다 (전부 적으면 읽히지 않는다)
+  const cand = NODES.filter((n) => canLearn(n.id, owned));
+  if (cand.length > 0) {
+    const cheap = cand.reduce((a, c) => (c.cost < a.cost ? c : a), cand[0]);
+    const y0 = b.designH - 210;
+    panel(ctx, 34, y0, b.designW - 68, 76, '#FFFFFF', 4, 16);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = cheap.branch ? BRANCH[cheap.branch].color : '#8A7355';
+    ctx.beginPath(); ctx.arc(58, y0 + 38, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3; ctx.stroke();
+    ctx.font = 'bold 24px system-ui, sans-serif';
+    ctx.fillStyle = PALETTE.woodDark;
+    ctx.fillText(cheap.name, 84, y0 + 26);
+    ctx.font = '17px system-ui, sans-serif';
+    ctx.fillStyle = '#8A7355';
+    ctx.fillText(cheap.desc, 84, y0 + 52);
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 28px system-ui, sans-serif';
+    ctx.fillStyle = bio >= cheap.cost ? '#1E7A3C' : '#B03A3A';
+    ctx.fillText(`${cheap.cost}`, b.designW - 78, y0 + 38);
+    bioIcon(ctx, b.designW - 58, y0 + 38, 24);
+  }
+
+  const s2 = L.start;
   const pulse = 1 + Math.sin(t * 3.4) * 0.012;
   ctx.save();
-  ctx.translate(s.x + s.w / 2, s.y + s.h / 2);
+  ctx.translate(s2.x + s2.w / 2, s2.y + s2.h / 2);
   ctx.scale(pulse, pulse);
-  ctx.translate(-(s.x + s.w / 2), -(s.y + s.h / 2));
-  panel(ctx, s.x, s.y, s.w, s.h, PALETTE.hpRed, 6, 22);
+  ctx.translate(-(s2.x + s2.w / 2), -(s2.y + s2.h / 2));
+  panel(ctx, s2.x, s2.y, s2.w, s2.h, PALETTE.hpRed, 6, 20);
   ctx.textAlign = 'center';
-  ctx.font = 'bold 44px system-ui, sans-serif';
-  outlinedText(ctx, '다시 도전', s.x + s.w / 2, s.y + s.h / 2 + 2, 7);
+  ctx.font = 'bold 38px system-ui, sans-serif';
+  outlinedText(ctx, '다시 도전', s2.x + s2.w / 2, s2.y + s2.h / 2 + 2, 7);
   ctx.restore();
 }
 
@@ -3775,6 +3898,7 @@ function createInput(canvas, getViewport, layout, onTap = null) {
 
 
 
+
 /**
  * 화면 네 개: 타이틀 → 런 → (웨이브 돌파) 상점 → 런 → (사망) 로비 → 런
  *
@@ -3860,7 +3984,7 @@ async function boot() {
 
   function startRun() {
     rng = makeRng((Date.now() ^ (save.totalRuns * 2654435761)) & 0x7fffffff);
-    world = createWorld(save.upgrades, B);
+    world = createWorld(save.owned, B);
     mode = 'run';
     input.setEnabled(true);
   }
@@ -3903,9 +4027,9 @@ async function boot() {
     if (mode === 'lobby') {
       const hit = lobbyHitTest(x, y, B);
       if (hit.type === 'start') startRun();
-      else if (hit.type === 'buy') {
-        const r = buyUpgrade(hit.id, save.bio, save.upgrades);
-        if (r.ok) { save.bio = r.gold; save.upgrades = r.upgrades; persist(); }
+      else if (hit.type === 'learn') {
+        const r = learnNode(hit.id, save.bio, save.owned);
+        if (r.ok) { save.bio = r.bio; save.owned = r.owned; persist(); }
       }
       return true;
     }
@@ -3952,7 +4076,7 @@ async function boot() {
       }, elapsed, B);
     } else if (mode === 'lobby') {
       renderLobby(ctx, {
-        bio: save.bio, upgrades: save.upgrades, best: save.bestScore,
+        bio: save.bio, owned: save.owned, best: save.bestScore,
         lastRun, lastBio, lastWave, lastStage,
       }, elapsed, B);
     } else {
@@ -3988,10 +4112,11 @@ async function boot() {
     globalThis.__dev = {
       bridge, loop, input, save, images: () => images,
       world: () => world, mode: () => mode, viewport: () => viewport,
-      stats: () => deriveStats(save.upgrades),
+      stats: () => deriveStats(save.owned),
       renderFrame, startRun, closeShop,
       auto: (on = true) => { autoPlay = on; return `autoplay ${on ? 'ON' : 'OFF'}`; },
-      grant: (lv) => { save.upgrades = normalizeUpgrades({ ...save.upgrades, ...lv }); persist(); return save.upgrades; },
+      grant: (ids) => { save.owned = normalizeOwned([...save.owned, ...(ids ?? [])]); persist(); return save.owned; },
+      grantAll: () => { save.owned = normalizeOwned(NODES.map((n) => n.id)); persist(); return save.owned.length; },
       bio: (n) => { save.bio += n; return save.bio; },
       give: (id) => { if (world) equipWeapon(world, id); return world?.weapon; },
       /** rAF 없이 n 초 진행하고 한 프레임 그린다 (백그라운드 탭 검증용) */
