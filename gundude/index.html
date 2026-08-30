@@ -783,12 +783,16 @@ const B = {
    * 이 값을 치르지 않는 길이 로비의 '촉수 감각'(자석) 해금이다.
    */
   bioPickup: true,            // false 면 예전처럼 처치 즉시 획득 (A/B 비교용)
-  shardLife: 9.0,             // 조각 수명(초)
-  shardBlink: 2.5,            // 사라지기 전 깜빡이는 구간
+  shardLife: 11.5,            // 조각 수명(초). 결단할 시간은 주되 무한하지는 않게
+  shardBlink: 3.0,            // 사라지기 전 깜빡이는 구간
   shardMax: 5,                // 조각 하나가 담는 최대량. 넘치면 여러 개로 흩어진다
   shardR: 9,
-  shardScatter: 46,           // 죽은 자리에서 튀는 거리
-  pickupR: 20,                // 획득 판정 반경
+  // 획득 반경을 키웠으니 흩어지는 거리도 같이 늘린다.
+  // 안 그러면 코앞에서 죽인 적의 조각이 전부 발밑에 떨어져 "걸어가서 줍는다" 가 사라진다.
+  shardScatter: 84,           // 죽은 자리에서 튀는 거리
+  // 닿았는데도 안 먹히는 느낌이 있었다. 조각이 끌려오는 속도가 빨라
+  // 한 프레임 사이에 판정 반경을 지나쳐 버리는 경우가 생긴다.
+  pickupR: 30,                // 획득 판정 반경 (+ playerR 이 실제 반경)
   magnetBaseR: 42,            // 기본 흡인 — 거의 밟아야 한다
   magnetUnlockedR: 165,       // '촉수 감각' 해금 시
   magnetPull: 460,            // 끌려오는 가속
@@ -1223,6 +1227,13 @@ const NODES = [
   { id: 'lt6', branch: 'loot', g: [-4, -1], req: 'lt3', max: 3, base: 26, kind: 'stat',
     name: '포식자', eff: { money: 1.15, bio: 1.15 }, unit: '돈·조각 +15%',
     long: '쓰러진 것에서 남길 게 없을 때까지 가져간다. 죄책감은 실험대에 두고 왔다.' },
+  { id: 'lt7', branch: 'loot', g: [-5, 1], req: 'lt5', max: 3, base: 12, kind: 'stat',
+    name: '손끝 감각', eff: { pickR: 8 }, unit: '줍는 반경 +8',
+    long: '스치기만 해도 뜯긴다. 발을 정확히 얹지 않아도 되니 그만큼 덜 멈춘다.' },
+  { id: 'lt8', branch: 'loot', g: [-5, -1], req: 'lt6', max: 3, base: 16, kind: 'stat',
+    name: '조직 보존', eff: { shardLife: 2.5 }, unit: '조각이 남아 있는 시간 +2.5초',
+    long: '조직이 늦게 삭는다. 지금 갈지 나중에 갈지를 고를 여유가 생긴다 — '
+        + '그 여유가 곧 목숨이다.' },
 ];
 
 const NODE_BY_ID = Object.fromEntries(NODES.map((n) => [n.id, n]));
@@ -1355,13 +1366,15 @@ function deriveStats(owned, b = B) {
     skCd: 1, skR: 1, skDmg: 1, skKb: 1,
     money: 1, bio: 1, startMoney: 0,
     lifesteal: 0, pierce: 0, charges: 0, magnet: 0, magR: 1,
+    pickR: 0, shardLife: 0,
   };
   for (const [id, lv] of Object.entries(own)) {
     const e = NODE_BY_ID[id]?.eff ?? {};
     for (let i = 0; i < lv; i += 1) {
       for (const k of Object.keys(e)) {
         if (k === 'hp' || k === 'startMoney' || k === 'lifesteal'
-            || k === 'pierce' || k === 'charges' || k === 'magnet') m[k] += e[k];
+            || k === 'pierce' || k === 'charges' || k === 'magnet'
+            || k === 'pickR' || k === 'shardLife') m[k] += e[k];
         else if (k === 'dr') m.dr = 1 - (1 - m.dr) * (1 - e.dr);   // 감소율은 곱연산
         else m[k] *= e[k];
       }
@@ -1390,6 +1403,8 @@ function deriveStats(owned, b = B) {
     bonusPierce: m.pierce,                      // 모든 탄의 추가 관통
     skillCharges: 1 + m.charges,                // 충격파 보유 가능 수
     magnetRadius: Math.min(b.magnetCapR, (m.magnet > 0 ? b.magnetUnlockedR : b.magnetBaseR) * m.magR),
+    pickupRadius: b.pickupR + m.pickR,          // 손으로 뜯는 반경
+    shardLife: b.shardLife + m.shardLife,       // 조각이 버티는 시간
     owned: own,
     learned,
   };
@@ -1419,6 +1434,8 @@ function statSummary(owned, b = B) {
     ['loot', '조각 획득', base.bioMul, s.bioMul, (v) => `×${v.toFixed(2)}`],
     ['loot', '시작 자금', base.startMoney, s.startMoney, (v) => Math.round(v)],
     ['loot', '조각 흡인 범위', base.magnetRadius, s.magnetRadius, (v) => Math.round(v)],
+    ['loot', '줍는 반경', base.pickupRadius, s.pickupRadius, (v) => Math.round(v)],
+    ['loot', '조각 지속 시간', base.shardLife, s.shardLife, (v) => `${v.toFixed(1)}초`],
   ].map(([branch, label, b0, b1, fmt]) => ({
     branch, label, base: fmt(b0), now: fmt(b1), changed: Math.abs(b1 - b0) > 1e-9,
   }));
@@ -1511,12 +1528,14 @@ const WEAPONS = {
     real: '반자동 권총 · 기본 지급품',
     // 연사가 빠르면 "한 발 한 발" 의 무게가 사라진다. 시작 총은 느려야
     // 다가오는 놈을 보며 "이 탄창으로 될까" 를 세게 된다.
+    // 사거리도 짧다. 맵 절반도 못 닿으니 놈이 다가올 때까지 기다려야 한다 —
+    // 기다리는 그 시간이 이 게임의 첫 긴장이다.
     dmgMul: 0.62, intervalMul: 1.45, count: 1, spread: 0.03, pierce: 1,
-    speed: 520, life: 1.2, blast: 0, arm: 0,
+    speed: 520, life: 0.42, blast: 0, arm: 0,
     mag: 6, reload: 1.5, burst: 1, burstGap: 0,
-    bloom: 0.020, bloomMax: 0.18, falloff: [200, 380, 0.6],
+    bloom: 0.020, bloomMax: 0.18, falloff: [120, 210, 0.5],
     kick: 5, flash: 0.7, shake: 0.9, muzzle: 36, shape: 'pistol',
-    desc: '6발 · 느리다 · 기본 지급품',
+    desc: '6발 · 느리고 짧다 · 기본 지급품',
     style: '살아남아서 더 나은 총을 구해라',
   },
 
@@ -1627,16 +1646,33 @@ function weaponById(id) {
 /** 무기를 적용한 실제 사격 제원. 로비 스탯 위에 곱해진다. */
 function weaponStats(weaponId, stats) {
   const w = weaponById(weaponId);
+  const rng = stats.rangeMul ?? 1;
+
+  // 【실제로 났던 버그】 rangeMul 이 아무 데도 안 쓰이고 있었다.
+  // '총열 연장' 을 배워도 사거리가 1px 도 안 늘었다 — 조각만 먹고 아무 일도 안 했다.
+  // 사거리는 speed × life 이므로 life 에 곱하고, 감쇠 거리도 같이 밀어 준다.
+  const falloff = w.falloff
+    ? [w.falloff[0] * rng, w.falloff[1] * rng, w.falloff[2]]
+    : null;
+
   return {
     id: w.id,
     damage: stats.damage * w.dmgMul,
     interval: Math.max(0.09, stats.fireInterval * w.intervalMul),
     knock: (stats.knockMul ?? 1),
     count: w.count, spread: w.spread, pierce: w.pierce,
-    speed: w.speed, life: w.life, blast: w.blast, arm: w.arm,
+    speed: w.speed, life: w.life * rng, blast: w.blast, arm: w.arm,
     mag: w.mag, reload: w.reload * (stats.reloadMul ?? 1), burst: w.burst, burstGap: w.burstGap,
-    bloom: w.bloom, bloomMax: w.bloomMax, falloff: w.falloff,
+    bloom: w.bloom, bloomMax: w.bloomMax, falloff,
     kick: w.kick, flash: w.flash, shake: w.shake, muzzle: w.muzzle,
+    /**
+     * **탄이 실제로 닿는 거리.** 자동 조준과 화면 표시가 같은 값을 본다.
+     * 이 밖의 적은 겨누지 않는다 — 겨누면 탄이 허공에서 사라져
+     * "왜 안 맞지" 가 되고, 그건 플레이어 잘못이 아닌 답답함이다.
+     */
+    range: w.speed * w.life * rng,
+    /** 제 위력이 나오는 거리. 감쇠가 없는 총은 사거리 전체가 제 위력이다. */
+    effRange: falloff ? falloff[0] : w.speed * w.life * rng,
   };
 }
 
@@ -1990,7 +2026,7 @@ function stepWorld(world, dt, input, rnd) {
   }
 
   /* --- 2. 사격: 장전은 계속 돌고, 발사는 멈춰야 한다 --- */
-  const target = nearestEnemy(world, p.x, p.y);
+  const target = nearestEnemy(world, p.x, p.y, shot.range);
 
   // 이동 중에는 조준하지 않는다. 총을 이동 방향으로 들고 달린다.
   // 그래야 "달리면서는 못 쏜다" 가 화면만 보고도 납득된다.
@@ -2143,7 +2179,7 @@ function fireOnce(world, rnd) {
   const shot = world.shot;
   if (p.mag <= 0) { startReload(world); return; }
 
-  const near = nearestEnemy(world, p.x, p.y);
+  const near = nearestEnemy(world, p.x, p.y, shot.range);
   const limit = near ? Math.hypot(near.x - p.x, near.y - p.y) - near.r - 2 : Infinity;
   const m = muzzlePoint(p, shot, limit);
   const base = p.aimA;
@@ -2497,7 +2533,7 @@ function dropShards(world, x, y, amount, rnd = () => 0.5) {
     const np = clampToArena(x + Math.cos(a) * d, y + Math.sin(a) * d, b.shardR + 6, b);
     world.pickups.push({
       id: world.nextId++, kind: 'shard', v,
-      x: np.x, y: np.y, t: 0, life: b.shardLife,
+      x: np.x, y: np.y, t: 0, life: world.stats.shardLife ?? b.shardLife,
       seed: (world.nextId * 2654435761) >>> 0,
     });
   }
@@ -2576,7 +2612,7 @@ function stepPickups(world, dt) {
   const b = world.b;
   const p = world.player;
   const mag = world.stats.magnetRadius;
-  const takeR = b.pickupR + b.playerR;
+  const takeR = (world.stats.pickupRadius ?? b.pickupR) + b.playerR;
 
   for (let i = world.pickups.length - 1; i >= 0; i -= 1) {
     const it = world.pickups[i];
@@ -2761,11 +2797,20 @@ function stepFx(world, dt) {
   }
 }
 
-function nearestEnemy(world, x, y) {
+/**
+ * 겨눌 적. **사거리 밖은 겨누지 않는다.**
+ * 겨누면 탄이 허공에서 사라져 "왜 안 맞지" 가 되는데,
+ * 그건 플레이어가 뭘 잘못한 게 아니라 그냥 답답한 것이다.
+ * @param maxDist 사거리. 없으면 제한 없음
+ */
+function nearestEnemy(world, x, y, maxDist = Infinity) {
+  const lim = maxDist * maxDist;
   let best = null, bestD = Infinity;
   for (const e of world.enemies) {
     if (e.state === ST.FALL || e.state === ST.DROP) continue;
     const d = d2(x, y, e.x, e.y);
+    // 몸통 반지름만큼은 봐준다 — 큰 적은 가장자리가 사거리에 닿으면 맞는다
+    if (d > lim + e.r * e.r + 2 * e.r * maxDist) continue;
     if (d < bestD) { bestD = d; best = e; }
   }
   return best;
@@ -3301,6 +3346,163 @@ function drawCharacter(ctx, spec) {
 function drawGold(ctx, x, y, size, seed) {
   const lw = Math.max(1.2, size * 0.16);
   inkShape(ctx, wobbleCircle(x, y, size * 0.5, seed, size * 0.06, 8), PALETTE.gold, lw);
+}
+
+
+/* ===== src/game/art/vehicles.js ===== */
+
+
+
+/**
+ * 탈것.
+ *
+ * 【왜 새로 그리나】
+ * 배경에 떠다니는 헬기는 **시설의 것**이다. 놈들을 실어 나르는 물건이라
+ * 그걸 타고 나가는 그림은 말이 안 된다.
+ *
+ * 그래서 탈출용은 실루엣부터 다르다:
+ *   시설 헬기 — 둥근 조종석 · 로터 하나 · 슬레이트 블루
+ *   수송선   — 각진 화물칸 · **로터 둘** · 국방색 · 뒤가 열려 사다리가 내려온다
+ *
+ * 두 대가 같은 화면에 있어도 한눈에 갈린다.
+ * 색·형태·로터 수 — 셋 다 다르게 두는 것이 규칙이다.
+ */
+
+const OLIVE = '#5E6B45';
+const OLIVE_DARK = '#414C31';
+const GLASS = '#A8C4CE';
+
+/**
+ * 탈출 수송선. (0,0) 이 동체 중심이다.
+ * @param spin  로터 회전 위상
+ * @param door  0..1 — 뒷문이 열린 정도
+ */
+function drawTransport(ctx, x, y, size, spin = 0, door = 0) {
+  const S = size / 100;                 // 100 을 기준 폭으로 잡고 비율로 그린다
+  const lw = Math.max(2, 3.4 * S);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(S, S);
+
+  const poly = (pts, c) => inkPoly(ctx, pts, c, lw / S);
+
+  // --- 로터 둘 (동체보다 먼저 — 뒤에 깔린다) ---
+  for (const rx of [-46, 46]) {
+    ctx.save();
+    ctx.translate(rx, -34);
+    // 로터 기둥
+    poly([[-5, 0], [5, 0], [5, 12], [-5, 12]], OLIVE_DARK);
+    // 날개 — 회전은 가로 폭을 줄였다 늘였다 해서 표현한다 (개별 날을 그리면 뭉갠다)
+    const w = 40 * Math.abs(Math.cos(spin + (rx > 0 ? 1.1 : 0)));
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = PALETTE.ink;
+    ctx.beginPath();
+    ctx.ellipse(0, -2, Math.max(6, w), 3.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(0, -2, 5, 0, Math.PI * 2);
+    ctx.fillStyle = OLIVE_DARK; ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = lw / S; ctx.stroke();
+    ctx.restore();
+  }
+
+  // --- 동체: 각진 상자. 시설 헬기의 둥근 몸과 정반대다 ---
+  poly([[-58, -22], [44, -22], [58, -4], [58, 20], [-52, 20], [-58, 2]], OLIVE);
+
+  // 조종석 유리 — 앞쪽(오른쪽)에 비스듬히
+  poly([[34, -16], [50, -4], [50, 8], [34, 8]], GLASS);
+
+  // 측면 띠 — 군용 표식
+  poly([[-46, 0], [30, 0], [30, 6], [-46, 6]], OLIVE_DARK);
+
+  // 착륙 다리
+  for (const lx of [-34, 26]) {
+    poly([[lx, 20], [lx + 7, 20], [lx + 5, 34], [lx - 2, 34]], OLIVE_DARK);
+  }
+  poly([[-44, 32], [40, 32], [40, 38], [-44, 38]], OLIVE_DARK);
+
+  // --- 뒷문 (왼쪽 아래) — 경첩이 바닥에 있고 아래로 젖혀진다 ---
+  if (door > 0) {
+    ctx.save();
+    ctx.translate(-56, 20);
+    ctx.rotate(-door * 1.05);          // 아래·바깥으로 내려간다
+    poly([[-34, -5], [0, -5], [0, 4], [-34, 4]], OLIVE_DARK);
+    ctx.restore();
+    // 열린 화물칸 안쪽 — 어둡게 파인 것이 보여야 문이 열린 것으로 읽힌다
+    ctx.save();
+    ctx.globalAlpha = door;
+    poly([[-52, 2], [-30, 2], [-30, 19], [-52, 19]], '#20261A');
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/**
+ * 수송선에서 내려온 줄사다리.
+ * @param prog 0..1 — 내려온 정도
+ */
+function drawRopeLadder(ctx, x, topY, len, prog, seed = 3) {
+  if (prog <= 0) return;
+  const L = len * prog;
+  ctx.save();
+  ctx.strokeStyle = PALETTE.ink;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 3.4;
+  for (const sx of [-9, 9]) {
+    ctx.beginPath();
+    ctx.moveTo(x + sx, topY);
+    ctx.lineTo(x + sx, topY + L);
+    ctx.stroke();
+  }
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = PALETTE.wood;
+  const step = 22;
+  for (let d = step; d < L; d += step) {
+    ctx.beginPath();
+    ctx.moveTo(x - 11, topY + d);
+    ctx.lineTo(x + 11, topY + d);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** 하강 기류 — 수송선 아래로 퍼지는 먼지. */
+function drawDownwash(ctx, x, y, groundY, spread, alpha) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.moveTo(x - spread * 0.32, y);
+  ctx.lineTo(x + spread * 0.32, y);
+  ctx.lineTo(x + spread, groundY);
+  ctx.lineTo(x - spread, groundY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+/**
+ * 바닥에 이는 먼지.
+ * 큰 고리 하나를 그리면 "이게 뭐지" 싶은 원이 된다 —
+ * 작은 덩어리 몇 개가 바깥으로 밀려 나가는 쪽이 먼지로 읽힌다.
+ */
+function drawDustRing(ctx, x, y, r, alpha, seed = 11) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(0.5, alpha);
+  ctx.fillStyle = '#CFC8B8';
+  for (let i = 0; i < 7; i += 1) {
+    const a = (i / 7) * Math.PI * 2 + seed * 0.7;
+    const d = r * (0.55 + ((i * 37) % 10) / 22);
+    const rr = r * 0.15;
+    ctx.beginPath();
+    ctx.ellipse(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.34, rr, rr * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
 }
 
 
@@ -4044,6 +4246,7 @@ function createBridge() {
 
 
 
+
 /**
  * 렌더 계층 — 시뮬레이션 상태를 그림으로 바꾼다. 상태를 절대 수정하지 않는다.
  *
@@ -4399,6 +4602,30 @@ function drawPlayer(ctx, world) {
       0, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * charging);
     ctx.stroke();
   }
+  // 사거리 — 자동 조준이라 "저 놈이 닿나" 를 눈으로 재야 한다.
+  // 탄이 실제로 닿는 거리와 제 위력이 나오는 거리를 두 겹으로 그린다.
+  // 아레나가 타원이므로 원이 아니라 타원으로 눕힌다 — 원으로 그리면 거리가 거짓말이 된다.
+  if (shot.range && shot.range < B.arenaRx * 2.2) {
+    const flat = 0.62;                       // 바닥에 눕힌 정도
+    ctx.globalAlpha = p.moving ? 0.10 : 0.20;
+    ctx.strokeStyle = '#6E7C88';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([10, 12]);
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y + B.playerR * 0.6, shot.range, shot.range * flat, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 제 위력 구간 — 여기 안이면 감쇠가 없다
+    if (shot.effRange < shot.range * 0.95) {
+      ctx.globalAlpha = p.moving ? 0.12 : 0.26;
+      ctx.strokeStyle = PALETTE.gold;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y + B.playerR * 0.6, shot.effRange, shot.effRange * flat, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
   // 총구 들림 — 탄착이 벌어지는 만큼 조준선도 벌어진다
   if (ready && p.bloom > 0.001) {
     ctx.globalAlpha = 0.5;
@@ -4960,49 +5187,80 @@ function drawDeathCine(ctx, world, k) {
 function drawStageClear(ctx, world, images, cine) {
   const b = world.b;
   const k = Math.min(1, cine.t / cine.life);
-  ctx.save();
+  const p = world.player;
 
   // 화면이 서서히 가라앉는다
-  ctx.globalAlpha = Math.min(0.55, k * 1.4);
+  ctx.save();
+  ctx.globalAlpha = Math.min(0.5, k * 1.3);
   ctx.fillStyle = '#101E2A';
   ctx.fillRect(0, 0, b.designW, b.designH);
   ctx.restore();
 
-  // 수송선 — 위에서 내려와 잠시 머물고 다시 오른다
-  const drop = k < 0.55 ? (k / 0.55) : 1 - (k - 0.55) / 0.45 * 0.35;
-  const hy = -120 + drop * 430;
-  if (images.heli) {
-    const sc = 250 / images.heli.width;
+  /* --- 연출 구간 ---
+   * 0.00~0.30  수송선이 내려온다
+   * 0.25~0.55  문이 열리고 사다리가 내려온다
+   * 0.45~0.80  주인공이 사다리를 타고 올라간다
+   * 0.75~1.00  수송선이 떠오른다
+   */
+  const seg = (a, z) => Math.max(0, Math.min(1, (k - a) / (z - a)));
+  const descend = seg(0, 0.30);
+  const doorOpen = seg(0.25, 0.55);
+  const climb = seg(0.45, 0.80);
+  const leave = seg(0.75, 1.00);
+
+  const groundY = p.y;
+  const hoverY = groundY - 300;
+  const shipY = -160 + (hoverY + 160) * (1 - (1 - descend) ** 3) - leave * 520;
+  const shipX = p.x;
+
+  // 하강 기류와 먼지 — 있는 물건처럼 보이게 하는 것은 이런 것들이다
+  const wash = Math.min(descend, 1 - leave * 0.7) * 0.16;
+  drawDownwash(ctx, shipX, shipY + 40, groundY + 10, 150, wash);
+  drawDustRing(ctx, shipX, groundY + 8, 60 + descend * 40, wash * 2.4);
+
+  // 사다리
+  // 사다리는 열린 화물칸에서 내려온다 — 동체 왼쪽 아래다.
+  const ladderX = shipX - 94;
+  const ladderTop = shipY + 46;
+  drawRopeLadder(ctx, ladderX, ladderTop, groundY - ladderTop, doorOpen);
+
+  // 주인공 — 사다리를 타고 올라간다
+  const climbY = groundY + (ladderTop + 30 - groundY) * climb;
+  if (climb < 1 || leave > 0) {
     ctx.save();
-    ctx.translate(b.designW / 2 + Math.sin(cine.t * 2.2) * 10, hy);
-    ctx.drawImage(images.heli, -images.heli.width * sc / 2, -images.heli.height * sc / 2,
-      images.heli.width * sc, images.heli.height * sc);
-    ctx.restore();
-    // 하강 기류
-    ctx.save();
-    ctx.globalAlpha = 0.18 * drop;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.moveTo(b.designW / 2 - 60, hy + 30);
-    ctx.lineTo(b.designW / 2 + 60, hy + 30);
-    ctx.lineTo(b.designW / 2 + 150, b.arenaY + 80);
-    ctx.lineTo(b.designW / 2 - 150, b.arenaY + 80);
-    ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1;
+    drawCharacter(ctx, {
+      kind: 'dude',
+      // 사다리까지 걸어가서 오른다. 처음에는 죽은 자리에 서 있다.
+      x: p.x + (ladderX - p.x) * Math.min(1, k / 0.45),
+      y: climbY,
+      size: B.playerR * 2.5, seed: 1337, facing: 1,
+      // 사다리를 잡고 오르는 동안은 총을 내린다
+      aimA: climb > 0.05 ? Math.PI * 0.5 : 0,
+      gunShape: weaponById(world.weapon).shape,
+      pose: { walk: climb * 22, moving: climb > 0.02 && climb < 0.99, lean: 0, state: null, prog: 0 },
+    });
     ctx.restore();
   }
 
-  const e = Math.min(1, k * 3.2) * Math.min(1, (1 - k) * 4.5);
+  drawTransport(ctx, shipX, shipY, 230, world.t * 26 + k * 40, doorOpen);
+
+  /* --- 글 --- */
+  const e = Math.min(1, k * 3.4) * Math.min(1, (1 - k) * 5);
   ctx.save();
   ctx.globalAlpha = Math.max(0, e);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 30px system-ui, sans-serif';
-  outlinedText(ctx, '보스 격파', b.designW / 2, b.designH * 0.52, 8);
-  ctx.font = 'bold 64px system-ui, sans-serif';
-  outlinedText(ctx, `스테이지 ${cine.stage} 돌파`, b.designW / 2, b.designH * 0.60, 11);
-  ctx.font = 'bold 22px system-ui, sans-serif';
-  outlinedText(ctx, '보급이 내려온다', b.designW / 2, b.designH * 0.66, 6);
+  outlinedText(ctx, '보스 격파', b.designW / 2, b.designH * 0.60, 8);
+  ctx.font = 'bold 62px system-ui, sans-serif';
+  outlinedText(ctx, `스테이지 ${cine.stage} 돌파`, b.designW / 2, b.designH * 0.68, 11);
+  ctx.font = 'bold 21px system-ui, sans-serif';
+  // 매 스테이지 섬을 빠져나가는 것이 아니다. 다음 고원으로 옮겨 가는 것이다 —
+  // 탈출은 아직 멀었고, 그게 이 게임이 계속되는 이유다.
+  outlinedText(ctx, '다음 고원으로 옮겨 탄다', b.designW / 2, b.designH * 0.74, 6);
   ctx.restore();
 }
+
 
 /* ------------------------------------------------------------- 전체 */
 
@@ -5041,7 +5299,10 @@ function renderWorld(ctx, world, images, t, stick, cam = null) {
 
   const list = world.enemies.slice().sort((a, c) => a.y - c.y);
   const py = world.player.y;
-  let drew = false;
+  // 스테이지 클리어 연출은 **자기 주인공을 따로 그린다** (사다리를 오르는 그림).
+  // 여기서도 그리면 같은 사람이 둘로 보인다.
+  const hidePlayer = world.cine?.type === 'stageClear';
+  let drew = hidePlayer;
   for (const e of list) {
     if (!drew && e.y > py) { drawPlayer(ctx, world); drew = true; }
     drawEnemy(ctx, world, e);
@@ -5351,7 +5612,9 @@ function screenPos(n, pan, b = B) {
 /** 패닝 한계 — 트리가 창 밖으로 완전히 사라지지 않게 묶는다. */
 function clampPan(pan, b = B) {
   const V = treeViewport(b);
-  const lim = 4 * CELL + 40;
+  // 격자 좌표의 최대 반경에서 뽑는다. 노드를 늘려도 따라온다.
+  const span = Math.max(...NODES.map((n) => Math.max(Math.abs(n.g[0]), Math.abs(n.g[1]))));
+  const lim = span * CELL + 40;
   const mx = Math.max(0, lim - V.w / 2 + 60);
   const my = Math.max(0, lim - V.h / 2 + 60);
   return {

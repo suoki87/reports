@@ -12,7 +12,7 @@
     "counts": {
       "enemies": 3,
       "waves": 12,
-      "genes": 25,
+      "genes": 27,
       "weapons": 9,
       "bosses": 3,
       "bossPatterns": 11
@@ -66,7 +66,7 @@
       "maxAliveEnemies": 40,
       "intermissionSec": 1.6
     },
-    "treeTotalCost": 2120
+    "treeTotalCost": 2283
   },
   "enemies": [
     {
@@ -1203,6 +1203,64 @@
         },
         "desc": "돈·조각 +15%"
       }
+    },
+    {
+      "id": "lt7",
+      "name": "손끝 감각",
+      "branch": "loot",
+      "branchName": "자원 획득",
+      "branchColor": "#5FA36A",
+      "concept": "줍는 반경 +8. 스치기만 해도 뜯긴다.",
+      "intent": "\"얼마나 정확히 밟아야 하나\" — 반경이 넓을수록 줍느라 멈추는 시간이 짧아진다. 자석과 달리 여전히 그 자리로 가야 한다.",
+      "stats": {
+        "g": [
+          -5,
+          1
+        ],
+        "req": "lt5",
+        "kind": "stat",
+        "max": 3,
+        "base": 12,
+        "costs": [
+          12,
+          21,
+          37
+        ],
+        "totalCost": 70,
+        "eff": {
+          "pickR": 8
+        },
+        "desc": "줍는 반경 +8"
+      }
+    },
+    {
+      "id": "lt8",
+      "name": "조직 보존",
+      "branch": "loot",
+      "branchName": "자원 획득",
+      "branchColor": "#5FA36A",
+      "concept": "조각이 남아 있는 시간 +2.5초.",
+      "intent": "\"지금 갈까, 이따 갈까\" — 수명이 길어지면 그 결단을 미룰 수 있다. 줍기의 값을 없애는 게 아니라 **미루게** 해 주는 노드다.",
+      "stats": {
+        "g": [
+          -5,
+          -1
+        ],
+        "req": "lt6",
+        "kind": "stat",
+        "max": 3,
+        "base": 16,
+        "costs": [
+          16,
+          28,
+          49
+        ],
+        "totalCost": 93,
+        "eff": {
+          "shardLife": 2.5
+        },
+        "desc": "조각이 남아 있는 시간 +2.5초"
+      }
     }
   ],
   "weapons": [
@@ -1221,7 +1279,7 @@
         "spread": 0.03,
         "pierce": 1,
         "speed": 520,
-        "life": 1.2,
+        "life": 0.42,
         "blast": 0,
         "arm": 0,
         "mag": 6,
@@ -1231,9 +1289,9 @@
         "bloom": 0.02,
         "bloomMax": 0.18,
         "falloff": [
-          200,
-          380,
-          0.6
+          120,
+          210,
+          0.5
         ],
         "kick": 5,
         "flash": 0.7,
@@ -1242,7 +1300,7 @@
         "shape": "pistol"
       },
       "text": {
-        "desc": "6발 · 느리다 · 기본 지급품",
+        "desc": "6발 · 느리고 짧다 · 기본 지급품",
         "style": "살아남아서 더 나은 총을 구해라"
       },
       "derived": {

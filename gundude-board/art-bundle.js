@@ -256,12 +256,16 @@ const B = {
    * 이 값을 치르지 않는 길이 로비의 '촉수 감각'(자석) 해금이다.
    */
   bioPickup: true,            // false 면 예전처럼 처치 즉시 획득 (A/B 비교용)
-  shardLife: 9.0,             // 조각 수명(초)
-  shardBlink: 2.5,            // 사라지기 전 깜빡이는 구간
+  shardLife: 11.5,            // 조각 수명(초). 결단할 시간은 주되 무한하지는 않게
+  shardBlink: 3.0,            // 사라지기 전 깜빡이는 구간
   shardMax: 5,                // 조각 하나가 담는 최대량. 넘치면 여러 개로 흩어진다
   shardR: 9,
-  shardScatter: 46,           // 죽은 자리에서 튀는 거리
-  pickupR: 20,                // 획득 판정 반경
+  // 획득 반경을 키웠으니 흩어지는 거리도 같이 늘린다.
+  // 안 그러면 코앞에서 죽인 적의 조각이 전부 발밑에 떨어져 "걸어가서 줍는다" 가 사라진다.
+  shardScatter: 84,           // 죽은 자리에서 튀는 거리
+  // 닿았는데도 안 먹히는 느낌이 있었다. 조각이 끌려오는 속도가 빨라
+  // 한 프레임 사이에 판정 반경을 지나쳐 버리는 경우가 생긴다.
+  pickupR: 30,                // 획득 판정 반경 (+ playerR 이 실제 반경)
   magnetBaseR: 42,            // 기본 흡인 — 거의 밟아야 한다
   magnetUnlockedR: 165,       // '촉수 감각' 해금 시
   magnetPull: 460,            // 끌려오는 가속
@@ -693,6 +697,13 @@ const NODES = [
   { id: 'lt6', branch: 'loot', g: [-4, -1], req: 'lt3', max: 3, base: 26, kind: 'stat',
     name: '포식자', eff: { money: 1.15, bio: 1.15 }, unit: '돈·조각 +15%',
     long: '쓰러진 것에서 남길 게 없을 때까지 가져간다. 죄책감은 실험대에 두고 왔다.' },
+  { id: 'lt7', branch: 'loot', g: [-5, 1], req: 'lt5', max: 3, base: 12, kind: 'stat',
+    name: '손끝 감각', eff: { pickR: 8 }, unit: '줍는 반경 +8',
+    long: '스치기만 해도 뜯긴다. 발을 정확히 얹지 않아도 되니 그만큼 덜 멈춘다.' },
+  { id: 'lt8', branch: 'loot', g: [-5, -1], req: 'lt6', max: 3, base: 16, kind: 'stat',
+    name: '조직 보존', eff: { shardLife: 2.5 }, unit: '조각이 남아 있는 시간 +2.5초',
+    long: '조직이 늦게 삭는다. 지금 갈지 나중에 갈지를 고를 여유가 생긴다 — '
+        + '그 여유가 곧 목숨이다.' },
 ];
 
 const NODE_BY_ID = Object.fromEntries(NODES.map((n) => [n.id, n]));
@@ -825,13 +836,15 @@ function deriveStats(owned, b = B) {
     skCd: 1, skR: 1, skDmg: 1, skKb: 1,
     money: 1, bio: 1, startMoney: 0,
     lifesteal: 0, pierce: 0, charges: 0, magnet: 0, magR: 1,
+    pickR: 0, shardLife: 0,
   };
   for (const [id, lv] of Object.entries(own)) {
     const e = NODE_BY_ID[id]?.eff ?? {};
     for (let i = 0; i < lv; i += 1) {
       for (const k of Object.keys(e)) {
         if (k === 'hp' || k === 'startMoney' || k === 'lifesteal'
-            || k === 'pierce' || k === 'charges' || k === 'magnet') m[k] += e[k];
+            || k === 'pierce' || k === 'charges' || k === 'magnet'
+            || k === 'pickR' || k === 'shardLife') m[k] += e[k];
         else if (k === 'dr') m.dr = 1 - (1 - m.dr) * (1 - e.dr);   // 감소율은 곱연산
         else m[k] *= e[k];
       }
@@ -860,6 +873,8 @@ function deriveStats(owned, b = B) {
     bonusPierce: m.pierce,                      // 모든 탄의 추가 관통
     skillCharges: 1 + m.charges,                // 충격파 보유 가능 수
     magnetRadius: Math.min(b.magnetCapR, (m.magnet > 0 ? b.magnetUnlockedR : b.magnetBaseR) * m.magR),
+    pickupRadius: b.pickupR + m.pickR,          // 손으로 뜯는 반경
+    shardLife: b.shardLife + m.shardLife,       // 조각이 버티는 시간
     owned: own,
     learned,
   };
@@ -889,6 +904,8 @@ function statSummary(owned, b = B) {
     ['loot', '조각 획득', base.bioMul, s.bioMul, (v) => `×${v.toFixed(2)}`],
     ['loot', '시작 자금', base.startMoney, s.startMoney, (v) => Math.round(v)],
     ['loot', '조각 흡인 범위', base.magnetRadius, s.magnetRadius, (v) => Math.round(v)],
+    ['loot', '줍는 반경', base.pickupRadius, s.pickupRadius, (v) => Math.round(v)],
+    ['loot', '조각 지속 시간', base.shardLife, s.shardLife, (v) => `${v.toFixed(1)}초`],
   ].map(([branch, label, b0, b1, fmt]) => ({
     branch, label, base: fmt(b0), now: fmt(b1), changed: Math.abs(b1 - b0) > 1e-9,
   }));
@@ -980,12 +997,14 @@ const WEAPONS = {
     real: '반자동 권총 · 기본 지급품',
     // 연사가 빠르면 "한 발 한 발" 의 무게가 사라진다. 시작 총은 느려야
     // 다가오는 놈을 보며 "이 탄창으로 될까" 를 세게 된다.
+    // 사거리도 짧다. 맵 절반도 못 닿으니 놈이 다가올 때까지 기다려야 한다 —
+    // 기다리는 그 시간이 이 게임의 첫 긴장이다.
     dmgMul: 0.62, intervalMul: 1.45, count: 1, spread: 0.03, pierce: 1,
-    speed: 520, life: 1.2, blast: 0, arm: 0,
+    speed: 520, life: 0.42, blast: 0, arm: 0,
     mag: 6, reload: 1.5, burst: 1, burstGap: 0,
-    bloom: 0.020, bloomMax: 0.18, falloff: [200, 380, 0.6],
+    bloom: 0.020, bloomMax: 0.18, falloff: [120, 210, 0.5],
     kick: 5, flash: 0.7, shake: 0.9, muzzle: 36, shape: 'pistol',
-    desc: '6발 · 느리다 · 기본 지급품',
+    desc: '6발 · 느리고 짧다 · 기본 지급품',
     style: '살아남아서 더 나은 총을 구해라',
   },
 
@@ -1096,16 +1115,33 @@ function weaponById(id) {
 /** 무기를 적용한 실제 사격 제원. 로비 스탯 위에 곱해진다. */
 function weaponStats(weaponId, stats) {
   const w = weaponById(weaponId);
+  const rng = stats.rangeMul ?? 1;
+
+  // 【실제로 났던 버그】 rangeMul 이 아무 데도 안 쓰이고 있었다.
+  // '총열 연장' 을 배워도 사거리가 1px 도 안 늘었다 — 조각만 먹고 아무 일도 안 했다.
+  // 사거리는 speed × life 이므로 life 에 곱하고, 감쇠 거리도 같이 밀어 준다.
+  const falloff = w.falloff
+    ? [w.falloff[0] * rng, w.falloff[1] * rng, w.falloff[2]]
+    : null;
+
   return {
     id: w.id,
     damage: stats.damage * w.dmgMul,
     interval: Math.max(0.09, stats.fireInterval * w.intervalMul),
     knock: (stats.knockMul ?? 1),
     count: w.count, spread: w.spread, pierce: w.pierce,
-    speed: w.speed, life: w.life, blast: w.blast, arm: w.arm,
+    speed: w.speed, life: w.life * rng, blast: w.blast, arm: w.arm,
     mag: w.mag, reload: w.reload * (stats.reloadMul ?? 1), burst: w.burst, burstGap: w.burstGap,
-    bloom: w.bloom, bloomMax: w.bloomMax, falloff: w.falloff,
+    bloom: w.bloom, bloomMax: w.bloomMax, falloff,
     kick: w.kick, flash: w.flash, shake: w.shake, muzzle: w.muzzle,
+    /**
+     * **탄이 실제로 닿는 거리.** 자동 조준과 화면 표시가 같은 값을 본다.
+     * 이 밖의 적은 겨누지 않는다 — 겨누면 탄이 허공에서 사라져
+     * "왜 안 맞지" 가 되고, 그건 플레이어 잘못이 아닌 답답함이다.
+     */
+    range: w.speed * w.life * rng,
+    /** 제 위력이 나오는 거리. 감쇠가 없는 총은 사거리 전체가 제 위력이다. */
+    effRange: falloff ? falloff[0] : w.speed * w.life * rng,
   };
 }
 
@@ -1454,7 +1490,7 @@ function stepWorld(world, dt, input, rnd) {
   }
 
   /* --- 2. 사격: 장전은 계속 돌고, 발사는 멈춰야 한다 --- */
-  const target = nearestEnemy(world, p.x, p.y);
+  const target = nearestEnemy(world, p.x, p.y, shot.range);
 
   // 이동 중에는 조준하지 않는다. 총을 이동 방향으로 들고 달린다.
   // 그래야 "달리면서는 못 쏜다" 가 화면만 보고도 납득된다.
@@ -1607,7 +1643,7 @@ function fireOnce(world, rnd) {
   const shot = world.shot;
   if (p.mag <= 0) { startReload(world); return; }
 
-  const near = nearestEnemy(world, p.x, p.y);
+  const near = nearestEnemy(world, p.x, p.y, shot.range);
   const limit = near ? Math.hypot(near.x - p.x, near.y - p.y) - near.r - 2 : Infinity;
   const m = muzzlePoint(p, shot, limit);
   const base = p.aimA;
@@ -1961,7 +1997,7 @@ function dropShards(world, x, y, amount, rnd = () => 0.5) {
     const np = clampToArena(x + Math.cos(a) * d, y + Math.sin(a) * d, b.shardR + 6, b);
     world.pickups.push({
       id: world.nextId++, kind: 'shard', v,
-      x: np.x, y: np.y, t: 0, life: b.shardLife,
+      x: np.x, y: np.y, t: 0, life: world.stats.shardLife ?? b.shardLife,
       seed: (world.nextId * 2654435761) >>> 0,
     });
   }
@@ -2040,7 +2076,7 @@ function stepPickups(world, dt) {
   const b = world.b;
   const p = world.player;
   const mag = world.stats.magnetRadius;
-  const takeR = b.pickupR + b.playerR;
+  const takeR = (world.stats.pickupRadius ?? b.pickupR) + b.playerR;
 
   for (let i = world.pickups.length - 1; i >= 0; i -= 1) {
     const it = world.pickups[i];
@@ -2225,11 +2261,20 @@ function stepFx(world, dt) {
   }
 }
 
-function nearestEnemy(world, x, y) {
+/**
+ * 겨눌 적. **사거리 밖은 겨누지 않는다.**
+ * 겨누면 탄이 허공에서 사라져 "왜 안 맞지" 가 되는데,
+ * 그건 플레이어가 뭘 잘못한 게 아니라 그냥 답답한 것이다.
+ * @param maxDist 사거리. 없으면 제한 없음
+ */
+function nearestEnemy(world, x, y, maxDist = Infinity) {
+  const lim = maxDist * maxDist;
   let best = null, bestD = Infinity;
   for (const e of world.enemies) {
     if (e.state === ST.FALL || e.state === ST.DROP) continue;
     const d = d2(x, y, e.x, e.y);
+    // 몸통 반지름만큼은 봐준다 — 큰 적은 가장자리가 사거리에 닿으면 맞는다
+    if (d > lim + e.r * e.r + 2 * e.r * maxDist) continue;
     if (d < bestD) { bestD = d; best = e; }
   }
   return best;
