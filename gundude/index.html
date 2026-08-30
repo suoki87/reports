@@ -289,6 +289,53 @@ const B = {
   skillKnockback: 250,
   knockbackDrag: 3.2,
 
+  /**
+   * 유전자 조각 줍기.
+   *
+   * 왜 줍게 만드는가 — **죽는 이유를 플레이어의 선택으로 만들기 위해서다.**
+   * 지금 구조에서는 마음먹고 도망 다니면 거의 안 죽는다(카이팅). 카이팅 자체는
+   * 원하는 행동이지만, 그러면 죽는 길이 "적을 대량으로 쏟는 것" 하나뿐이 된다.
+   * 그건 플레이어가 진 게 아니라 게임이 밀어붙인 것이라 좋은 패배가 아니다.
+   *
+   * 조각은 **적이 죽은 자리**에 떨어진다. 그 자리는 대개 위험한 자리다.
+   * 그리고 **시간이 지나면 사라진다** — 안 사라지면 나중에 안전할 때 주우면 되므로
+   * 아무 고민도 생기지 않는다. 사라지기 때문에 "지금 갈까, 포기할까" 가 성립한다.
+   *
+   * 이 값을 치르지 않는 길이 로비의 '촉수 감각'(자석) 해금이다.
+   */
+  bioPickup: true,            // false 면 예전처럼 처치 즉시 획득 (A/B 비교용)
+  shardLife: 9.0,             // 조각 수명(초)
+  shardBlink: 2.5,            // 사라지기 전 깜빡이는 구간
+  shardMax: 5,                // 조각 하나가 담는 최대량. 넘치면 여러 개로 흩어진다
+  shardR: 9,
+  shardScatter: 46,           // 죽은 자리에서 튀는 거리
+  pickupR: 20,                // 획득 판정 반경
+  magnetBaseR: 42,            // 기본 흡인 — 거의 밟아야 한다
+  magnetUnlockedR: 165,       // '촉수 감각' 해금 시
+  magnetPull: 460,            // 끌려오는 가속
+  // 자석에 상한을 건다. 맵 전체를 덮으면 "가서 줍는다" 라는 규칙 자체가 사라진다.
+  // 아무리 투자해도 절반 남짓까지만 — 여전히 어디에 설지는 골라야 한다.
+  magnetCapR: 190,
+
+  /**
+   * 보급품 — 웨이브마다 낮은 확률로 맵에 떨어진다.
+   *
+   * 목적은 자원이 아니라 **"저기로 가고 싶다" 를 만드는 것**이다.
+   * 피하면서 쏘기만 하면 플레이어는 안전한 구석에 머문다. 그러면 지도가 없는 것과 같다.
+   * 그래서 보급품은 **플레이어에게서 먼 자리**에 놓고 **수명을 건다.**
+   * 가까이 놓거나 안 사라지면 그건 선물이지 결단이 아니다.
+   */
+  supplyChance: 0.55,         // 웨이브 시작 시 등장 확률
+  supplyLife: 15,             // 수명(초)
+  supplyBlink: 4,
+  supplyMinDist: 230,         // 플레이어로부터 최소 이 거리 밖에 놓는다
+  supplyR: 17,
+  supplyHeartFrac: 0.35,      // 하트 회복량 = 최대 체력의 35%
+  supplyPouchBase: 16,
+  supplyPouchPerWave: 4,
+  supplyClusterBase: 5,
+  supplyClusterPerWave: 1.4,
+
   // --- 적 공통 ---
   enemyBaseHp: 20,
   enemyHpGrowthPerWave: 0.22,   // 웨이브당 +22%. 시간이 아니라 진행도가 난이도를 올린다
@@ -549,13 +596,21 @@ function shotsToKill(wave, kind, shot, b = B) {
 /**
  * 메타 성장 — 생명에너지로 배우는 유전자 트리.
  *
- * 시안의 스킬트리 형태를 따른다: 격자 위에 직교 배선, 작은 노드와 큰 노드.
- * 중앙 하나에서 동서남북 네 갈래로 뻗고, **이전 노드를 배워야 다음이 열린다.**
+ * 【v2 재설계】 세 가지가 바뀌었다.
  *
- *   북 — 기본 스펙   (화력·체력·이동·방어)
- *   동 — 총기 이해   (연사·장전·사거리·탄 넉백)
- *   남 — 폭탄        (쿨타임·범위·피해·밀치기)
- *   서 — 자원 획득   (돈·생명에너지)
+ *  1. **노드마다 단계가 다르다.** 스탯은 3~5단계, 기능 해금은 1단계다.
+ *     기능 해금은 "있냐 없냐" 의 문제라 단계를 나눌 게 없다.
+ *     스탯은 조금씩 오르는 맛이 진행감이므로 잘게 쪼갠다.
+ *
+ *  2. **단계가 오를수록 값이 뛴다.** 1단계는 한 판이면 사고, 5단계는 한참 모아야 한다.
+ *     싼 단계가 앞에 있어야 "한 판 하면 뭐라도 하나는 산다" (설계 기둥 4번) 가 지켜진다.
+ *
+ *  3. **안 배운 앞길은 보이지 않는다.** 이전 노드를 배워야 다음이 드러난다.
+ *     25개를 한 번에 보여 주면 고르는 게 아니라 훑는 게 된다.
+ *     한 번에 보이는 선택지는 많아야 대여섯이어야 한다.
+ *
+ * 배치는 중앙 '각성' 에서 동서남북 네 갈래:
+ *   북 — 기본 스펙 · 동 — 총기 이해 · 남 — 폭탄 · 서 — 자원 획득
  *
  * 이 게임의 진행감 전체가 이 트리에 있다. 런 안에서는 아무것도 강해지지 않는다.
  * 전부 순수 함수다.
@@ -568,99 +623,208 @@ const BRANCH = {
   loot:  { name: '자원 획득',   color: '#5FA36A', desc: '더 많이 챙긴다' },
 };
 
+/** 단계 비용 곡선 — 1단계는 싸고, 올라갈수록 가파르다. */
+const COST_GROWTH = 1.75;
+
 /**
  * 노드 정의.
- *  g   : 격자 좌표 [x, y] — 중앙이 (0,0)
- *  req : 이 노드를 열려면 배워야 하는 노드
- *  big : 큰 노드 (비싸고 효과가 크다)
- *  eff : 효과. deriveStats 가 곱하거나 더한다.
+ *  g    : 격자 좌표 [x, y] — 중앙이 (0,0)
+ *  req  : 이 노드가 드러나려면 배워야 하는 노드
+ *  max  : 최대 단계
+ *  base : 1단계 비용. 다음 단계는 COST_GROWTH 배씩
+ *  kind : 'stat'(단계형) | 'unlock'(1단계 기능 해금)
+ *  eff  : **단계당** 효과. 3단계면 세 번 적용된다
  */
 const NODES = [
-  { id: 'root', branch: null, g: [0, 0], req: null, cost: 0, big: true,
-    name: '각성', eff: {}, desc: '여기서 시작한다' },
+  { id: 'root', branch: null, g: [0, 0], req: null, max: 1, base: 0, kind: 'unlock',
+    name: '각성', eff: {}, desc: '여기서 시작한다',
+    long: '모든 갈래가 여기서 뻗는다. 어느 쪽을 먼저 키울지가 첫 판단이다.' },
 
-  /* ---- 북: 기본 스펙 ---- */
-  { id: 'sp1', branch: 'spec', g: [0, -1], req: 'root', cost: 12,
-    name: '근육 섬유', eff: { dmg: 1.30 }, desc: '피해 +30%' },
-  { id: 'sp2', branch: 'spec', g: [0, -2], req: 'sp1', cost: 16,
-    name: '두꺼운 표피', eff: { hp: 16 }, desc: '최대 체력 +16' },
-  { id: 'sp3', branch: 'spec', g: [-1, -3], req: 'sp2', cost: 22,
-    name: '경련 반사', eff: { spd: 1.09 }, desc: '이동 속도 +9%' },
-  { id: 'sp4', branch: 'spec', g: [1, -3], req: 'sp2', cost: 26,
-    name: '아드레날린', eff: { dmg: 1.34 }, desc: '피해 +34%' },
-  { id: 'sp5', branch: 'spec', g: [-1, -4], req: 'sp3', cost: 34,
-    name: '연골 갑피', eff: { hp: 26 }, desc: '최대 체력 +26' },
-  { id: 'sp6', branch: 'spec', g: [0, -5], req: 'sp5', cost: 56, big: true,
-    name: '경화 세포', eff: { dr: 0.12, hp: 24, dmg: 1.25 }, desc: '받는 피해 −12% · 체력 +24 · 피해 +25%' },
+  /* ================= 북: 기본 스펙 ================= */
+  { id: 'sp1', branch: 'spec', g: [0, -1], req: 'root', max: 5, base: 4, kind: 'stat',
+    name: '근육 섬유', eff: { dmg: 1.12 }, unit: '피해 +12%',
+    long: '적이 몇 발에 죽는지가 이 게임의 체감 전부다. 가장 먼저 손대는 곳.' },
+  { id: 'sp2', branch: 'spec', g: [0, -2], req: 'sp1', max: 5, base: 5, kind: 'stat',
+    name: '두꺼운 표피', eff: { hp: 6 }, unit: '최대 체력 +6',
+    long: '한 대 더 맞고 버틴다. 초반에는 이 한 대가 스테이지 하나를 가른다.' },
+  { id: 'sp3', branch: 'spec', g: [-1, -3], req: 'sp2', max: 3, base: 9, kind: 'stat',
+    name: '경련 반사', eff: { spd: 1.05 }, unit: '이동 속도 +5%',
+    long: '빨리 피하면 빨리 멈출 수 있다. 이동 속도는 곧 사격 시간이다.' },
+  { id: 'sp4', branch: 'spec', g: [1, -3], req: 'sp2', max: 4, base: 12, kind: 'stat',
+    name: '연골 갑피', eff: { dr: 0.05 }, unit: '받는 피해 −5%',
+    long: '체력을 늘리는 것과 다르다. 후반의 큰 한 방을 깎는 쪽이다.' },
+  { id: 'sp6', branch: 'spec', g: [-1, -4], req: 'sp3', max: 3, base: 26, kind: 'stat',
+    name: '과부하 심장', eff: { dmg: 1.18 }, unit: '피해 +18%',
+    long: '근육 섬유의 상위. 비싸지만 한 단계가 크다.' },
+  { id: 'sp5', branch: 'spec', g: [1, -4], req: 'sp4', max: 1, base: 60, kind: 'unlock',
+    name: '재생 조직', eff: { lifesteal: 2 }, unit: '적을 죽일 때마다 체력 +2',
+    long: '싸울수록 회복한다. 도망치는 대신 맞서는 선택지가 생긴다 — '
+        + '체력이 자원이 되고, 그 자원은 오직 공격으로만 번다.' },
 
-  /* ---- 동: 총기 이해 ---- */
-  { id: 'gn1', branch: 'gun', g: [1, 0], req: 'root', cost: 12,
-    name: '방아쇠 감각', eff: { itv: 0.88 }, desc: '발사 간격 −12%' },
-  { id: 'gn2', branch: 'gun', g: [2, 0], req: 'gn1', cost: 16,
-    name: '탄창 숙련', eff: { rld: 0.84 }, desc: '재장전 −16%' },
-  { id: 'gn3', branch: 'gun', g: [3, -1], req: 'gn2', cost: 22,
-    name: '총열 연장', eff: { rng: 1.25 }, desc: '사거리 +25%' },
-  { id: 'gn4', branch: 'gun', g: [3, 1], req: 'gn2', cost: 26,
-    name: '고압 장약', eff: { kb: 1.8 }, desc: '탄 넉백 +80%' },
-  { id: 'gn5', branch: 'gun', g: [4, -1], req: 'gn3', cost: 34,
-    name: '속사 훈련', eff: { itv: 0.86 }, desc: '발사 간격 −14%' },
-  { id: 'gn6', branch: 'gun', g: [5, 0], req: 'gn5', cost: 56, big: true,
-    name: '총기 일체화', eff: { itv: 0.85, rld: 0.80, dmg: 1.2 }, desc: '간격 −15% · 재장전 −20% · 피해 +20%' },
+  /* ================= 동: 총기 이해 ================= */
+  { id: 'gn1', branch: 'gun', g: [1, 0], req: 'root', max: 5, base: 4, kind: 'stat',
+    name: '방아쇠 감각', eff: { itv: 0.94 }, unit: '발사 간격 −6%',
+    long: '멈춰 있는 시간이 같아도 더 많이 나간다. 정지사격 게임의 정석 투자.' },
+  { id: 'gn2', branch: 'gun', g: [2, 0], req: 'gn1', max: 4, base: 6, kind: 'stat',
+    name: '탄창 숙련', eff: { rld: 0.90 }, unit: '재장전 −10%',
+    long: '재장전은 이동 중에도 돈다. 짧아질수록 "도망치며 채우는" 리듬이 빨라진다.' },
+  { id: 'gn3', branch: 'gun', g: [3, -1], req: 'gn2', max: 3, base: 10, kind: 'stat',
+    name: '총열 연장', eff: { rng: 1.15 }, unit: '사거리 +15%',
+    long: '멀리서 시작할 수 있으면 그만큼 덜 위험한 자리에서 쏜다.' },
+  { id: 'gn4', branch: 'gun', g: [3, 1], req: 'gn2', max: 3, base: 8, kind: 'stat',
+    name: '고압 장약', eff: { kb: 1.35 }, unit: '탄 넉백 +35%',
+    long: '적을 밀어내면 그만큼 더 쏠 시간을 번다. 피해가 아니라 시간을 사는 투자.' },
+  { id: 'gn6', branch: 'gun', g: [4, -1], req: 'gn3', max: 3, base: 24, kind: 'stat',
+    name: '속사 훈련', eff: { itv: 0.92 }, unit: '발사 간격 −8%',
+    long: '방아쇠 감각의 상위. 둘을 겹치면 체감이 확실히 달라진다.' },
+  { id: 'gn5', branch: 'gun', g: [4, 1], req: 'gn4', max: 1, base: 70, kind: 'unlock',
+    name: '철갑탄', eff: { pierce: 1 }, unit: '모든 탄이 1명 더 관통',
+    long: '줄지어 오는 적을 한 발로 꿴다. 적을 "몇 마리" 가 아니라 "어떤 줄" 로 보게 만든다 — '
+        + '겨냥할 수 없는 게임에서 위치를 잡는 이유가 생긴다.' },
 
-  /* ---- 남: 폭탄 ---- */
-  { id: 'bm1', branch: 'bomb', g: [0, 1], req: 'root', cost: 14,
-    name: '기폭 회로', eff: { skCd: 0.74 }, desc: '충격파 대기 −26%' },
-  { id: 'bm2', branch: 'bomb', g: [0, 2], req: 'bm1', cost: 18,
-    name: '확산 장약', eff: { skR: 1.45 }, desc: '충격파 범위 +45%' },
-  { id: 'bm3', branch: 'bomb', g: [-1, 3], req: 'bm2', cost: 24,
-    name: '고폭 탄두', eff: { skDmg: 1.9 }, desc: '충격파 피해 +90%' },
-  { id: 'bm4', branch: 'bomb', g: [1, 3], req: 'bm2', cost: 26,
-    name: '충격 증폭', eff: { skKb: 1.9 }, desc: '밀치는 힘 +90%' },
-  { id: 'bm5', branch: 'bomb', g: [-1, 4], req: 'bm3', cost: 36,
-    name: '축전기', eff: { skCd: 0.72 }, desc: '충격파 대기 −28%' },
-  { id: 'bm6', branch: 'bomb', g: [0, 5], req: 'bm5', cost: 58, big: true,
-    name: '연쇄 폭발', eff: { skR: 1.5, skDmg: 2.0, skCd: 0.8 }, desc: '범위 +50% · 피해 +100% · 대기 −20%' },
+  /* ================= 남: 폭탄 ================= */
+  { id: 'bm1', branch: 'bomb', g: [0, 1], req: 'root', max: 5, base: 5, kind: 'stat',
+    name: '기폭 회로', eff: { skCd: 0.90 }, unit: '충격파 대기 −10%',
+    long: '런당 한 번짜리 기술을 두 번, 세 번 쓰게 만든다. 폭탄 갈래의 시작.' },
+  { id: 'bm2', branch: 'bomb', g: [0, 2], req: 'bm1', max: 4, base: 7, kind: 'stat',
+    name: '확산 장약', eff: { skR: 1.20 }, unit: '충격파 범위 +20%',
+    long: '처음엔 발밑만 쓸어낸다. 범위가 곧 살아남는 반경이다.' },
+  { id: 'bm3', branch: 'bomb', g: [-1, 3], req: 'bm2', max: 4, base: 9, kind: 'stat',
+    name: '고폭 탄두', eff: { skDmg: 1.35 }, unit: '충격파 피해 +35%',
+    long: '밀어내는 용도에서 죽이는 용도로 바뀌는 지점.' },
+  { id: 'bm4', branch: 'bomb', g: [1, 3], req: 'bm2', max: 3, base: 8, kind: 'stat',
+    name: '충격 증폭', eff: { skKb: 1.30 }, unit: '밀치는 힘 +30%',
+    long: '죽이지 못해도 벼랑까지 밀어낼 수 있다. 절벽이 무기가 된다.' },
+  { id: 'bm6', branch: 'bomb', g: [-1, 4], req: 'bm3', max: 3, base: 22, kind: 'stat',
+    name: '축전기', eff: { skCd: 0.88 }, unit: '충격파 대기 −12%',
+    long: '기폭 회로의 상위. 겹치면 대기가 눈에 띄게 짧아진다.' },
+  { id: 'bm5', branch: 'bomb', g: [1, 4], req: 'bm4', max: 1, base: 80, kind: 'unlock',
+    name: '이중 기폭', eff: { charges: 1 }, unit: '충격파를 2회까지 모아 둔다',
+    long: '한 번 더 들고 다닌다. "지금 쓸까, 아껴 둘까" 가 처음으로 진짜 고민이 된다 — '
+        + '한 발뿐일 때는 아낄 이유가 없었다.' },
 
-  /* ---- 서: 자원 획득 ---- */
-  { id: 'lt1', branch: 'loot', g: [-1, 0], req: 'root', cost: 12,
-    name: '전리품 감각', eff: { money: 1.25 }, desc: '돈 획득 +25%' },
-  { id: 'lt2', branch: 'loot', g: [-2, 0], req: 'lt1', cost: 16,
-    name: '조직 채취', eff: { bio: 1.25 }, desc: '생명에너지 +25%' },
-  { id: 'lt3', branch: 'loot', g: [-3, -1], req: 'lt2', cost: 22,
-    name: '약탈 습관', eff: { money: 1.3 }, desc: '돈 획득 +30%' },
-  { id: 'lt4', branch: 'loot', g: [-3, 1], req: 'lt2', cost: 24,
-    name: '유전자 정제', eff: { bio: 1.3 }, desc: '생명에너지 +30%' },
-  { id: 'lt5', branch: 'loot', g: [-4, -1], req: 'lt3', cost: 32,
-    name: '비상 자금', eff: { startMoney: 40 }, desc: '판 시작 시 돈 +40' },
-  { id: 'lt6', branch: 'loot', g: [-5, 0], req: 'lt5', cost: 54, big: true,
-    name: '포식자', eff: { money: 1.35, bio: 1.35 }, desc: '돈·생명에너지 +35%' },
+  /* ================= 서: 자원 획득 ================= */
+  { id: 'lt1', branch: 'loot', g: [-1, 0], req: 'root', max: 4, base: 4, kind: 'stat',
+    name: '전리품 감각', eff: { money: 1.15 }, unit: '돈 획득 +15%',
+    long: '돈은 보급소에서 쓴다. 이번 판이 끝나면 사라지지만, 그 판을 길게 만든다.' },
+  { id: 'lt2', branch: 'loot', g: [-2, 0], req: 'lt1', max: 4, base: 5, kind: 'stat',
+    name: '조직 채취', eff: { bio: 1.15 }, unit: '유전자 조각 +15%',
+    long: '조각 하나가 더 굵어진다. 다음 판이 빨라지는 유일한 길.' },
+  { id: 'lt3', branch: 'loot', g: [-3, -1], req: 'lt2', max: 3, base: 10, kind: 'stat',
+    name: '비상 자금', eff: { startMoney: 25 }, unit: '판 시작 시 돈 +25',
+    long: '첫 보급소에서 살 수 있는 게 달라진다. 시작이 다르면 끝도 다르다.' },
+  { id: 'lt4', branch: 'loot', g: [-3, 1], req: 'lt2', max: 1, base: 45, kind: 'unlock',
+    name: '촉수 감각', eff: { magnet: 1 }, unit: '유전자 조각을 멀리서 끌어당긴다',
+    long: '조각은 걸어가서 주워야 한다. 줍는 동안은 못 쏜다 — 그게 이 게임의 값이다. '
+        + '이걸 배우면 그 값을 안 치른다. 자원 갈래에서 가장 크게 체감되는 해금.' },
+  { id: 'lt5', branch: 'loot', g: [-4, 1], req: 'lt4', max: 3, base: 30, kind: 'stat',
+    name: '흡인장', eff: { magR: 1.20 }, unit: '끌어당기는 범위 +20%',
+    long: '촉수 감각을 더 멀리. 다만 맵 전체를 덮지는 못한다 — '
+        + '어디에 설지를 고르는 일은 끝까지 남는다.' },
+  { id: 'lt6', branch: 'loot', g: [-4, -1], req: 'lt3', max: 3, base: 26, kind: 'stat',
+    name: '포식자', eff: { money: 1.15, bio: 1.15 }, unit: '돈·조각 +15%',
+    long: '두 재화를 같이 올린다. 자원 갈래의 마무리.' },
 ];
 
 const NODE_BY_ID = Object.fromEntries(NODES.map((n) => [n.id, n]));
 
-/** 세이브의 습득 목록을 항상 유효한 모양으로 정규화한다. 절대 throw 하지 않는다. */
+/* ------------------------------------------------------------------ 비용 */
+
+/**
+ * 노드의 `level` 단계(1부터)를 사는 값.
+ * 1단계는 base, 그 뒤로 COST_GROWTH 배씩. 싼 앞단계가 있어야 한 판의 보상이 살아난다.
+ */
+function stepCost(node, level) {
+  const n = typeof node === 'string' ? NODE_BY_ID[node] : node;
+  if (!n || level < 1 || level > n.max) return Infinity;
+  return Math.max(1, Math.round(n.base * COST_GROWTH ** (level - 1)));
+}
+
+/** 그 노드를 끝까지 올리는 총액. */
+function nodeTotalCost(node) {
+  const n = typeof node === 'string' ? NODE_BY_ID[node] : node;
+  if (!n) return 0;
+  let s = 0;
+  for (let i = 1; i <= n.max; i += 1) s += stepCost(n, i);
+  return s;
+}
+
+/** 트리를 전부 배우는 데 드는 생명에너지 — 진행 곡선의 끝점. */
+function totalCost() {
+  return NODES.reduce((s, n) => s + nodeTotalCost(n), 0);
+}
+
+/* ------------------------------------------------------------ 습득 상태 */
+
+/**
+ * 세이브의 습득 상태를 항상 유효한 모양으로 정규화한다. 절대 throw 하지 않는다.
+ * 반환은 `{ id: level }` 맵이다. 예전 배열 형태(v5)도 받아 준다.
+ */
 function normalizeOwned(raw) {
-  const set = new Set(['root']);          // 각성은 언제나 보유
+  const out = { root: 1 };
   if (Array.isArray(raw)) {
-    for (const id of raw) if (typeof id === 'string' && NODE_BY_ID[id]) set.add(id);
+    // v5 형태 — 배운 노드의 id 배열. 전부 1단계로 본다.
+    for (const id of raw) if (typeof id === 'string' && NODE_BY_ID[id]) out[id] = 1;
+  } else if (raw && typeof raw === 'object') {
+    for (const [id, lv] of Object.entries(raw)) {
+      const n = NODE_BY_ID[id];
+      if (!n) continue;
+      const v = Math.floor(Number(lv));
+      if (Number.isFinite(v) && v > 0) out[id] = Math.min(n.max, v);
+    }
   }
   // 선행 노드가 빠져 있으면 잘라낸다 (세이브 오염 방어)
   let changed = true;
   while (changed) {
     changed = false;
-    for (const id of [...set]) {
+    for (const id of Object.keys(out)) {
       const n = NODE_BY_ID[id];
-      if (n?.req && !set.has(n.req)) { set.delete(id); changed = true; }
+      if (n?.req && !(out[n.req] > 0)) { delete out[id]; changed = true; }
     }
   }
-  return [...set];
+  out.root = 1;
+  return out;
 }
 
-/** 지금 배울 수 있는가 — 선행 노드를 배웠고 아직 안 배웠으면. */
-function canLearn(id, owned) {
+/** 지금 배운 단계 (0 = 아직 안 배움). */
+function levelOf(id, owned) {
+  return normalizeOwned(owned)[id] ?? 0;
+}
+
+/**
+ * 화면에 **보여도 되는가.**
+ * 이전 노드를 배워야 다음이 드러난다. 안 그러면 한눈에 25개가 쏟아진다.
+ */
+function isRevealed(id, owned) {
+  const own = normalizeOwned(owned);
   const n = NODE_BY_ID[id];
-  if (!n || owned.includes(id)) return false;
-  return !n.req || owned.includes(n.req);
+  if (!n) return false;
+  if (own[id] > 0) return true;
+  return !n.req || own[n.req] > 0;
+}
+
+/** 지금 화면에 그릴 노드들. */
+function revealedNodes(owned) {
+  const own = normalizeOwned(owned);
+  return NODES.filter((n) => isRevealed(n.id, own));
+}
+
+/** 다음 단계를 살 수 있는가 (돈은 보지 않는다). */
+function canLearn(id, owned) {
+  const own = normalizeOwned(owned);
+  const n = NODE_BY_ID[id];
+  if (!n) return false;
+  if ((own[id] ?? 0) >= n.max) return false;
+  return isRevealed(id, own);
+}
+
+/** 다음 단계의 값. 이미 만렙이면 Infinity. */
+function nextCost(id, owned) {
+  const n = NODE_BY_ID[id];
+  if (!n) return Infinity;
+  const lv = levelOf(id, owned);
+  if (lv >= n.max) return Infinity;
+  return stepCost(n, lv + 1);
 }
 
 /** 습득 시도. 순수 함수 — 새 상태를 돌려주고 인자를 건드리지 않는다. */
@@ -668,15 +832,20 @@ function learnNode(id, bio, owned) {
   const own = normalizeOwned(owned);
   const n = NODE_BY_ID[id];
   if (!n) return { ok: false, bio, owned: own, reason: 'unknown' };
-  if (own.includes(id)) return { ok: false, bio, owned: own, reason: 'have' };
+  const lv = own[id] ?? 0;
+  if (lv >= n.max) return { ok: false, bio, owned: own, reason: 'max' };
   if (!canLearn(id, own)) return { ok: false, bio, owned: own, reason: 'locked' };
-  if (bio < n.cost) return { ok: false, bio, owned: own, reason: 'poor' };
-  return { ok: true, bio: bio - n.cost, owned: [...own, id] };
+  const cost = stepCost(n, lv + 1);
+  if (bio < cost) return { ok: false, bio, owned: own, reason: 'poor' };
+  return { ok: true, bio: bio - cost, owned: { ...own, [id]: lv + 1 }, spent: cost };
 }
 
+/* --------------------------------------------------------------- 스탯 */
+
 /**
- * 습득한 노드 → 실제 전투 스탯.
+ * 습득 상태 → 실제 전투 스탯.
  * 런타임·시뮬레이터·테스트가 전부 이 함수 하나만 본다.
+ * 단계형 노드의 효과는 **단계 수만큼 반복 적용**된다.
  */
 function deriveStats(owned, b = B) {
   const own = normalizeOwned(owned);
@@ -685,15 +854,20 @@ function deriveStats(owned, b = B) {
     itv: 1, rld: 1, rng: 1, kb: 1,
     skCd: 1, skR: 1, skDmg: 1, skKb: 1,
     money: 1, bio: 1, startMoney: 0,
+    lifesteal: 0, pierce: 0, charges: 0, magnet: 0, magR: 1,
   };
-  for (const id of own) {
+  for (const [id, lv] of Object.entries(own)) {
     const e = NODE_BY_ID[id]?.eff ?? {};
-    for (const k of Object.keys(e)) {
-      if (k === 'hp' || k === 'startMoney') m[k] += e[k];
-      else if (k === 'dr') m.dr = 1 - (1 - m.dr) * (1 - e.dr);   // 감소율은 곱연산
-      else m[k] *= e[k];
+    for (let i = 0; i < lv; i += 1) {
+      for (const k of Object.keys(e)) {
+        if (k === 'hp' || k === 'startMoney' || k === 'lifesteal'
+            || k === 'pierce' || k === 'charges' || k === 'magnet') m[k] += e[k];
+        else if (k === 'dr') m.dr = 1 - (1 - m.dr) * (1 - e.dr);   // 감소율은 곱연산
+        else m[k] *= e[k];
+      }
     }
   }
+  const learned = Object.entries(own).reduce((s, [id, lv]) => s + (id === 'root' ? 0 : lv), 0);
   return {
     damage: b.baseDamage * m.dmg,
     fireInterval: Math.max(0.09, b.fireIntervalBase * m.itv),
@@ -710,28 +884,91 @@ function deriveStats(owned, b = B) {
     moneyMul: m.money,
     bioMul: m.bio,
     startMoney: m.startMoney,
+    // --- 기능 해금 ---
+    lifesteal: m.lifesteal,                     // 처치당 회복량
+    bonusPierce: m.pierce,                      // 모든 탄의 추가 관통
+    skillCharges: 1 + m.charges,                // 충격파 보유 가능 수
+    magnetRadius: Math.min(b.magnetCapR, (m.magnet > 0 ? b.magnetUnlockedR : b.magnetBaseR) * m.magR),
     owned: own,
-    learned: own.length - 1,
+    learned,
   };
 }
 
-/** 트리를 전부 배우는 데 드는 생명에너지 — 진행 곡선의 끝점. */
-function totalCost() {
-  return NODES.reduce((s, n) => s + n.cost, 0);
+/**
+ * 능력 총합 화면이 읽는 표.
+ * 기본값과 현재값을 나란히 놓는다 — 무엇이 얼마나 늘었는지가 숫자 하나로는 안 보인다.
+ */
+function statSummary(owned, b = B) {
+  const s = deriveStats(owned, b);
+  const base = deriveStats({}, b);
+  const rows = [
+    ['spec', '피해', base.damage, s.damage, (v) => v.toFixed(1)],
+    ['spec', '최대 체력', base.maxHp, s.maxHp, (v) => Math.round(v)],
+    ['spec', '이동 속도', base.speed, s.speed, (v) => Math.round(v)],
+    ['spec', '받는 피해 감소', base.damageReduction, s.damageReduction, (v) => `${Math.round(v * 100)}%`],
+    ['gun', '발사 간격', base.fireInterval, s.fireInterval, (v) => `${v.toFixed(2)}초`],
+    ['gun', '재장전 배율', base.reloadMul, s.reloadMul, (v) => `×${v.toFixed(2)}`],
+    ['gun', '사거리 배율', base.rangeMul, s.rangeMul, (v) => `×${v.toFixed(2)}`],
+    ['gun', '탄 넉백', base.knockMul, s.knockMul, (v) => `×${v.toFixed(2)}`],
+    ['bomb', '충격파 대기', base.skillCooldown, s.skillCooldown, (v) => `${v.toFixed(0)}초`],
+    ['bomb', '충격파 범위', base.skillRadius, s.skillRadius, (v) => Math.round(v)],
+    ['bomb', '충격파 피해', base.skillDamageMul, s.skillDamageMul, (v) => `×${v.toFixed(2)}`],
+    ['bomb', '밀치는 힘', base.skillKnockback, s.skillKnockback, (v) => Math.round(v)],
+    ['loot', '돈 획득', base.moneyMul, s.moneyMul, (v) => `×${v.toFixed(2)}`],
+    ['loot', '조각 획득', base.bioMul, s.bioMul, (v) => `×${v.toFixed(2)}`],
+    ['loot', '시작 자금', base.startMoney, s.startMoney, (v) => Math.round(v)],
+    ['loot', '조각 흡인 범위', base.magnetRadius, s.magnetRadius, (v) => Math.round(v)],
+  ].map(([branch, label, b0, b1, fmt]) => ({
+    branch, label, base: fmt(b0), now: fmt(b1), changed: Math.abs(b1 - b0) > 1e-9,
+  }));
+
+  const unlocks = NODES
+    .filter((n) => n.kind === 'unlock' && n.id !== 'root' && (s.owned[n.id] ?? 0) > 0)
+    .map((n) => ({ branch: n.branch, name: n.name, unit: n.unit }));
+
+  return { rows, unlocks, learned: s.learned, stats: s };
 }
 
 /** v4 의 트랙 레벨을 트리 노드로 옮긴다. 진행이 사라지면 안 된다. */
 function migrateFromTracks(upgrades) {
   const map = {
-    power: ['sp1', 'sp4'], rate: ['gn1', 'gn5'], vigor: ['sp2', 'sp5'],
-    swift: ['sp3'], shock: ['bm1', 'bm5'],
+    power: 'sp1', rate: 'gn1', vigor: 'sp2', swift: 'sp3', shock: 'bm1',
   };
-  const owned = ['root'];
-  for (const [k, ids] of Object.entries(map)) {
+  const owned = { root: 1 };
+  for (const [k, id] of Object.entries(map)) {
     const lv = Math.max(0, Math.floor(Number(upgrades?.[k]) || 0));
-    for (let i = 0; i < Math.min(lv, ids.length); i += 1) owned.push(ids[i]);
+    if (lv > 0) owned[id] = Math.min(NODE_BY_ID[id].max, lv);
   }
   return normalizeOwned(owned);
+}
+
+/**
+ * v5 의 노드 배열(전부 1단계)을 단계형으로 옮긴다.
+ * 없어진 노드(sp5·gn5·bm5·lt5 의 옛 뜻)는 같은 갈래의 대표 노드로 흡수한다 —
+ * 진행이 통째로 사라지는 것보다 낫다.
+ */
+function migrateFromFlatTree(ownedArray) {
+  // v4 → v5 단계가 이미 맵을 만들어 넘겼을 수 있다. 그때는 그대로 통과시킨다.
+  // (배열로만 받으면 v3 이하에서 올라온 진행이 통째로 사라진다 — 실제로 났던 버그다)
+  if (ownedArray && !Array.isArray(ownedArray) && typeof ownedArray === 'object') {
+    return normalizeOwned(ownedArray);
+  }
+  const out = { root: 1 };
+  const absorb = { spec: 'sp1', gun: 'gn1', bomb: 'bm1', loot: 'lt1' };
+  if (Array.isArray(ownedArray)) {
+    for (const id of ownedArray) {
+      if (id === 'root') continue;
+      const n = NODE_BY_ID[id];
+      if (n) { out[id] = Math.max(out[id] ?? 0, 1); continue; }
+      // 사라진 노드 — 갈래를 알 수 있으면 그 갈래의 첫 노드를 한 단계 올려 준다
+      const br = Object.keys(absorb).find((k) => id.startsWith(k.slice(0, 2)));
+      if (br) {
+        const t = absorb[br];
+        out[t] = Math.min(NODE_BY_ID[t].max, (out[t] ?? 0) + 1);
+      }
+    }
+  }
+  return normalizeOwned(out);
 }
 
 
@@ -1042,6 +1279,7 @@ function createWorld(owned = [], b = B) {
       x: b.arenaX, y: b.arenaY,
       hp: stats.maxHp, maxHp: stats.maxHp,
       invuln: 0, fireCd: 0, skillCd: 0,
+      skillReady: stats.skillCharges,   // 들고 있는 충격파 수 ('이중 기폭' 이 2로 만든다)
       facing: 1, moving: false, hurtFlash: 0,
       walk: 0, lean: 0,
       recoil: 0, recoilA: 0,   // 반동 (거리, 방향)
@@ -1053,6 +1291,7 @@ function createWorld(owned = [], b = B) {
       burstLeft: 0, burstT: 0, // 점사 잔여 발수·간격 타이머
     },
     enemies: [],
+    pickups: [],                 // 유전자 조각·보급품. 걸어가서 주워야 한다
     bullets: [],
     hostileShots: [],
     fx: [],
@@ -1062,6 +1301,8 @@ function createWorld(owned = [], b = B) {
     kills: 0,
     money: stats.startMoney,  // 금색 — 인게임 상점에서 쓴다. 런이 끝나면 사라진다
     bio: 0,                   // 파랑 — 생명에너지. 로비의 유전자 조작에 쓴다. 세이브에 쌓인다
+    bioLost: 0,               // 못 줍고 사라진 조각 — 로비가 "얼마를 흘렸나" 를 보여 준다
+    supplyTaken: 0,
     damageTaken: 0,
     lastHurt: null,              // 마지막으로 맞은 원인
     killedBy: null,              // 죽인 원인 — 사망 화면이 읽는다
@@ -1228,7 +1469,14 @@ function stepWorld(world, dt, input, rnd) {
   if (p.firing > 0) p.firing -= dt;
   if (p.invuln > 0) p.invuln -= dt;
   if (p.hurtFlash > 0) p.hurtFlash -= dt;
-  if (p.skillCd > 0) p.skillCd -= dt;
+  // 충격파는 충전식이다. 최대 보유 수에 도달할 때까지 계속 찬다.
+  if (p.skillReady < world.stats.skillCharges) {
+    p.skillCd -= dt;
+    if (p.skillCd <= 0) {
+      p.skillReady += 1;
+      p.skillCd = p.skillReady < world.stats.skillCharges ? world.stats.skillCooldown : 0;
+    }
+  }
 
   /* --- 2. 사격: 장전은 계속 돌고, 발사는 멈춰야 한다 --- */
   const target = nearestEnemy(world, p.x, p.y);
@@ -1274,8 +1522,9 @@ function stepWorld(world, dt, input, rnd) {
   }
 
   /* --- 3. 충격파 --- */
-  if (input.skill && p.skillCd <= 0 && !world.shock) {
-    p.skillCd = world.stats.skillCooldown;
+  if (input.skill && p.skillReady > 0 && !world.shock) {
+    p.skillReady -= 1;
+    if (p.skillCd <= 0) p.skillCd = world.stats.skillCooldown;
     world.shock = { t: 0, r: 0, hit: new Set(), x: p.x, y: p.y, R: world.stats.skillRadius };
     world.fx.push({ type: 'shockRing', x: p.x, y: p.y, t: 0, life: b.skillExpandSec + 0.2, R: world.stats.skillRadius });
     world.shake = Math.max(world.shake, 7);
@@ -1366,7 +1615,10 @@ function stepWorld(world, dt, input, rnd) {
     }
   }
 
-  /* --- 8. 웨이브 진행 --- */
+  /* --- 8. 조각·보급품 --- */
+  stepPickups(world, dt);
+
+  /* --- 9. 웨이브 진행 --- */
   stepWave(world, dt, rnd);
 
   stepFx(world, dt);
@@ -1392,7 +1644,8 @@ function fireOnce(world, rnd) {
     world.bullets.push({
       x: m.x, y: m.y,
       vx: Math.cos(a) * shot.speed, vy: Math.sin(a) * shot.speed,
-      dmg: shot.damage, pierce: shot.pierce, blast: shot.blast, arm: shot.arm,
+      dmg: shot.damage, pierce: shot.pierce + (world.stats.bonusPierce ?? 0),
+      blast: shot.blast, arm: shot.arm,
       falloff: shot.falloff, travel: 0,
       hit: new Set(), life: shot.life,
     });
@@ -1679,13 +1932,29 @@ function hurtPlayer(world, dmg, src = '적') {
 }
 
 function awardKill(world, e, how, rnd) {
+  const b = world.b;
   world.kills += 1;
-  const src = e.isBoss ? { money: e.money, bio: e.bio } : world.b.kinds[e.kind];
+  const src = e.isBoss ? { money: e.money, bio: e.bio } : b.kinds[e.kind];
   const gm = Math.max(1, Math.round(src.money * world.stats.moneyMul));
   const gb = Math.max(1, Math.round(src.bio * world.stats.bioMul));
+
+  // 돈은 즉시 들어온다. 이번 판에서만 쓰는 것이라 줍게 만들 이유가 없다.
   world.money += gm;
-  world.bio += gb;
-  world.fx.push({ type: 'drop', x: e.x, y: e.y - e.r, t: 0, life: 0.95, m: gm, bio: gb });
+
+  // 유전자 조각은 **죽은 자리에 떨어진다.** 그 자리는 대개 위험한 자리다.
+  // 이게 "먹으러 가다가 죽는" 선택지를 만든다 — 죽음의 이유가 게임이 아니라 플레이어가 된다.
+  if (b.bioPickup) dropShards(world, e.x, e.y, gb, rnd);
+  else world.bio += gb;
+
+  // 흡혈('재생 조직') — 싸울수록 회복한다. 도망 대신 맞서는 선택지.
+  if (world.stats.lifesteal > 0 && how === 'shot') {
+    const p = world.player;
+    const before = p.hp;
+    p.hp = Math.min(p.maxHp, p.hp + world.stats.lifesteal);
+    if (p.hp > before) world.fx.push({ type: 'heal', x: p.x, y: p.y - 26, t: 0, life: 0.6, v: p.hp - before });
+  }
+
+  world.fx.push({ type: 'drop', x: e.x, y: e.y - e.r, t: 0, life: 0.95, m: gm, bio: b.bioPickup ? 0 : gb });
   if (how === 'shot') world.fx.push({ type: 'pop', x: e.x, y: e.y, t: 0, life: 0.3 });
 
   if (e.isBoss) {
@@ -1695,6 +1964,129 @@ function awardKill(world, e, how, rnd) {
     return;
   }
   if (!world.bossActive && !e.summoned) world.waveKilled += 1;
+}
+
+/* ------------------------------------------------------- 조각 · 보급품 */
+
+/**
+ * 유전자 조각을 죽은 자리에 흩뿌린다.
+ * 한 조각이 담는 양에 상한이 있어, 많이 주는 적일수록 여러 개로 흩어진다 —
+ * 보스를 잡으면 조각밭이 생기고, 그걸 다 줍는 것 자체가 하나의 도전이 된다.
+ */
+function dropShards(world, x, y, amount, rnd = () => 0.5) {
+  const b = world.b;
+  let left = Math.max(1, Math.round(amount));
+  let guard = 0;
+  while (left > 0 && guard < 24) {
+    const v = Math.min(b.shardMax, left);
+    left -= v;
+    guard += 1;
+    const a = rnd() * Math.PI * 2;
+    const d = b.shardScatter * (0.25 + rnd() * 0.75);
+    const np = clampToArena(x + Math.cos(a) * d, y + Math.sin(a) * d, b.shardR + 6, b);
+    world.pickups.push({
+      id: world.nextId++, kind: 'shard', v,
+      x: np.x, y: np.y, t: 0, life: b.shardLife,
+      seed: (world.nextId * 2654435761) >>> 0,
+    });
+  }
+}
+
+/**
+ * 웨이브마다 낮은 확률로 보급품 하나를 **먼 자리에** 떨군다.
+ *
+ * 피하면서 쏘기만 하면 플레이어는 안전한 구석에 머문다. 그러면 지도가 없는 것과 같다.
+ * 보급품은 "저기로 가고 싶다" 를 만들기 위한 장치이므로, 반드시 멀리 놓고 수명을 건다.
+ * 가까이 놓으면 선물이고, 안 사라지면 결단이 아니다.
+ */
+function maybeDropSupply(world, rnd) {
+  const b = world.b;
+  if (rnd() > b.supplyChance) return;
+  const p = world.player;
+
+  let best = null, bestD = -1;
+  for (let i = 0; i < 12; i += 1) {
+    const a = rnd() * Math.PI * 2;
+    const rr = 0.30 + rnd() * 0.52;
+    const x = b.arenaX + Math.cos(a) * b.arenaRx * rr;
+    const y = b.arenaY + Math.sin(a) * b.arenaRy * rr;
+    const d = Math.hypot(x - p.x, y - p.y);
+    if (d > bestD) { bestD = d; best = { x, y }; }
+    if (d >= b.supplyMinDist) break;
+  }
+  if (!best) return;
+
+  // 종류는 지금 부족한 것에 기울인다. 체력이 넉넉한데 하트가 나오면 갈 이유가 없다.
+  const hurt = 1 - p.hp / p.maxHp;
+  const roll = rnd();
+  let kind;
+  if (roll < 0.30 + hurt * 0.40) kind = 'heart';
+  else if (roll < 0.72) kind = 'pouch';
+  else kind = 'cluster';
+
+  const wave = world.wave;
+  const v = kind === 'heart' ? Math.ceil(p.maxHp * b.supplyHeartFrac)
+    : kind === 'pouch' ? Math.round((b.supplyPouchBase + wave * b.supplyPouchPerWave) * world.stats.moneyMul)
+      : Math.round((b.supplyClusterBase + wave * b.supplyClusterPerWave) * world.stats.bioMul);
+
+  world.pickups.push({
+    id: world.nextId++, kind, v,
+    x: best.x, y: best.y, t: 0, life: b.supplyLife,
+    seed: (world.nextId * 2654435761) >>> 0,
+  });
+  world.fx.push({ type: 'supplyCall', x: best.x, y: best.y, t: 0, life: 1.5, k: kind });
+}
+
+/**
+ * 조각·보급품 진행.
+ * 흡인 범위 안이면 끌려오고, 닿으면 먹히고, 수명이 다하면 사라진다.
+ * **사라진다는 것이 이 시스템의 전부다** — 안 사라지면 나중에 안전할 때 주우면 그만이다.
+ */
+function stepPickups(world, dt) {
+  const b = world.b;
+  const p = world.player;
+  const mag = world.stats.magnetRadius;
+  const takeR = b.pickupR + b.playerR;
+
+  for (let i = world.pickups.length - 1; i >= 0; i -= 1) {
+    const it = world.pickups[i];
+    it.t += dt;
+
+    const dx = p.x - it.x, dy = p.y - it.y;
+    const d = Math.hypot(dx, dy) || 1;
+
+    if (d <= mag) {
+      // 가까울수록 세게 끌린다. 멀리서는 굼뜨게 따라온다.
+      const pull = b.magnetPull * (0.35 + 0.65 * (1 - d / mag));
+      it.x += (dx / d) * pull * dt;
+      it.y += (dy / d) * pull * dt;
+    }
+
+    if (d <= takeR) {
+      collectPickup(world, it);
+      world.pickups.splice(i, 1);
+      continue;
+    }
+    if (it.t >= it.life) {
+      if (it.kind === 'shard' || it.kind === 'cluster') world.bioLost += it.v;
+      world.fx.push({ type: 'expire', x: it.x, y: it.y, t: 0, life: 0.35, k: it.kind });
+      world.pickups.splice(i, 1);
+    }
+  }
+}
+
+function collectPickup(world, it) {
+  const p = world.player;
+  if (it.kind === 'shard' || it.kind === 'cluster') {
+    world.bio += it.v;
+  } else if (it.kind === 'pouch') {
+    world.money += it.v;
+    world.supplyTaken += 1;
+  } else if (it.kind === 'heart') {
+    p.hp = Math.min(p.maxHp, p.hp + it.v);
+    world.supplyTaken += 1;
+  }
+  world.fx.push({ type: 'take', x: it.x, y: it.y, t: 0, life: 0.7, k: it.kind, v: it.v });
 }
 
 /** 상점을 닫고 다음 스테이지의 첫 웨이브로. main 이 부른다. */
@@ -1819,6 +2211,8 @@ function startWave(world, rnd) {
   world.groupTimer = 0;
   world.groupAge = b.groupTimeout;   // 웨이브 첫 그룹은 기다리지 않는다
   world.spawnTimer = 0;
+
+  maybeDropSupply(world, rnd);
 
   if (isBossWave(world.wave, b)) {
     world.bossActive = true;
@@ -2458,16 +2852,53 @@ function decide(world, memory = {}) {
   if (mustMove) {
     const len = Math.hypot(th.vx, th.vy);
     if (len > 0) { mx = th.vx / len; my = th.vy / len; }
+  } else {
+    // 안전하다고 판단되면 주우러 간다. 사람도 그렇게 한다.
+    // **이 줄이 "먹으러 다니다가 죽는" 경로를 시뮬레이터에 넣는다** —
+    // 그게 없으면 밸런스 측정이 "절대 안 줍는 사람" 만 보게 된다.
+    const g = greedTarget(world, th);
+    if (g) { mx = g.x; my = g.y; }
   }
 
   memory.out = { mx, my };
   return { mx, my, skill: decideSkill(world, memory) };
 }
 
+/** 얼마나 위험을 감수하고 주우러 갈 것인가. 사람의 욕심을 흉내낸 값이다. */
+const GREED_RANGE = 300;    // 이 거리 안의 것만 노린다
+const GREED_NERVE = 1.1;    // 이 위협 수준까지는 감수한다
+
+function greedTarget(world, th) {
+  if (th.level > GREED_NERVE) return null;          // 위험하면 안 간다
+  const p = world.player;
+  const mag = world.stats.magnetRadius;
+
+  let best = null, bestScore = 0;
+  for (const it of world.pickups) {
+    const d = Math.hypot(it.x - p.x, it.y - p.y);
+    if (d <= mag) continue;                          // 어차피 끌려온다
+    if (d > GREED_RANGE) continue;
+    const left = it.life - it.t;
+    // 갈 시간이 있나 — 도착 전에 사라질 것은 포기한다
+    const travel = (d - mag) / Math.max(1, world.stats.speed);
+    if (travel > left * 0.85) continue;
+    // 값이 클수록, 가까울수록 먼저
+    const worth = it.kind === 'heart'
+      ? (1 - p.hp / p.maxHp) * 26          // 아플수록 하트가 값지다
+      : (it.kind === 'pouch' ? 9 : it.v);
+    const score = worth / (d + 40);
+    if (score > bestScore) { bestScore = score; best = it; }
+  }
+  if (!best) return null;
+  const dx = best.x - p.x, dy = best.y - p.y;
+  const d = Math.hypot(dx, dy) || 1;
+  return { x: dx / d, y: dy / d };
+}
+
 /** 충격파 — 포위되었거나 체력이 낮을 때. 즉각 반응하지 않는다. */
 function decideSkill(world, memory) {
   const p = world.player;
-  if (p.skillCd > 0) return false;
+  if (p.skillReady <= 0) return false;
   let near = 0;
   for (const e of world.enemies) {
     if (e.state === ST.FALL || e.state === ST.DROP) continue;
@@ -2650,7 +3081,7 @@ function createLoop({ update, render, now = () => performance.now(), raf, caf })
  *  I4. migrate(serialize(state)) === state  (왕복 보존)
  */
 
-const SAVE_VERSION = 5;
+const SAVE_VERSION = 6;
 const MAX_SAVE_UTF16_CHARS = 3 * 1024 * 1024;
 
 function defaultSave() {
@@ -2685,6 +3116,8 @@ const MIGRATIONS = {
   3: (s) => ({ ...s, version: 4, bio: Number(s.gold) || 0, gold: undefined }),
   // v4 -> v5 : 트랙 5개 → 유전자 트리. 배운 만큼 대응 노드를 넘겨준다.
   4: (s) => ({ ...s, version: 5, owned: migrateFromTracks(s.upgrades), upgrades: undefined }),
+  // v5 -> v6 : 평평한 노드 배열 → 단계형 맵. 배운 노드는 1단계로 이어받는다.
+  5: (s) => ({ ...s, version: 6, owned: migrateFromFlatTree(s.owned) }),
 };
 
 /**
@@ -2733,7 +3166,7 @@ function migrateSave(raw) {
     bestScore: toSafeInt(state.bestScore, base.bestScore),
     totalRuns: toSafeInt(state.totalRuns, base.totalRuns),
     bio: toSafeInt(state.bio, base.bio),
-    owned: normalizeOwned(state.owned),
+    owned: normalizeOwned(state.owned),   // { 노드id: 단계 }
     settings: { muted: state.settings?.muted === true },
   };
 }
@@ -3454,6 +3887,103 @@ function drawPlayer(ctx, world) {
   }
 }
 
+/**
+ * 유전자 조각과 보급품.
+ *
+ * 이 그림이 해야 할 말은 두 가지다: **저기 있다**, 그리고 **곧 사라진다.**
+ * 사라진다는 걸 못 읽으면 "지금 갈까" 라는 결단이 안 생긴다.
+ */
+function drawPickups(ctx, world) {
+  const b = world.b;
+  const mag = world.stats.magnetRadius;
+
+  // 흡인 범위 — 어디까지 서 있으면 딸려오는지가 보여야 위치를 고를 수 있다
+  if (mag > b.magnetBaseR * 1.5) {
+    const p = world.player;
+    ctx.save();
+    ctx.globalAlpha = 0.13;
+    ctx.strokeStyle = '#5FC8F0';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([9, 11]);
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y, mag, mag * 0.8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  for (const it of world.pickups) {
+    const left = it.life - it.t;
+    const blink = it.kind === 'shard' ? b.shardBlink : b.supplyBlink;
+    // 사라지기 직전에는 깜빡인다. 남은 시간이 곧 결단의 시간이다.
+    if (left < blink && Math.floor(it.t * 9) % 2 === 0) continue;
+
+    const bob = Math.sin(world.t * 3.4 + (it.seed % 100) * 0.11) * 3;
+    const x = it.x, y = it.y + bob;
+    ctx.save();
+
+    if (it.kind === 'shard' || it.kind === 'cluster') {
+      const r = it.kind === 'cluster' ? 12 : b.shardR * (1 + Math.min(0.35, it.v / 20));
+      ctx.save();
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = '#5FC8F0';
+      ctx.beginPath(); ctx.ellipse(x, y, r * 1.7, r * 1.7, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      if (it.kind === 'cluster') {
+        // 뭉치 — 조각 셋이 겹쳐 있다. 하나짜리와 한눈에 구분되어야 한다.
+        bioIcon(ctx, x - r * 0.85, y + r * 0.5, r * 1.7);
+        bioIcon(ctx, x + r * 0.85, y + r * 0.5, r * 1.7);
+        bioIcon(ctx, x, y - r * 0.35, r * 2);
+      } else {
+        bioIcon(ctx, x, y, r * 2);
+      }
+    } else if (it.kind === 'heart') {
+      const r = b.supplyR;
+      ctx.fillStyle = '#E0604F';
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(x, y + r * 0.85);
+      ctx.bezierCurveTo(x - r * 1.5, y - r * 0.25, x - r * 0.5, y - r * 1.15, x, y - r * 0.35);
+      ctx.bezierCurveTo(x + r * 0.5, y - r * 1.15, x + r * 1.5, y - r * 0.25, x, y + r * 0.85);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      // 돈주머니 — 어두운 자루만 그리면 바위와 구분이 안 됐다. 금빛을 얹는다.
+      const r = b.supplyR * 1.25;
+      ctx.save();
+      ctx.globalAlpha = 0.30;
+      ctx.fillStyle = PALETTE.gold;
+      ctx.beginPath(); ctx.arc(x, y, r * 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = '#8A6A4A';
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.62, y - r * 0.5);
+      ctx.quadraticCurveTo(x - r * 1.3, y + r * 0.6, x, y + r * 1.05);
+      ctx.quadraticCurveTo(x + r * 1.3, y + r * 0.6, x + r * 0.62, y - r * 0.5);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      // 자루 입구를 묶은 끈
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.72, y - r * 0.55);
+      ctx.lineTo(x + r * 0.72, y - r * 0.55);
+      ctx.stroke();
+      // 넘치는 금화
+      drawGold(ctx, x - r * 0.4, y - r * 0.85, r * 0.72, 4);
+      drawGold(ctx, x + r * 0.38, y - r * 0.78, r * 0.62, 7);
+      drawGold(ctx, x, y + r * 0.25, r * 0.85, 11);
+    }
+
+    // 바닥 그림자 — 공중에 뜬 게 아니라 땅에 놓인 것이다
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(it.x, it.y + 12, 9, 3.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 function drawShots(ctx, world) {
   ctx.save();
   ctx.strokeStyle = PALETTE.ink;
@@ -3563,6 +4093,47 @@ function drawFx(ctx, world) {
       outlinedText(ctx, `+${f.m}`, f.x - 18, y, 6);
       bioIcon(ctx, f.x + 14, y, 13);
       outlinedText(ctx, `+${f.bio}`, f.x + 26, y, 6);
+    } else if (f.type === 'heal') {
+      ctx.globalAlpha = 1 - k;
+      ctx.font = 'bold 20px system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#7BD69A';
+      ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 5; ctx.lineJoin = 'round';
+      const hy = f.y - k * 26;
+      ctx.strokeText(`+${f.v}`, f.x, hy);
+      ctx.fillText(`+${f.v}`, f.x, hy);
+    } else if (f.type === 'take') {
+      ctx.globalAlpha = 1 - k;
+      const r = 6 + k * 22;
+      ctx.strokeStyle = f.k === 'heart' ? '#E0604F' : (f.k === 'pouch' ? PALETTE.gold : '#5FC8F0');
+      ctx.lineWidth = 5 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.font = 'bold 21px system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const label = f.k === 'heart' ? `+${f.v} HP` : (f.k === 'pouch' ? `+${f.v}` : `+${f.v}`);
+      outlinedText(ctx, label, f.x, f.y - 16 - k * 22, 6);
+    } else if (f.type === 'expire') {
+      // 흘린 것 — 사라졌다는 걸 봐야 다음엔 주우러 간다
+      ctx.globalAlpha = (1 - k) * 0.75;
+      ctx.strokeStyle = '#7C8B96';
+      ctx.lineWidth = 3;
+      const r = 4 + k * 15;
+      ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, Math.PI * 2); ctx.stroke();
+    } else if (f.type === 'supplyCall') {
+      // 보급품이 어디 떨어졌는지 한 번 크게 찍어 준다
+      ctx.globalAlpha = (1 - k) * 0.9;
+      ctx.strokeStyle = f.k === 'heart' ? '#E0604F' : (f.k === 'pouch' ? PALETTE.gold : '#5FC8F0');
+      ctx.lineWidth = 6;
+      const r = 130 * (1 - k) + 22;
+      ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([7, 8]);
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 34, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = 'bold 20px system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      outlinedText(ctx, f.k === 'heart' ? '보급 — 회복' : (f.k === 'pouch' ? '보급 — 자금' : '보급 — 조각'),
+        f.x, f.y - 52, 6);
     } else if (f.type === 'waveBanner') {
       const e = Math.min(1, k * 4) * Math.min(1, (1 - k) * 4);
       ctx.globalAlpha = e;
@@ -3711,7 +4282,7 @@ function drawHud(ctx, world, images) {
     ctx.restore();
   }
 
-  const ready = p.skillCd <= 0;
+  const ready = p.skillReady > 0;
   ctx.save();
   ctx.globalAlpha = ready ? 1 : 0.5;
   if (images.skill) {
@@ -3740,6 +4311,19 @@ function drawHud(ctx, world, images) {
     ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 6;
     ctx.beginPath(); ctx.arc(L.skillX, L.skillY, L.skillR * 1.14, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
+  }
+
+  // 충격파 보유 수 — '이중 기폭' 을 배우면 두 발을 들고 다닌다
+  if (world.stats.skillCharges > 1) {
+    const n = world.stats.skillCharges;
+    for (let i = 0; i < n; i += 1) {
+      const cx = L.skillX + (i - (n - 1) / 2) * 22;
+      const cy = L.skillY + L.skillR + 20;
+      ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.fillStyle = i < p.skillReady ? PALETTE.gold : 'rgba(255,255,255,0.45)';
+      ctx.fill();
+      ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
+    }
   }
 
   // 일시정지 버튼
@@ -3879,6 +4463,8 @@ function renderWorld(ctx, world, images, t, stick, cam = null) {
       images.heli.width * s, images.heli.height * s);
   }
 
+  drawPickups(ctx, world);
+
   const list = world.enemies.slice().sort((a, c) => a.y - c.y);
   const py = world.player.y;
   let drew = false;
@@ -4008,9 +4594,19 @@ function renderTitle(ctx, state, t, b = B) {
 
 /* ============================================================ 로비 — 유전자 트리 */
 
-const CELL = 56;
+/**
+ * 【v2 재설계】 한 번에 보이는 정보를 줄였다.
+ *
+ * 예전에는 25개 노드가 전부 깔려 있었다. 그러면 고르는 게 아니라 훑는 게 된다.
+ * 이제 **배운 것과 그 바로 다음만** 보인다. 앞길은 배워야 드러난다.
+ *
+ * 그리고 탭이 곧 구매가 아니다. 탭하면 **정보창**이 열리고,
+ * 무엇이 얼마나 오르는지 읽은 뒤에 배울지 고른다. 실수로 사는 일이 없어야 한다.
+ */
+
+const CELL = 46;
 const TREE_CX = 360;
-const TREE_CY = 690;
+const TREE_CY = 462;
 
 /** 노드의 화면 좌표. 격자 좌표를 그대로 화면에 편다. */
 function nodePos(n) {
@@ -4018,26 +4614,46 @@ function nodePos(n) {
 }
 
 function lobbyLayout(b = B) {
-  return { start: { x: 40, y: b.designH - 118, w: b.designW - 80, h: 86 } };
+  return {
+    start:  { x: 34, y: b.designH - 104, w: b.designW - 68, h: 82 },
+    panel:  { x: 28, y: 672, w: b.designW - 56, h: 396 },
+    learn:  { x: 52, y: 986, w: b.designW - 104, h: 74 },
+    totals: { x: b.designW - 92, y: 26, w: 66, h: 66 },
+    close:  { x: b.designW - 92, y: 26, w: 66, h: 66 },
+  };
 }
 
-function lobbyHitTest(x, y, b = B) {
+/**
+ * 탭 판정.
+ * @param view 'tree' | 'totals'
+ * @returns {type:'start'|'learn'|'select'|'totals'|'closeTotals'|'none', id?}
+ */
+function lobbyHitTest(x, y, owned, selected, view = 'tree', b = B) {
   const L = lobbyLayout(b);
+  if (view === 'totals') {
+    return inside(L.close, x, y) ? { type: 'closeTotals' } : { type: 'none' };
+  }
+  if (inside(L.totals, x, y)) return { type: 'totals' };
   if (inside(L.start, x, y)) return { type: 'start' };
-  let best = null, bestD = 34 * 34;
-  for (const n of NODES) {
+  if (selected && inside(L.learn, x, y)) return { type: 'learn', id: selected };
+
+  // 노드는 보이는 것만 잡힌다. 안개 속 노드를 실수로 누르면 안 된다.
+  let best = null, bestD = 30 * 30;
+  for (const n of revealedNodes(owned)) {
     const p = nodePos(n);
     const d = (p.x - x) ** 2 + (p.y - y) ** 2;
     if (d < bestD) { bestD = d; best = n.id; }
   }
-  return best ? { type: 'learn', id: best } : { type: 'none' };
+  if (best) return { type: 'select', id: best };
+  return { type: 'none' };
 }
 
 /** 직교 배선 — 시안의 트리처럼 ㄱ자로 꺾어 잇는다. */
 function wire(ctx, a, b2, on) {
   const midX = Math.abs(b2.x - a.x) > Math.abs(b2.y - a.y);
-  ctx.strokeStyle = on ? '#F0C64A' : '#3E5568';
-  ctx.lineWidth = on ? 7 : 5;
+  // 안 배운 선도 보여야 한다. 배경(#28475F)과 붙으면 길이 있는지조차 안 보인다.
+  ctx.strokeStyle = on ? '#F0C64A' : '#5B7793';
+  ctx.lineWidth = on ? 6 : 5;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.beginPath();
@@ -4047,101 +4663,310 @@ function wire(ctx, a, b2, on) {
   ctx.stroke();
 }
 
+/** 단계 표시 — 숫자보다 칸이 먼저 읽힌다. */
+function levelPips(ctx, cx, y, level, max, color, size = 11, gap = 6) {
+  const w = max * size + (max - 1) * gap;
+  let x = cx - w / 2;
+  for (let i = 0; i < max; i += 1) {
+    ctx.beginPath();
+    ctx.roundRect(x, y - size / 2, size, size, 3);
+    ctx.fillStyle = i < level ? color : 'rgba(0,0,0,0.14)';
+    ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2;
+    ctx.stroke();
+    x += size + gap;
+  }
+}
+
+/** 노드 하나. 배운 단계만큼 테두리가 채워진다. */
+function drawNode(ctx, n, p, level, afford, isSel, t) {
+  const col = n.branch ? BRANCH[n.branch].color : '#F0C64A';
+  const maxed = level >= n.max;
+  const r = n.kind === 'unlock' ? 21 : 17;
+
+  if (afford) {
+    ctx.save();
+    ctx.globalAlpha = 0.3 + Math.sin(t * 5) * 0.2;
+    ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 9;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r + 8, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  if (isSel) {
+    ctx.save();
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.arc(p.x, p.y, r + 13, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+  ctx.fillStyle = level > 0 ? col : '#F4EFE2';
+  ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3.5;
+  ctx.stroke();
+
+  // 진행 호 — 몇 단계까지 올렸는지 테두리로 보여 준다
+  if (n.max > 1 && level > 0) {
+    ctx.save();
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r - 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (level / n.max));
+    ctx.stroke();
+    ctx.restore();
+  }
+  // 기능 해금은 별 하나로 표시한다 — 단계가 아니라 있냐 없냐의 문제다
+  if (n.kind === 'unlock' && n.id !== 'root') {
+    ctx.save();
+    ctx.fillStyle = level > 0 ? '#FFFFFF' : col;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i += 1) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rr = i % 2 === 0 ? r * 0.52 : r * 0.22;
+      const fx = p.x + Math.cos(a) * rr, fy = p.y + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(fx, fy); else ctx.lineTo(fx, fy);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  } else if (level === 0) {
+    ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.36, 0, Math.PI * 2);
+    ctx.fillStyle = col; ctx.fill();
+  }
+  // 만렙은 글자가 아니라 테두리로 알린다. 글자를 밑에 달면 아래 노드와 겹친다.
+  if (maxed && n.max > 1) {
+    ctx.save();
+    ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r + 5, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r + 6.8, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/** 우상단 버튼 — 지금까지 얻은 능력의 총합으로 들어가는 문. */
+function totalsButton(ctx, L, learned, t) {
+  const r = L.totals;
+  ctx.save();
+  ctx.fillStyle = PALETTE.parchment;
+  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18); ctx.stroke();
+  // 막대 세 개 = 능력치 표
+  ctx.fillStyle = PALETTE.woodDark;
+  const bx = r.x + 16, by = r.y + 18;
+  for (let i = 0; i < 3; i += 1) {
+    ctx.beginPath();
+    ctx.roundRect(bx, by + i * 11, r.w - 32 - i * 7, 7, 3);
+    ctx.fill();
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 13px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText('능력', r.x + r.w / 2, r.y + r.h - 12);
+  if (learned > 0) {
+    ctx.fillStyle = PALETTE.hpRed;
+    ctx.beginPath(); ctx.arc(r.x + r.w - 4, r.y + 4, 13, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.font = 'bold 14px system-ui, sans-serif';
+    outlinedText(ctx, `${learned}`, r.x + r.w - 4, r.y + 5, 4);
+  }
+  ctx.restore();
+}
+
+/* -------------------------------------------------- 능력 총합 화면 */
+
+/**
+ * "지금까지 뭘 얻었지" 에 한 화면으로 답한다.
+ * 기본값을 나란히 놓지 않으면 숫자가 큰지 작은지 알 수가 없다.
+ */
+function renderTotals(ctx, state, t, b = B) {
+  const { owned, bio } = state;
+  const L = lobbyLayout(b);
+  const sum = statSummary(owned, b);
+
+  ctx.fillStyle = 'rgba(12,24,34,0.96)';
+  ctx.fillRect(0, 0, b.designW, b.designH);
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 36px system-ui, sans-serif';
+  outlinedText(ctx, '얻은 능력', b.designW / 2, 58, 8);
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = '#9FB4C4';
+  ctx.fillText(`유전자 ${sum.learned}단계 습득 · 보유 조각 ${bio}`, b.designW / 2, 92);
+
+  // 닫기
+  ctx.save();
+  ctx.fillStyle = PALETTE.parchment;
+  ctx.beginPath(); ctx.roundRect(L.close.x, L.close.y, L.close.w, L.close.h, 18); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(L.close.x, L.close.y, L.close.w, L.close.h, 18); ctx.stroke();
+  ctx.strokeStyle = PALETTE.woodDark; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  const cx = L.close.x + L.close.w / 2, cy = L.close.y + L.close.h / 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 13, cy - 13); ctx.lineTo(cx + 13, cy + 13);
+  ctx.moveTo(cx + 13, cy - 13); ctx.lineTo(cx - 13, cy + 13);
+  ctx.stroke();
+  ctx.restore();
+
+  // 해금 — 숫자가 아니라 행동이 바뀐 것들이라 위에 따로 둔다
+  let y = 122;
+  if (sum.unlocks.length > 0) {
+    const h = 34 + sum.unlocks.length * 30;
+    panel(ctx, 28, y, b.designW - 56, h, '#FFFDF6', 5, 18);
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 16px system-ui, sans-serif';
+    ctx.fillStyle = PALETTE.woodDark;
+    ctx.fillText('해금한 능력', 50, y + 22);
+    sum.unlocks.forEach((u, i) => {
+      const ly = y + 48 + i * 30;
+      ctx.fillStyle = BRANCH[u.branch].color;
+      ctx.beginPath(); ctx.arc(57, ly - 5, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
+      ctx.font = 'bold 16px system-ui, sans-serif';
+      ctx.fillStyle = PALETTE.woodDark;
+      ctx.fillText(u.name, 74, ly - 4);
+      ctx.font = '14px system-ui, sans-serif';
+      ctx.fillStyle = '#9C8B6E';
+      ctx.fillText(u.unit, 74 + ctx.measureText(u.name).width + 26, ly - 4);
+    });
+    y += h + 12;
+  } else {
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.fillStyle = '#7C8B96';
+    ctx.fillText('아직 해금한 능력이 없다 — 갈래 끝의 별 노드가 해금이다', b.designW / 2, y + 14);
+    y += 40;
+  }
+
+  // 수치 표
+  const rowH = 30;
+  const h2 = 34 + sum.rows.length * rowH + 8;
+  panel(ctx, 28, y, b.designW - 56, h2, '#FFFDF6', 5, 18);
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 16px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText('수치', 50, y + 22);
+  ctx.textAlign = 'right';
+  ctx.font = 'bold 13px system-ui, sans-serif';
+  ctx.fillStyle = '#B7ADA0';
+  ctx.fillText('기본', b.designW - 168, y + 22);
+  ctx.fillText('지금', b.designW - 52, y + 22);
+
+  sum.rows.forEach((r, i) => {
+    const ly = y + 48 + i * rowH;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = BRANCH[r.branch].color;
+    ctx.beginPath(); ctx.arc(56, ly, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.fillStyle = r.changed ? PALETTE.woodDark : '#A79C8C';
+    ctx.fillText(r.label, 70, ly);
+    ctx.textAlign = 'right';
+    ctx.font = '14px system-ui, sans-serif';
+    ctx.fillStyle = '#B7ADA0';
+    ctx.fillText(r.base, b.designW - 168, ly);
+    ctx.font = r.changed ? 'bold 17px system-ui, sans-serif' : '15px system-ui, sans-serif';
+    ctx.fillStyle = r.changed ? '#1E7A3C' : '#A79C8C';
+    ctx.fillText(r.now, b.designW - 52, ly);
+  });
+}
+
+/* -------------------------------------------------------- 로비 본체 */
+
 function renderLobby(ctx, state, t, b = B) {
-  const { bio, owned: rawOwned, best, lastRun, lastBio, lastWave, lastStage } = state;
+  const { bio, owned: rawOwned, best, lastRun, lastBio, lastLost, lastWave, lastStage, selected } = state;
   const owned = normalizeOwned(rawOwned);
   const L = lobbyLayout(b);
 
   ctx.fillStyle = PALETTE.backdrop;
   ctx.fillRect(0, 0, b.designW, b.designH);
 
-  // 상단 — 결과와 보유 생명에너지
-  panel(ctx, 24, 30, b.designW - 48, 150, PALETTE.parchment, 5);
+  /* --- 상단: 지난 판의 결과 --- */
+  panel(ctx, 24, 26, b.designW - 148, 138, PALETTE.parchment, 5);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 26px system-ui, sans-serif';
+  ctx.font = 'bold 22px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText('쓰러졌다', b.designW / 2, 60);
-  ctx.font = 'bold 62px system-ui, sans-serif';
-  ctx.fillText(formatTime(lastRun), b.designW / 2, 104);
-  ctx.font = 'bold 20px system-ui, sans-serif';
+  const hx = (b.designW - 148) / 2 + 24;
+  ctx.fillText('쓰러졌다', hx, 52);
+  ctx.font = 'bold 54px system-ui, sans-serif';
+  ctx.fillText(formatTime(lastRun), hx, 92);
+  ctx.font = 'bold 17px system-ui, sans-serif';
   ctx.fillStyle = '#8A7355';
-  ctx.fillText(`스테이지 ${lastStage} · 웨이브 ${lastWave}   ·   최고 ${formatTime(best)}`, b.designW / 2, 142);
+  ctx.fillText(`스테이지 ${lastStage} · 웨이브 ${lastWave}   ·   최고 ${formatTime(best)}`, hx, 132);
 
-  panel(ctx, b.designW / 2 - 110, 158, 220, 44, '#FFFFFF', 4, 22);
-  bioIcon(ctx, b.designW / 2 - 74, 180, 26);
-  ctx.font = 'bold 26px system-ui, sans-serif';
+  totalsButton(ctx, L, statSummary(owned, b).learned, t);
+
+  /* --- 보유 조각 + 흘린 조각 --- */
+  panel(ctx, b.designW / 2 - 150, 172, 300, 44, '#FFFFFF', 4, 22);
+  bioIcon(ctx, b.designW / 2 - 116, 194, 24);
+  ctx.font = 'bold 24px system-ui, sans-serif';
   ctx.textAlign = 'left';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(`${bio}`, b.designW / 2 - 52, 181);
+  ctx.fillText(`${bio}`, b.designW / 2 - 96, 195);
   if (lastBio > 0) {
-    ctx.font = 'bold 19px system-ui, sans-serif';
+    ctx.font = 'bold 17px system-ui, sans-serif';
     ctx.fillStyle = '#1E7A3C';
-    ctx.fillText(`+${lastBio}`, b.designW / 2 + 26, 181);
+    ctx.fillText(`+${lastBio}`, b.designW / 2 - 30, 195);
+  }
+  // 못 주운 조각 — "어디서 흘렸나" 가 다음 판의 동기가 된다
+  if (lastLost > 0) {
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.fillStyle = '#B03A3A';
+    ctx.textAlign = 'right';
+    ctx.fillText(`못 주움 −${lastLost}`, b.designW / 2 + 138, 195);
   }
 
   ctx.textAlign = 'center';
-  ctx.font = 'bold 19px system-ui, sans-serif';
+  ctx.font = 'bold 17px system-ui, sans-serif';
   ctx.fillStyle = '#9FB4C4';
-  ctx.fillText('유전자 조작 — 이어진 것부터 배운다', b.designW / 2, 224);
+  ctx.fillText('노드를 눌러 살펴본 뒤 배운다', b.designW / 2, 240);
 
-  // 배선 먼저
-  for (const n of NODES) {
+  /* --- 트리 (안개) --- */
+  const vis = revealedNodes(owned);
+  const visIds = new Set(vis.map((n) => n.id));
+  for (const n of vis) {
     if (!n.req) continue;
-    wire(ctx, nodePos(NODE_BY_ID[n.req]), nodePos(n), owned.includes(n.id));
+    wire(ctx, nodePos(NODE_BY_ID[n.req]), nodePos(n), (owned[n.id] ?? 0) > 0);
   }
-
-  // 노드
-  let focus = null;
-  for (const n of NODES) {
-    const p = nodePos(n);
-    const has = owned.includes(n.id);
-    const open = canLearn(n.id, owned);
-    const afford = open && bio >= n.cost;
-    const col = n.branch ? BRANCH[n.branch].color : '#F0C64A';
-    const r = n.big ? 21 : 14;
-
-    if (afford) {
+  // 아직 안 드러난 앞길이 있다는 것만 짧은 토막으로 알린다 — 무엇인지는 안 알린다
+  for (const n of vis) {
+    const lv = owned[n.id] ?? 0;
+    if (lv <= 0) continue;
+    for (const c of NODES) {
+      if (c.req !== n.id || visIds.has(c.id)) continue;
+      const a = nodePos(n), z = nodePos(c);
+      const d = Math.hypot(z.x - a.x, z.y - a.y) || 1;
       ctx.save();
-      ctx.globalAlpha = 0.3 + Math.sin(t * 5) * 0.2;
-      ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 9;
-      ctx.beginPath(); ctx.arc(p.x, p.y, r + 8, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = '#5B7793'; ctx.lineWidth = 5;
+      ctx.setLineDash([5, 7]);
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(a.x + ((z.x - a.x) / d) * 26, a.y + ((z.y - a.y) / d) * 26);
+      ctx.stroke();
+      ctx.setLineDash([]);
       ctx.restore();
     }
-    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = has ? col : (open ? '#F4EFE2' : '#2E4356');
-    ctx.fill();
-    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = n.big ? 5 : 3.5;
-    ctx.stroke();
-    if (!has && open) {
-      ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.42, 0, Math.PI * 2);
-      ctx.fillStyle = col; ctx.fill();
-    }
-    if (open && !has) focus = focus ?? n;
+  }
+  for (const n of vis) {
+    const lv = owned[n.id] ?? 0;
+    const afford = canLearn(n.id, owned) && bio >= nextCost(n.id, owned);
+    drawNode(ctx, n, nodePos(n), lv, afford, selected === n.id, t);
   }
 
-  // 배울 수 있는 노드 하나를 아래에 설명한다 (전부 적으면 읽히지 않는다)
-  const cand = NODES.filter((n) => canLearn(n.id, owned));
-  if (cand.length > 0) {
-    const cheap = cand.reduce((a, c) => (c.cost < a.cost ? c : a), cand[0]);
-    const y0 = b.designH - 210;
-    panel(ctx, 34, y0, b.designW - 68, 76, '#FFFFFF', 4, 16);
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = cheap.branch ? BRANCH[cheap.branch].color : '#8A7355';
-    ctx.beginPath(); ctx.arc(58, y0 + 38, 13, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3; ctx.stroke();
-    ctx.font = 'bold 24px system-ui, sans-serif';
-    ctx.fillStyle = PALETTE.woodDark;
-    ctx.fillText(cheap.name, 84, y0 + 26);
-    ctx.font = '17px system-ui, sans-serif';
-    ctx.fillStyle = '#8A7355';
-    ctx.fillText(cheap.desc, 84, y0 + 52);
-    ctx.textAlign = 'right';
-    ctx.font = 'bold 28px system-ui, sans-serif';
-    ctx.fillStyle = bio >= cheap.cost ? '#1E7A3C' : '#B03A3A';
-    ctx.fillText(`${cheap.cost}`, b.designW - 78, y0 + 38);
-    bioIcon(ctx, b.designW - 58, y0 + 38, 24);
+  /* --- 정보창 --- */
+  const n = selected ? NODE_BY_ID[selected] : null;
+  if (!n) {
+    panel(ctx, L.panel.x, L.panel.y, L.panel.w, 120, 'rgba(255,255,255,0.06)', 4, 20);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 19px system-ui, sans-serif';
+    ctx.fillStyle = '#7C8B96';
+    ctx.fillText('노드를 하나 골라 보라', b.designW / 2, L.panel.y + 48);
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.fillText('배운 노드의 다음 길만 드러난다', b.designW / 2, L.panel.y + 78);
+  } else {
+    drawNodeCard(ctx, n, owned, bio, L, b);
   }
 
+  /* --- 다시 도전 --- */
   const s2 = L.start;
   const pulse = 1 + Math.sin(t * 3.4) * 0.012;
   ctx.save();
@@ -4150,10 +4975,122 @@ function renderLobby(ctx, state, t, b = B) {
   ctx.translate(-(s2.x + s2.w / 2), -(s2.y + s2.h / 2));
   panel(ctx, s2.x, s2.y, s2.w, s2.h, PALETTE.hpRed, 6, 20);
   ctx.textAlign = 'center';
-  ctx.font = 'bold 38px system-ui, sans-serif';
+  ctx.font = 'bold 34px system-ui, sans-serif';
   outlinedText(ctx, '다시 도전', s2.x + s2.w / 2, s2.y + s2.h / 2 + 2, 7);
   ctx.restore();
 }
+
+/**
+ * 노드 정보창 — 탭이 곧 구매가 아니다.
+ * 무엇이 얼마나 오르는지 읽고 나서 배울지 고른다.
+ */
+function drawNodeCard(ctx, n, owned, bio, L, b) {
+  const col = n.branch ? BRANCH[n.branch].color : '#F0C64A';
+  const lv = owned[n.id] ?? 0;
+  const maxed = lv >= n.max;
+  const cost = nextCost(n.id, owned);
+  const afford = !maxed && bio >= cost;
+  const P = L.panel;
+
+  panel(ctx, P.x, P.y, P.w, P.h, PALETTE.parchment, 6, 22);
+
+  // 갈래 띠
+  ctx.fillStyle = col;
+  ctx.beginPath(); ctx.roundRect(P.x + 6, P.y + 14, 10, P.h - 28, 5); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 15px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText(n.branch ? BRANCH[n.branch].name : '시작점', P.x + 34, P.y + 32);
+  if (n.kind === 'unlock' && n.id !== 'root') {
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.roundRect(P.x + 34 + ctx.measureText(n.branch ? BRANCH[n.branch].name : '시작점').width + 14, P.y + 21, 74, 22, 11); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 13px system-ui, sans-serif';
+    outlinedText(ctx, '기능 해금', P.x + 34 + ctx.measureText(n.branch ? BRANCH[n.branch].name : '시작점').width + 51, P.y + 33, 4);
+    ctx.textAlign = 'left';
+  }
+
+  ctx.font = 'bold 32px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(n.name, P.x + 34, P.y + 68);
+
+  // 단계
+  if (n.max > 1) {
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.fillStyle = '#8A7355';
+    ctx.fillText(`단계  ${lv} / ${n.max}`, P.x + 34, P.y + 104);
+    levelPips(ctx, P.x + 34 + 110 + (n.max * 17) / 2, P.y + 104, lv, n.max, col);
+  } else {
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.fillStyle = lv > 0 ? '#1E7A3C' : '#8A7355';
+    ctx.fillText(lv > 0 ? '해금됨' : '아직 해금하지 않음', P.x + 34, P.y + 104);
+  }
+
+  // 효과
+  panel(ctx, P.x + 22, P.y + 124, P.w - 44, n.max > 1 ? 88 : 62, '#FFFDF6', 4, 14);
+  ctx.font = 'bold 14px system-ui, sans-serif';
+  ctx.fillStyle = '#9C8B6E';
+  ctx.fillText(n.max > 1 ? '한 단계당' : '효과', P.x + 40, P.y + 146);
+  ctx.font = 'bold 21px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(n.unit ?? n.desc ?? '—', P.x + 40, P.y + 172);
+  if (n.max > 1) {
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.fillStyle = lv > 0 ? '#1E7A3C' : '#B7ADA0';
+    ctx.fillText(lv > 0 ? `지금까지 ${lv}단계 적용 중` : '아직 적용된 것이 없다', P.x + 40, P.y + 197);
+  }
+
+  // 설명 — 왜 이걸 배우는가
+  const text = n.long ?? n.desc ?? '';
+  ctx.font = '16px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  wrapText(ctx, text, P.x + 34, P.y + (n.max > 1 ? 240 : 214), P.w - 68, 24, 5);
+
+  // 배우기 버튼
+  const Lb = L.learn;
+  const fill = maxed ? '#C8BFAE' : (afford ? '#2E9E52' : '#B8AE9C');
+  panel(ctx, Lb.x, Lb.y, Lb.w, Lb.h, fill, 6, 20);
+  ctx.textAlign = 'center';
+  if (maxed) {
+    ctx.font = 'bold 26px system-ui, sans-serif';
+    ctx.fillStyle = '#6E6355';
+    ctx.fillText('더 올릴 것이 없다', Lb.x + Lb.w / 2, Lb.y + Lb.h / 2 + 1);
+  } else {
+    ctx.font = 'bold 26px system-ui, sans-serif';
+    outlinedText(ctx, lv > 0 ? `${lv + 1}단계로` : '배우기', Lb.x + Lb.w / 2 - 44, Lb.y + Lb.h / 2 + 1, 6);
+    ctx.font = 'bold 25px system-ui, sans-serif';
+    const cx2 = Lb.x + Lb.w / 2 + 74;
+    outlinedText(ctx, `${cost}`, cx2 + 12, Lb.y + Lb.h / 2 + 1, 6);
+    bioIcon(ctx, cx2 - 14, Lb.y + Lb.h / 2, 24);
+    if (!afford) {
+      ctx.font = 'bold 14px system-ui, sans-serif';
+      ctx.fillStyle = '#7A3A3A';
+      ctx.fillText(`${cost - bio} 더 필요하다`, Lb.x + Lb.w / 2, Lb.y + Lb.h - 12);
+    }
+  }
+}
+
+/** 줄바꿈 — 캔버스에는 자동 줄바꿈이 없다. */
+function wrapText(ctx, text, x, y, maxW, lineH, maxLines) {
+  const words = String(text).split(' ');
+  let line = '';
+  let n = 0;
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line, x, y + n * lineH);
+      n += 1;
+      if (n >= maxLines) return;
+      line = w;
+    } else line = test;
+  }
+  if (line && n < maxLines) ctx.fillText(line, x, y + n * lineH);
+}
+
 
 /* ============================================================ 상점 (보스 후) */
 
@@ -4457,27 +5394,31 @@ function renderPause(ctx, state, t, b = B) {
 
   // --- 유전자 ---
   y += 110;
-  const learned = normalizeOwned(owned).filter((id) => id !== 'root');
+  // 단계형 트리 — "몇 개" 가 아니라 "몇 단계" 를 센다
+  const own = normalizeOwned(owned);
+  const perBranch = {};
+  let learned = 0;
+  for (const [id, lv] of Object.entries(own)) {
+    if (id === 'root') continue;
+    learned += lv;
+    const br = NODE_BY_ID[id]?.branch;
+    if (br) perBranch[br] = (perBranch[br] ?? 0) + lv;
+  }
+  const maxSteps = NODES.reduce((s2, n) => s2 + (n.id === 'root' ? 0 : n.max), 0);
   panel(ctx, 30, y, b.designW - 60, 128, '#FFFDF6', 5, 20);
   ctx.font = 'bold 17px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(`유전자  ${learned.length} / ${NODES.length - 1}`, 52, y + 24);
-  const byBranch = {};
-  for (const id of learned) {
-    const n = NODE_BY_ID[id];
-    if (!n?.branch) continue;
-    (byBranch[n.branch] ??= []).push(n);
-  }
+  ctx.fillText(`유전자  ${learned} / ${maxSteps} 단계`, 52, y + 24);
   Object.keys(BRANCH).forEach((key, i) => {
-    const list = byBranch[key] ?? [];
+    const cnt = perBranch[key] ?? 0;
     const cx = 52 + (i % 2) * ((b.designW - 104) / 2);
     const cy = y + 56 + Math.floor(i / 2) * 36;
     ctx.fillStyle = BRANCH[key].color;
     ctx.beginPath(); ctx.arc(cx + 7, cy - 5, 8, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.font = 'bold 16px system-ui, sans-serif';
-    ctx.fillStyle = list.length ? PALETTE.woodDark : '#B7ADA0';
-    ctx.fillText(`${BRANCH[key].name} ${list.length}`, cx + 22, cy - 4);
+    ctx.fillStyle = cnt ? PALETTE.woodDark : '#B7ADA0';
+    ctx.fillText(`${BRANCH[key].name} ${cnt}`, cx + 22, cy - 4);
   });
 
   // --- 이번 판 획득 ---
@@ -4727,7 +5668,11 @@ async function boot() {
   let world = null;
   let rng = makeRng(1);
   let elapsed = 0;
-  let lastRun = 0, lastBio = 0, lastWave = 1, lastStage = 1;
+  let lastRun = 0, lastBio = 0, lastLost = 0, lastWave = 1, lastStage = 1;
+  // 로비 안의 상태 — 지금 고른 노드와 보고 있는 화면.
+  // 탭이 곧 구매가 아니므로 "무엇을 고르고 있는가" 를 들고 있어야 한다.
+  let lobbySel = null;
+  let lobbyView = 'tree';
   let autoPlay = false;
   let deathCine = null;   // 사망 슬로우모션 — 끝나야 로비로 넘어간다
   const aiMemory = {};
@@ -4747,6 +5692,7 @@ async function boot() {
     deathCine = null;
     lastRun = Math.floor(world.t);
     lastBio = world.bio;
+    lastLost = world.bioLost;
     lastWave = world.wave;
     lastStage = stageOf(world.wave, B);
     save.bio += world.bio;      // 돈(금색)은 런과 함께 사라진다. 생명에너지만 남는다.
@@ -4756,6 +5702,8 @@ async function boot() {
       bridge.sendScore(save.bestScore);   // 요건: 전송 점수 = 세이브 최고 기록
     }
     mode = 'lobby';
+    lobbySel = null;
+    lobbyView = 'tree';
     input.setEnabled(false);
     persist();
   }
@@ -4776,13 +5724,17 @@ async function boot() {
     if (mode === 'title') {
       const hit = titleHitTest(x, y, B);
       if (hit.type === 'start') startRun();
-      else if (hit.type === 'lobby') mode = 'lobby';
+      else if (hit.type === 'lobby') { mode = 'lobby'; lobbySel = null; lobbyView = 'tree'; }
       return true;
     }
     if (mode === 'lobby') {
-      const hit = lobbyHitTest(x, y, B);
+      const hit = lobbyHitTest(x, y, save.owned, lobbySel, lobbyView, B);
       if (hit.type === 'start') startRun();
+      else if (hit.type === 'totals') lobbyView = 'totals';
+      else if (hit.type === 'closeTotals') lobbyView = 'tree';
+      else if (hit.type === 'select') lobbySel = hit.id;
       else if (hit.type === 'learn') {
+        // 배우기는 정보창에서 한 번 더 눌러야 일어난다. 노드를 탭하는 것만으로는 안 산다.
         const r = learnNode(hit.id, save.bio, save.owned);
         if (r.ok) { save.bio = r.bio; save.owned = r.owned; persist(); }
       }
@@ -4872,10 +5824,14 @@ async function boot() {
         currentWeapon: world.weapon, hp: world.player.hp, maxHp: world.player.maxHp,
       }, elapsed, B);
     } else if (mode === 'lobby') {
-      renderLobby(ctx, {
-        bio: save.bio, owned: save.owned, best: save.bestScore,
-        lastRun, lastBio, lastWave, lastStage,
-      }, elapsed, B);
+      if (lobbyView === 'totals') {
+        renderTotals(ctx, { owned: save.owned, bio: save.bio }, elapsed, B);
+      } else {
+        renderLobby(ctx, {
+          bio: save.bio, owned: save.owned, best: save.bestScore,
+          lastRun, lastBio, lastLost, lastWave, lastStage, selected: lobbySel,
+        }, elapsed, B);
+      }
     } else {
       renderTitle(ctx, { best: save.bestScore, bio: save.bio }, elapsed, B);
     }
@@ -4912,8 +5868,16 @@ async function boot() {
       stats: () => deriveStats(save.owned),
       renderFrame, startRun, closeShop,
       auto: (on = true) => { autoPlay = on; return `autoplay ${on ? 'ON' : 'OFF'}`; },
-      grant: (ids) => { save.owned = normalizeOwned([...save.owned, ...(ids ?? [])]); persist(); return save.owned; },
-      grantAll: () => { save.owned = normalizeOwned(NODES.map((n) => n.id)); persist(); return save.owned.length; },
+      grant: (ids) => {
+        const next = { ...normalizeOwned(save.owned) };
+        for (const id of ids ?? []) next[id] = (next[id] ?? 0) + 1;
+        save.owned = normalizeOwned(next); persist(); return save.owned;
+      },
+      grantAll: () => {
+        save.owned = normalizeOwned(Object.fromEntries(NODES.map((n) => [n.id, n.max])));
+        persist(); return Object.keys(save.owned).length;
+      },
+      lobby: (view = 'tree', sel = null) => { mode = 'lobby'; lobbyView = view; lobbySel = sel; renderFrame(); return view; },
       bio: (n) => { save.bio += n; return save.bio; },
       give: (id) => { if (world) equipWeapon(world, id); return world?.weapon; },
       /** 특정 웨이브로 건너뛴다 (보스 검수용) */

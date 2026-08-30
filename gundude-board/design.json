@@ -66,7 +66,7 @@
       "maxAliveEnemies": 40,
       "intermissionSec": 1.6
     },
-    "treeTotalCost": 668
+    "treeTotalCost": 2118
   },
   "enemies": [
     {
@@ -490,8 +490,13 @@
           0
         ],
         "req": null,
-        "cost": 0,
-        "big": true,
+        "kind": "unlock",
+        "max": 1,
+        "base": 0,
+        "costs": [
+          1
+        ],
+        "totalCost": 1,
         "eff": {},
         "desc": "여기서 시작한다"
       }
@@ -510,12 +515,21 @@
           -1
         ],
         "req": "root",
-        "cost": 12,
-        "big": false,
+        "kind": "stat",
+        "max": 5,
+        "base": 4,
+        "costs": [
+          4,
+          7,
+          12,
+          21,
+          38
+        ],
+        "totalCost": 82,
         "eff": {
-          "dmg": 1.3
+          "dmg": 1.12
         },
-        "desc": "피해 +30%"
+        "desc": "피해 +12%"
       }
     },
     {
@@ -532,12 +546,21 @@
           -2
         ],
         "req": "sp1",
-        "cost": 16,
-        "big": false,
+        "kind": "stat",
+        "max": 5,
+        "base": 5,
+        "costs": [
+          5,
+          9,
+          15,
+          27,
+          47
+        ],
+        "totalCost": 103,
         "eff": {
-          "hp": 16
+          "hp": 6
         },
-        "desc": "최대 체력 +16"
+        "desc": "최대 체력 +6"
       }
     },
     {
@@ -554,17 +577,24 @@
           -3
         ],
         "req": "sp2",
-        "cost": 22,
-        "big": false,
+        "kind": "stat",
+        "max": 3,
+        "base": 9,
+        "costs": [
+          9,
+          16,
+          28
+        ],
+        "totalCost": 53,
         "eff": {
-          "spd": 1.09
+          "spd": 1.05
         },
-        "desc": "이동 속도 +9%"
+        "desc": "이동 속도 +5%"
       }
     },
     {
       "id": "sp4",
-      "name": "아드레날린",
+      "name": "연골 갑피",
       "branch": "spec",
       "branchName": "기본 스펙",
       "branchColor": "#D9534F",
@@ -576,39 +606,25 @@
           -3
         ],
         "req": "sp2",
-        "cost": 26,
-        "big": false,
-        "eff": {
-          "dmg": 1.34
-        },
-        "desc": "피해 +34%"
-      }
-    },
-    {
-      "id": "sp5",
-      "name": "연골 갑피",
-      "branch": "spec",
-      "branchName": "기본 스펙",
-      "branchColor": "#D9534F",
-      "concept": "최대 체력 +26. 회피 갈래의 연장.",
-      "intent": "\"보스 패턴을 한 번 잘못 읽어도 살아남을 두께가 되는가\" — 보스 벽 앞에서 가장 먼저 고민되는 노드.",
-      "stats": {
-        "g": [
-          -1,
-          -4
+        "kind": "stat",
+        "max": 4,
+        "base": 12,
+        "costs": [
+          12,
+          21,
+          37,
+          64
         ],
-        "req": "sp3",
-        "cost": 34,
-        "big": false,
+        "totalCost": 134,
         "eff": {
-          "hp": 26
+          "dr": 0.05
         },
-        "desc": "최대 체력 +26"
+        "desc": "받는 피해 −5%"
       }
     },
     {
       "id": "sp6",
-      "name": "경화 세포",
+      "name": "과부하 심장",
       "branch": "spec",
       "branchName": "기본 스펙",
       "branchColor": "#D9534F",
@@ -616,18 +632,50 @@
       "intent": "\"방어를 곱연산으로 쌓을 것인가\" — 감소율은 곱으로 붙으므로 체력과 성격이 다르다.",
       "stats": {
         "g": [
-          0,
-          -5
+          -1,
+          -4
         ],
-        "req": "sp5",
-        "cost": 56,
-        "big": true,
+        "req": "sp3",
+        "kind": "stat",
+        "max": 3,
+        "base": 26,
+        "costs": [
+          26,
+          46,
+          80
+        ],
+        "totalCost": 152,
         "eff": {
-          "dr": 0.12,
-          "hp": 24,
-          "dmg": 1.25
+          "dmg": 1.18
         },
-        "desc": "받는 피해 −12% · 체력 +24 · 피해 +25%"
+        "desc": "피해 +18%"
+      }
+    },
+    {
+      "id": "sp5",
+      "name": "재생 조직",
+      "branch": "spec",
+      "branchName": "기본 스펙",
+      "branchColor": "#D9534F",
+      "concept": "최대 체력 +26. 회피 갈래의 연장.",
+      "intent": "\"보스 패턴을 한 번 잘못 읽어도 살아남을 두께가 되는가\" — 보스 벽 앞에서 가장 먼저 고민되는 노드.",
+      "stats": {
+        "g": [
+          1,
+          -4
+        ],
+        "req": "sp4",
+        "kind": "unlock",
+        "max": 1,
+        "base": 60,
+        "costs": [
+          60
+        ],
+        "totalCost": 60,
+        "eff": {
+          "lifesteal": 2
+        },
+        "desc": "적을 죽일 때마다 체력 +2"
       }
     },
     {
@@ -644,12 +692,21 @@
           0
         ],
         "req": "root",
-        "cost": 12,
-        "big": false,
+        "kind": "stat",
+        "max": 5,
+        "base": 4,
+        "costs": [
+          4,
+          7,
+          12,
+          21,
+          38
+        ],
+        "totalCost": 82,
         "eff": {
-          "itv": 0.88
+          "itv": 0.94
         },
-        "desc": "발사 간격 −12%"
+        "desc": "발사 간격 −6%"
       }
     },
     {
@@ -666,12 +723,20 @@
           0
         ],
         "req": "gn1",
-        "cost": 16,
-        "big": false,
+        "kind": "stat",
+        "max": 4,
+        "base": 6,
+        "costs": [
+          6,
+          11,
+          18,
+          32
+        ],
+        "totalCost": 67,
         "eff": {
-          "rld": 0.84
+          "rld": 0.9
         },
-        "desc": "재장전 −16%"
+        "desc": "재장전 −10%"
       }
     },
     {
@@ -688,12 +753,19 @@
           -1
         ],
         "req": "gn2",
-        "cost": 22,
-        "big": false,
+        "kind": "stat",
+        "max": 3,
+        "base": 10,
+        "costs": [
+          10,
+          18,
+          31
+        ],
+        "totalCost": 59,
         "eff": {
-          "rng": 1.25
+          "rng": 1.15
         },
-        "desc": "사거리 +25%"
+        "desc": "사거리 +15%"
       }
     },
     {
@@ -710,17 +782,53 @@
           1
         ],
         "req": "gn2",
-        "cost": 26,
-        "big": false,
+        "kind": "stat",
+        "max": 3,
+        "base": 8,
+        "costs": [
+          8,
+          14,
+          25
+        ],
+        "totalCost": 47,
         "eff": {
-          "kb": 1.8
+          "kb": 1.35
         },
-        "desc": "탄 넉백 +80%"
+        "desc": "탄 넉백 +35%"
+      }
+    },
+    {
+      "id": "gn6",
+      "name": "속사 훈련",
+      "branch": "gun",
+      "branchName": "총기 이해",
+      "branchColor": "#4E8FBF",
+      "concept": "큰 노드 — 간격 −15% · 재장전 −20% · 피해 +20%.",
+      "intent": "\"총 하나로 끝을 볼 것인가\" — 무기 파라미터 위에 곱해지므로 어떤 총을 들지에 따라 값이 달라진다.",
+      "stats": {
+        "g": [
+          4,
+          -1
+        ],
+        "req": "gn3",
+        "kind": "stat",
+        "max": 3,
+        "base": 24,
+        "costs": [
+          24,
+          42,
+          74
+        ],
+        "totalCost": 140,
+        "eff": {
+          "itv": 0.92
+        },
+        "desc": "발사 간격 −8%"
       }
     },
     {
       "id": "gn5",
-      "name": "속사 훈련",
+      "name": "철갑탄",
       "branch": "gun",
       "branchName": "총기 이해",
       "branchColor": "#4E8FBF",
@@ -729,39 +837,20 @@
       "stats": {
         "g": [
           4,
-          -1
+          1
         ],
-        "req": "gn3",
-        "cost": 34,
-        "big": false,
-        "eff": {
-          "itv": 0.86
-        },
-        "desc": "발사 간격 −14%"
-      }
-    },
-    {
-      "id": "gn6",
-      "name": "총기 일체화",
-      "branch": "gun",
-      "branchName": "총기 이해",
-      "branchColor": "#4E8FBF",
-      "concept": "큰 노드 — 간격 −15% · 재장전 −20% · 피해 +20%.",
-      "intent": "\"총 하나로 끝을 볼 것인가\" — 무기 파라미터 위에 곱해지므로 어떤 총을 들지에 따라 값이 달라진다.",
-      "stats": {
-        "g": [
-          5,
-          0
+        "req": "gn4",
+        "kind": "unlock",
+        "max": 1,
+        "base": 70,
+        "costs": [
+          70
         ],
-        "req": "gn5",
-        "cost": 56,
-        "big": true,
+        "totalCost": 70,
         "eff": {
-          "itv": 0.85,
-          "rld": 0.8,
-          "dmg": 1.2
+          "pierce": 1
         },
-        "desc": "간격 −15% · 재장전 −20% · 피해 +20%"
+        "desc": "모든 탄이 1명 더 관통"
       }
     },
     {
@@ -778,12 +867,21 @@
           1
         ],
         "req": "root",
-        "cost": 14,
-        "big": false,
+        "kind": "stat",
+        "max": 5,
+        "base": 5,
+        "costs": [
+          5,
+          9,
+          15,
+          27,
+          47
+        ],
+        "totalCost": 103,
         "eff": {
-          "skCd": 0.74
+          "skCd": 0.9
         },
-        "desc": "충격파 대기 −26%"
+        "desc": "충격파 대기 −10%"
       }
     },
     {
@@ -800,12 +898,20 @@
           2
         ],
         "req": "bm1",
-        "cost": 18,
-        "big": false,
+        "kind": "stat",
+        "max": 4,
+        "base": 7,
+        "costs": [
+          7,
+          12,
+          21,
+          38
+        ],
+        "totalCost": 78,
         "eff": {
-          "skR": 1.45
+          "skR": 1.2
         },
-        "desc": "충격파 범위 +45%"
+        "desc": "충격파 범위 +20%"
       }
     },
     {
@@ -822,12 +928,20 @@
           3
         ],
         "req": "bm2",
-        "cost": 24,
-        "big": false,
+        "kind": "stat",
+        "max": 4,
+        "base": 9,
+        "costs": [
+          9,
+          16,
+          28,
+          48
+        ],
+        "totalCost": 101,
         "eff": {
-          "skDmg": 1.9
+          "skDmg": 1.35
         },
-        "desc": "충격파 피해 +90%"
+        "desc": "충격파 피해 +35%"
       }
     },
     {
@@ -844,39 +958,24 @@
           3
         ],
         "req": "bm2",
-        "cost": 26,
-        "big": false,
-        "eff": {
-          "skKb": 1.9
-        },
-        "desc": "밀치는 힘 +90%"
-      }
-    },
-    {
-      "id": "bm5",
-      "name": "축전기",
-      "branch": "bomb",
-      "branchName": "폭탄",
-      "branchColor": "#E8A33D",
-      "concept": "충격파 대기 −28%. 피해 갈래의 연장.",
-      "intent": "\"위기 대응을 상시 무기로 만들 것인가\" — 대기가 짧아질수록 판단이 아니라 습관이 된다.",
-      "stats": {
-        "g": [
-          -1,
-          4
+        "kind": "stat",
+        "max": 3,
+        "base": 8,
+        "costs": [
+          8,
+          14,
+          25
         ],
-        "req": "bm3",
-        "cost": 36,
-        "big": false,
+        "totalCost": 47,
         "eff": {
-          "skCd": 0.72
+          "skKb": 1.3
         },
-        "desc": "충격파 대기 −28%"
+        "desc": "밀치는 힘 +30%"
       }
     },
     {
       "id": "bm6",
-      "name": "연쇄 폭발",
+      "name": "축전기",
       "branch": "bomb",
       "branchName": "폭탄",
       "branchColor": "#E8A33D",
@@ -884,18 +983,50 @@
       "intent": "\"버튼 하나로 웨이브를 지울 것인가\" — 예산 밖의 버튼을 안 늘리고 얻는 유일한 광역 해답.",
       "stats": {
         "g": [
-          0,
-          5
+          -1,
+          4
         ],
-        "req": "bm5",
-        "cost": 58,
-        "big": true,
+        "req": "bm3",
+        "kind": "stat",
+        "max": 3,
+        "base": 22,
+        "costs": [
+          22,
+          39,
+          67
+        ],
+        "totalCost": 128,
         "eff": {
-          "skR": 1.5,
-          "skDmg": 2,
-          "skCd": 0.8
+          "skCd": 0.88
         },
-        "desc": "범위 +50% · 피해 +100% · 대기 −20%"
+        "desc": "충격파 대기 −12%"
+      }
+    },
+    {
+      "id": "bm5",
+      "name": "이중 기폭",
+      "branch": "bomb",
+      "branchName": "폭탄",
+      "branchColor": "#E8A33D",
+      "concept": "충격파 대기 −28%. 피해 갈래의 연장.",
+      "intent": "\"위기 대응을 상시 무기로 만들 것인가\" — 대기가 짧아질수록 판단이 아니라 습관이 된다.",
+      "stats": {
+        "g": [
+          1,
+          4
+        ],
+        "req": "bm4",
+        "kind": "unlock",
+        "max": 1,
+        "base": 80,
+        "costs": [
+          80
+        ],
+        "totalCost": 80,
+        "eff": {
+          "charges": 1
+        },
+        "desc": "충격파를 2회까지 모아 둔다"
       }
     },
     {
@@ -912,12 +1043,20 @@
           0
         ],
         "req": "root",
-        "cost": 12,
-        "big": false,
+        "kind": "stat",
+        "max": 4,
+        "base": 4,
+        "costs": [
+          4,
+          7,
+          12,
+          21
+        ],
+        "totalCost": 44,
         "eff": {
-          "money": 1.25
+          "money": 1.15
         },
-        "desc": "돈 획득 +25%"
+        "desc": "돈 획득 +15%"
       }
     },
     {
@@ -934,17 +1073,25 @@
           0
         ],
         "req": "lt1",
-        "cost": 16,
-        "big": false,
+        "kind": "stat",
+        "max": 4,
+        "base": 5,
+        "costs": [
+          5,
+          9,
+          15,
+          27
+        ],
+        "totalCost": 56,
         "eff": {
-          "bio": 1.25
+          "bio": 1.15
         },
-        "desc": "생명에너지 +25%"
+        "desc": "유전자 조각 +15%"
       }
     },
     {
       "id": "lt3",
-      "name": "약탈 습관",
+      "name": "비상 자금",
       "branch": "loot",
       "branchName": "자원 획득",
       "branchColor": "#5FA36A",
@@ -956,17 +1103,24 @@
           -1
         ],
         "req": "lt2",
-        "cost": 22,
-        "big": false,
+        "kind": "stat",
+        "max": 3,
+        "base": 10,
+        "costs": [
+          10,
+          18,
+          31
+        ],
+        "totalCost": 59,
         "eff": {
-          "money": 1.3
+          "startMoney": 25
         },
-        "desc": "돈 획득 +30%"
+        "desc": "판 시작 시 돈 +25"
       }
     },
     {
       "id": "lt4",
-      "name": "유전자 정제",
+      "name": "촉수 감각",
       "branch": "loot",
       "branchName": "자원 획득",
       "branchColor": "#5FA36A",
@@ -978,17 +1132,22 @@
           1
         ],
         "req": "lt2",
-        "cost": 24,
-        "big": false,
+        "kind": "unlock",
+        "max": 1,
+        "base": 45,
+        "costs": [
+          45
+        ],
+        "totalCost": 45,
         "eff": {
-          "bio": 1.3
+          "magnet": 1
         },
-        "desc": "생명에너지 +30%"
+        "desc": "유전자 조각을 멀리서 끌어당긴다"
       }
     },
     {
       "id": "lt5",
-      "name": "비상 자금",
+      "name": "흡인장",
       "branch": "loot",
       "branchName": "자원 획득",
       "branchColor": "#5FA36A",
@@ -997,15 +1156,22 @@
       "stats": {
         "g": [
           -4,
-          -1
+          1
         ],
-        "req": "lt3",
-        "cost": 32,
-        "big": false,
+        "req": "lt4",
+        "kind": "stat",
+        "max": 3,
+        "base": 30,
+        "costs": [
+          30,
+          53,
+          92
+        ],
+        "totalCost": 175,
         "eff": {
-          "startMoney": 40
+          "magR": 1.2
         },
-        "desc": "판 시작 시 돈 +40"
+        "desc": "끌어당기는 범위 +20%"
       }
     },
     {
@@ -1018,17 +1184,24 @@
       "intent": "\"수확을 끝까지 밀 것인가\" — 배율끼리 곱해지므로 서쪽을 다 산 사람에게만 값이 크다.",
       "stats": {
         "g": [
-          -5,
-          0
+          -4,
+          -1
         ],
-        "req": "lt5",
-        "cost": 54,
-        "big": true,
+        "req": "lt3",
+        "kind": "stat",
+        "max": 3,
+        "base": 26,
+        "costs": [
+          26,
+          46,
+          80
+        ],
+        "totalCost": 152,
         "eff": {
-          "money": 1.35,
-          "bio": 1.35
+          "money": 1.15,
+          "bio": 1.15
         },
-        "desc": "돈·생명에너지 +35%"
+        "desc": "돈·조각 +15%"
       }
     }
   ],
