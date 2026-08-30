@@ -4493,6 +4493,7 @@ function renderWorld(ctx, world, images, t, stick, cam = null) {
 
 
 
+
 /**
  * 게임 밖 화면들 — 타이틀 · 로비(영구 성장) · 상점(인게임 무기).
  *
@@ -4549,27 +4550,29 @@ function renderTitle(ctx, state, t, b = B) {
   ctx.font = 'bold 104px system-ui, sans-serif';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 20;
-  ctx.strokeText('GUN', b.designW / 2, 300);
-  ctx.strokeText('DUDE', b.designW / 2, 400);
+  ctx.strokeText('GUN', b.designW / 2, 250);
+  ctx.strokeText('DUDE', b.designW / 2, 352);
   ctx.fillStyle = PALETTE.parchment;
-  ctx.fillText('GUN', b.designW / 2, 300);
-  ctx.fillText('DUDE', b.designW / 2, 400);
+  ctx.fillText('GUN', b.designW / 2, 250);
+  ctx.fillText('DUDE', b.designW / 2, 352);
 
+  // 부제는 제목 아래로 충분히 띄운다. 104px 글자의 아랫단이 여기까지 내려온다.
   ctx.font = 'bold 24px system-ui, sans-serif';
   ctx.fillStyle = '#9FB4C4';
-  ctx.fillText('절벽 위에서 얼마나 버티나', b.designW / 2, 462);
+  ctx.fillText('절벽 위에서 얼마나 버티나', b.designW / 2, 430);
 
+  // 총을 수평으로 들면 얼굴을 가로지른다. 타이틀에서는 총구를 살짝 내린다.
   drawCharacter(ctx, {
-    kind: 'dude', x: b.designW / 2, y: 660, size: 130, seed: 1337, facing: 1,
-    aimA: -0.12,
+    kind: 'dude', x: b.designW / 2, y: 690, size: 130, seed: 1337, facing: 1,
+    aimA: 0.30,
     pose: { walk: 0, moving: false, lean: 0, state: null, prog: 0 },
   });
 
   if (state.best > 0) {
-    panel(ctx, b.designW / 2 - 150, 700, 300, 58, PALETTE.parchment, 4, 29);
+    panel(ctx, b.designW / 2 - 150, 716, 300, 58, PALETTE.parchment, 4, 29);
     ctx.font = 'bold 28px system-ui, sans-serif';
     ctx.fillStyle = PALETTE.woodDark;
-    ctx.fillText(`최고 기록  ${formatTime(state.best)}`, b.designW / 2, 730);
+    ctx.fillText(`최고 기록  ${formatTime(state.best)}`, b.designW / 2, 746);
   }
 
   const pulse = 1 + Math.sin(t * 3.2) * 0.014;
@@ -4583,197 +4586,303 @@ function renderTitle(ctx, state, t, b = B) {
   ctx.restore();
 
   panel(ctx, L.lobby.x, L.lobby.y, L.lobby.w, L.lobby.h, PALETTE.parchment, 5, 20);
-  ctx.font = 'bold 34px system-ui, sans-serif';
+  // 글자와 재화가 겹치던 자리다. 폭을 재서 배치한다 —
+  // 고정 오프셋으로 두면 숫자가 커지는 순간 무너진다.
+  const cy = L.lobby.y + L.lobby.h / 2 + 1;
+  const label = '유전자 조작';
+  const amount = `${state.bio}`;
+  ctx.font = 'bold 32px system-ui, sans-serif';
+  const lw = ctx.measureText(label).width;
+  ctx.font = 'bold 26px system-ui, sans-serif';
+  const aw = ctx.measureText(amount).width;
+  const GAP = 22, ICON = 26;
+  const total = lw + GAP + ICON + 8 + aw;
+  const x0 = b.designW / 2 - total / 2;
+
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 32px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText('유전자 조작', b.designW / 2 - 40, L.lobby.y + L.lobby.h / 2 + 1);
-  bioIcon(ctx, b.designW / 2 + 42, L.lobby.y + L.lobby.h / 2 - 1, 26);
-  ctx.textAlign = 'left';
-  ctx.fillText(`${state.bio}`, b.designW / 2 + 60, L.lobby.y + L.lobby.h / 2 + 1);
+  ctx.fillText(label, x0, cy);
+  bioIcon(ctx, x0 + lw + GAP + ICON / 2, cy - 1, ICON);
+  ctx.font = 'bold 26px system-ui, sans-serif';
+  ctx.fillStyle = '#3F6B86';
+  ctx.fillText(amount, x0 + lw + GAP + ICON + 8, cy);
   ctx.textAlign = 'center';
 }
 
 /* ============================================================ 로비 — 유전자 트리 */
 
 /**
- * 【v2 재설계】 한 번에 보이는 정보를 줄였다.
+ * 【v3 — 시안 준수】 `Mutation UI 0.png` 를 그대로 따랐다.
  *
- * 예전에는 25개 노드가 전부 깔려 있었다. 그러면 고르는 게 아니라 훑는 게 된다.
- * 이제 **배운 것과 그 바로 다음만** 보인다. 앞길은 배워야 드러난다.
+ * 이전 화면의 문제는 셋이었다:
+ *  1. 노드가 전부 밝고 전부 글로우가 있었다 → **상태가 안 읽힌다**
+ *  2. 노드가 색 원뿐이라 무엇을 하는 노드인지 눌러 봐야 알았다 → **픽토그램**
+ *  3. 노드가 붙어 있어 손가락으로 고르기 어려웠다 → **간격 78px · 패닝**
  *
- * 그리고 탭이 곧 구매가 아니다. 탭하면 **정보창**이 열리고,
- * 무엇이 얼마나 오르는지 읽은 뒤에 배울지 고른다. 실수로 사는 일이 없어야 한다.
+ * 시안이 정한 규칙:
+ *  - 배경은 펼친 **양피지 책**이다. 네이비 단색이 아니다
+ *  - 못 배운 노드는 **회색**이다. 배운 노드만 색을 가진다
+ *  - 선택 표시는 글로우가 아니라 **네 모서리 대괄호**다
+ *  - 배선은 굵은 검정선이고 모서리가 **둥글게** 휜다
  */
 
-const CELL = 46;
-const TREE_CX = 360;
-const TREE_CY = 462;
+const CELL = 78;
+const NODE_R = 22;          // 스탯 노드
+const BIG_R = 31;           // 기능 해금 노드
 
-/** 노드의 화면 좌표. 격자 좌표를 그대로 화면에 편다. */
+/** 트리를 보여 주는 창. 이 밖으로는 안 그린다. */
+function treeViewport(b = B) {
+  return { x: 22, y: 232, w: b.designW - 44, h: 424 };
+}
+
+/** 격자 좌표 → 트리 내부 좌표 (패닝 전). */
 function nodePos(n) {
-  return { x: TREE_CX + n.g[0] * CELL, y: TREE_CY + n.g[1] * CELL };
+  return { x: n.g[0] * CELL, y: n.g[1] * CELL };
+}
+
+/** 패닝을 적용한 화면 좌표. */
+function screenPos(n, pan, b = B) {
+  const V = treeViewport(b);
+  const p = nodePos(n);
+  return { x: V.x + V.w / 2 + p.x + pan.x, y: V.y + V.h / 2 + p.y + pan.y };
+}
+
+/** 패닝 한계 — 트리가 창 밖으로 완전히 사라지지 않게 묶는다. */
+function clampPan(pan, b = B) {
+  const V = treeViewport(b);
+  const lim = 4 * CELL + 40;
+  const mx = Math.max(0, lim - V.w / 2 + 60);
+  const my = Math.max(0, lim - V.h / 2 + 60);
+  return {
+    x: Math.max(-mx, Math.min(mx, pan.x)),
+    y: Math.max(-my, Math.min(my, pan.y)),
+  };
 }
 
 function lobbyLayout(b = B) {
   return {
-    start:  { x: 34, y: b.designH - 104, w: b.designW - 68, h: 82 },
-    panel:  { x: 28, y: 672, w: b.designW - 56, h: 396 },
-    learn:  { x: 52, y: 986, w: b.designW - 104, h: 74 },
-    totals: { x: b.designW - 92, y: 26, w: 66, h: 66 },
-    close:  { x: b.designW - 92, y: 26, w: 66, h: 66 },
+    record: { x: 22, y: 22, w: b.designW - 44, h: 126 },
+    // 능력·옵션은 기록 카드 **아래**에 둔다 (디렉터 지시).
+    // 위에 겹쳐 두면 기록을 가리고, 무엇이 상위 정보인지도 흐려진다.
+    totals:  { x: 22, y: 158, w: 214, h: 60 },
+    options: { x: 244, y: 158, w: 116, h: 60 },
+    purse:   { x: 372, y: 158, w: b.designW - 394, h: 60 },
+    panel:   { x: 22, y: 668, w: b.designW - 44, h: 424 },
+    learn:   { x: 46, y: 1000, w: b.designW - 92, h: 78 },
+    start:   { x: 34, y: b.designH - 106, w: b.designW - 68, h: 84 },
+    close:   { x: b.designW - 88, y: 24, w: 64, h: 64 },
+    reset:   { x: 70, y: 520, w: b.designW - 140, h: 86 },
+    confirm: { x: 70, y: 640, w: b.designW - 140, h: 78 },
   };
 }
 
 /**
  * 탭 판정.
- * @param view 'tree' | 'totals'
- * @returns {type:'start'|'learn'|'select'|'totals'|'closeTotals'|'none', id?}
+ * @param view 'tree' | 'totals' | 'options'
  */
-function lobbyHitTest(x, y, owned, selected, view = 'tree', b = B) {
+function lobbyHitTest(x, y, owned, selected, view = 'tree', pan = { x: 0, y: 0 }, b = B) {
   const L = lobbyLayout(b);
-  if (view === 'totals') {
-    return inside(L.close, x, y) ? { type: 'closeTotals' } : { type: 'none' };
+  if (view === 'totals' || view === 'options') {
+    if (inside(L.close, x, y)) return { type: 'closeOverlay' };
+    if (view === 'options') {
+      if (inside(L.reset, x, y)) return { type: 'resetAsk' };
+      if (inside(L.confirm, x, y)) return { type: 'resetDo' };
+    }
+    return { type: 'none' };
   }
   if (inside(L.totals, x, y)) return { type: 'totals' };
+  if (inside(L.options, x, y)) return { type: 'options' };
   if (inside(L.start, x, y)) return { type: 'start' };
   if (selected && inside(L.learn, x, y)) return { type: 'learn', id: selected };
 
-  // 노드는 보이는 것만 잡힌다. 안개 속 노드를 실수로 누르면 안 된다.
-  let best = null, bestD = 30 * 30;
-  for (const n of revealedNodes(owned)) {
-    const p = nodePos(n);
-    const d = (p.x - x) ** 2 + (p.y - y) ** 2;
-    if (d < bestD) { bestD = d; best = n.id; }
+  // 노드는 창 안에 보이는 것만 잡힌다
+  const V = treeViewport(b);
+  if (x >= V.x && x <= V.x + V.w && y >= V.y && y <= V.y + V.h) {
+    let best = null, bestD = 40 * 40;
+    for (const n of revealedNodes(owned)) {
+      const p = screenPos(n, pan, b);
+      const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+      if (d < bestD) { bestD = d; best = n.id; }
+    }
+    if (best) return { type: 'select', id: best };
+    return { type: 'deselect' };
   }
-  if (best) return { type: 'select', id: best };
   return { type: 'none' };
 }
 
-/** 직교 배선 — 시안의 트리처럼 ㄱ자로 꺾어 잇는다. */
-function wire(ctx, a, b2, on) {
-  const midX = Math.abs(b2.x - a.x) > Math.abs(b2.y - a.y);
-  // 안 배운 선도 보여야 한다. 배경(#28475F)과 붙으면 길이 있는지조차 안 보인다.
-  ctx.strokeStyle = on ? '#F0C64A' : '#5B7793';
-  ctx.lineWidth = on ? 6 : 5;
+/**
+ * 배선 — 시안은 직각이 아니라 **둥글게 휜다.**
+ * 꺾이는 자리에 곡선을 넣으면 손그림 느낌이 살고, 길이 눈으로 따라진다.
+ */
+function wire(ctx, a, c, on) {
+  const midX = Math.abs(c.x - a.x) > Math.abs(c.y - a.y);
+  const corner = midX ? { x: c.x, y: a.y } : { x: a.x, y: c.y };
+  const r = 22;
+  const d1 = Math.hypot(corner.x - a.x, corner.y - a.y);
+  const d2 = Math.hypot(c.x - corner.x, c.y - corner.y);
+
+  ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(a.x, a.y);
-  if (midX) { ctx.lineTo(b2.x, a.y); } else { ctx.lineTo(a.x, b2.y); }
-  ctx.lineTo(b2.x, b2.y);
-  ctx.stroke();
-}
-
-/** 단계 표시 — 숫자보다 칸이 먼저 읽힌다. */
-function levelPips(ctx, cx, y, level, max, color, size = 11, gap = 6) {
-  const w = max * size + (max - 1) * gap;
-  let x = cx - w / 2;
-  for (let i = 0; i < max; i += 1) {
+  // 검정 외곽 → 안쪽 색. 시안의 굵은 먹선을 흉내낸다.
+  for (const [w, col] of [[13, PALETTE.ink], [7, on ? '#F0C64A' : '#B8AB92']]) {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = w;
     ctx.beginPath();
-    ctx.roundRect(x, y - size / 2, size, size, 3);
-    ctx.fillStyle = i < level ? color : 'rgba(0,0,0,0.14)';
-    ctx.fill();
-    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2;
+    ctx.moveTo(a.x, a.y);
+    if (d1 > r && d2 > r) {
+      const t1 = { x: a.x + ((corner.x - a.x) / d1) * (d1 - r), y: a.y + ((corner.y - a.y) / d1) * (d1 - r) };
+      const t2 = { x: corner.x + ((c.x - corner.x) / d2) * r, y: corner.y + ((c.y - corner.y) / d2) * r };
+      ctx.lineTo(t1.x, t1.y);
+      ctx.quadraticCurveTo(corner.x, corner.y, t2.x, t2.y);
+    } else {
+      ctx.lineTo(corner.x, corner.y);
+    }
+    ctx.lineTo(c.x, c.y);
     ctx.stroke();
-    x += size + gap;
   }
+  ctx.restore();
 }
 
-/** 노드 하나. 배운 단계만큼 테두리가 채워진다. */
-function drawNode(ctx, n, p, level, afford, isSel, t) {
+/**
+ * 노드 하나. 상태는 셋뿐이다 — 디렉터가 정리해 준 그대로다.
+ *   잠김/미학습 → 회색 딤
+ *   배우는 중   → 갈래색 + 진행 호
+ *   가득 참     → 갈래색 + 금 테두리
+ * 글로우는 쓰지 않는다. 전부 빛나면 아무것도 안 빛나는 것과 같다.
+ */
+function drawNode(ctx, n, p, level, afford, isSel) {
   const col = n.branch ? BRANCH[n.branch].color : '#F0C64A';
+  const big = n.kind === 'unlock';
+  const r = big ? BIG_R : NODE_R;
   const maxed = level >= n.max;
-  const r = n.kind === 'unlock' ? 21 : 17;
+  const learning = level > 0 && !maxed;
 
-  if (afford) {
-    ctx.save();
-    ctx.globalAlpha = 0.3 + Math.sin(t * 5) * 0.2;
-    ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 9;
-    ctx.beginPath(); ctx.arc(p.x, p.y, r + 8, 0, Math.PI * 2); ctx.stroke();
-    ctx.restore();
-  }
-  if (isSel) {
-    ctx.save();
-    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4;
-    ctx.setLineDash([6, 5]);
-    ctx.beginPath(); ctx.arc(p.x, p.y, r + 13, 0, Math.PI * 2); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.restore();
-  }
+  const face = level > 0 ? col : '#A79C8C';
+  const ink = level > 0 ? '#FFFFFF' : '#6E6558';
+
+  ctx.save();
+  // 바닥 그림자 — 종이 위에 놓인 칩처럼 보이게
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(p.x, p.y + 3, r, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
 
   ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-  ctx.fillStyle = level > 0 ? col : '#F4EFE2';
-  ctx.fill();
-  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3.5;
+  ctx.fillStyle = face; ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = big ? 5 : 4;
   ctx.stroke();
 
-  // 진행 호 — 몇 단계까지 올렸는지 테두리로 보여 준다
-  if (n.max > 1 && level > 0) {
+  drawIcon(ctx, iconForNode(n), p.x, p.y, r * (big ? 0.56 : 0.52), ink);
+
+  // 배우는 중 — 몇 단계까지 왔는지 테두리 호로
+  if (learning && n.max > 1) {
     ctx.save();
-    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4;
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, r - 5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (level / n.max));
+    ctx.arc(p.x, p.y, r - 3.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (level / n.max));
     ctx.stroke();
     ctx.restore();
   }
-  // 기능 해금은 별 하나로 표시한다 — 단계가 아니라 있냐 없냐의 문제다
-  if (n.kind === 'unlock' && n.id !== 'root') {
+  // 가득 참 — 금 테두리
+  if (maxed) {
     ctx.save();
-    ctx.fillStyle = level > 0 ? '#FFFFFF' : col;
-    ctx.beginPath();
-    for (let i = 0; i < 10; i += 1) {
-      const a = -Math.PI / 2 + (i * Math.PI) / 5;
-      const rr = i % 2 === 0 ? r * 0.52 : r * 0.22;
-      const fx = p.x + Math.cos(a) * rr, fy = p.y + Math.sin(a) * rr;
-      if (i === 0) ctx.moveTo(fx, fy); else ctx.lineTo(fx, fy);
-    }
-    ctx.closePath(); ctx.fill();
-    ctx.restore();
-  } else if (level === 0) {
-    ctx.beginPath(); ctx.arc(p.x, p.y, r * 0.36, 0, Math.PI * 2);
-    ctx.fillStyle = col; ctx.fill();
-  }
-  // 만렙은 글자가 아니라 테두리로 알린다. 글자를 밑에 달면 아래 노드와 겹친다.
-  if (maxed && n.max > 1) {
-    ctx.save();
-    ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 3.5;
+    ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.arc(p.x, p.y, r + 5, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(p.x, p.y, r + 6.8, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(p.x, p.y, r + 7.3, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  // 살 수 있음 — 조용한 금색 점 하나. 글로우로 화면을 덮지 않는다.
+  if (afford) {
+    const ax = p.x + r * 0.72, ay = p.y - r * 0.72;
+    ctx.beginPath(); ctx.arc(ax, ay, 7, 0, Math.PI * 2);
+    ctx.fillStyle = PALETTE.gold; ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
+  }
+  // 선택 — 시안의 네 모서리 대괄호
+  if (isSel) {
+    const d = r + 13, len = 11;
+    ctx.save();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      ctx.beginPath();
+      ctx.moveTo(p.x + sx * d, p.y + sy * d - sy * len);
+      ctx.lineTo(p.x + sx * d, p.y + sy * d);
+      ctx.lineTo(p.x + sx * d - sx * len, p.y + sy * d);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 }
 
-/** 우상단 버튼 — 지금까지 얻은 능력의 총합으로 들어가는 문. */
-function totalsButton(ctx, L, learned, t) {
-  const r = L.totals;
+/** 펼친 책 — 시안의 배경. 트리는 이 종이 위에 그려진다. */
+function paperPage(ctx, V) {
+  ctx.save();
+  ctx.fillStyle = '#4A3527';
+  ctx.beginPath(); ctx.roundRect(V.x - 7, V.y - 7, V.w + 14, V.h + 14, 16); ctx.fill();
+  const g = ctx.createLinearGradient(V.x, V.y, V.x, V.y + V.h);
+  g.addColorStop(0, '#F2E8D2');
+  g.addColorStop(0.5, '#EADFC4');
+  g.addColorStop(1, '#E0D3B4');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.roundRect(V.x, V.y, V.w, V.h, 11); ctx.fill();
+  // 가운데 접힌 자국
+  ctx.globalAlpha = 0.16;
+  const f = ctx.createLinearGradient(V.x + V.w / 2 - 22, 0, V.x + V.w / 2 + 22, 0);
+  f.addColorStop(0, 'rgba(0,0,0,0)');
+  f.addColorStop(0.5, 'rgba(74,53,39,1)');
+  f.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = f;
+  ctx.fillRect(V.x + V.w / 2 - 22, V.y, 44, V.h);
+  ctx.restore();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.roundRect(V.x, V.y, V.w, V.h, 11); ctx.stroke();
+}
+
+/** 작은 아이콘 버튼 — 능력 / 옵션 */
+function iconButton(ctx, r, label, badge, drawGlyph) {
   ctx.save();
   ctx.fillStyle = PALETTE.parchment;
-  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 16); ctx.fill();
   ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18); ctx.stroke();
-  // 막대 세 개 = 능력치 표
-  ctx.fillStyle = PALETTE.woodDark;
-  const bx = r.x + 16, by = r.y + 18;
-  for (let i = 0; i < 3; i += 1) {
-    ctx.beginPath();
-    ctx.roundRect(bx, by + i * 11, r.w - 32 - i * 7, 7, 3);
-    ctx.fill();
+  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 16); ctx.stroke();
+  drawGlyph(ctx, r.x + 34, r.y + r.h / 2);
+  if (label) {
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 20px system-ui, sans-serif';
+    ctx.fillStyle = PALETTE.woodDark;
+    ctx.fillText(label, r.x + 58, r.y + r.h / 2 + 1);
   }
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 13px system-ui, sans-serif';
-  ctx.fillStyle = '#8A7355';
-  ctx.fillText('능력', r.x + r.w / 2, r.y + r.h - 12);
-  if (learned > 0) {
+  if (badge > 0) {
     ctx.fillStyle = PALETTE.hpRed;
-    ctx.beginPath(); ctx.arc(r.x + r.w - 4, r.y + 4, 13, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
-    ctx.font = 'bold 14px system-ui, sans-serif';
-    outlinedText(ctx, `${learned}`, r.x + r.w - 4, r.y + 5, 4);
+    ctx.beginPath(); ctx.arc(r.x + r.w - 6, r.y + 6, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3; ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    outlinedText(ctx, `${badge}`, r.x + r.w - 6, r.y + 7, 4);
   }
   ctx.restore();
 }
 
 /* -------------------------------------------------- 능력 총합 화면 */
+
+function overlayClose(ctx, L) {
+  ctx.save();
+  ctx.fillStyle = PALETTE.parchment;
+  ctx.beginPath(); ctx.roundRect(L.close.x, L.close.y, L.close.w, L.close.h, 18); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(L.close.x, L.close.y, L.close.w, L.close.h, 18); ctx.stroke();
+  ctx.strokeStyle = PALETTE.woodDark; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  const cx = L.close.x + L.close.w / 2, cy = L.close.y + L.close.h / 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 13, cy - 13); ctx.lineTo(cx + 13, cy + 13);
+  ctx.moveTo(cx + 13, cy - 13); ctx.lineTo(cx - 13, cy + 13);
+  ctx.stroke();
+  ctx.restore();
+}
 
 /**
  * "지금까지 뭘 얻었지" 에 한 화면으로 답한다.
@@ -4789,158 +4898,241 @@ function renderTotals(ctx, state, t, b = B) {
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 36px system-ui, sans-serif';
-  outlinedText(ctx, '얻은 능력', b.designW / 2, 58, 8);
+  outlinedText(ctx, '얻은 능력', b.designW / 2, 56, 8);
   ctx.font = 'bold 17px system-ui, sans-serif';
   ctx.fillStyle = '#9FB4C4';
-  ctx.fillText(`유전자 ${sum.learned}단계 습득 · 보유 조각 ${bio}`, b.designW / 2, 92);
+  ctx.fillText(`유전자 ${sum.learned}단계 습득 · 보유 조각 ${bio}`, b.designW / 2, 90);
+  overlayClose(ctx, L);
 
-  // 닫기
-  ctx.save();
-  ctx.fillStyle = PALETTE.parchment;
-  ctx.beginPath(); ctx.roundRect(L.close.x, L.close.y, L.close.w, L.close.h, 18); ctx.fill();
-  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.roundRect(L.close.x, L.close.y, L.close.w, L.close.h, 18); ctx.stroke();
-  ctx.strokeStyle = PALETTE.woodDark; ctx.lineWidth = 5; ctx.lineCap = 'round';
-  const cx = L.close.x + L.close.w / 2, cy = L.close.y + L.close.h / 2;
-  ctx.beginPath();
-  ctx.moveTo(cx - 13, cy - 13); ctx.lineTo(cx + 13, cy + 13);
-  ctx.moveTo(cx + 13, cy - 13); ctx.lineTo(cx - 13, cy + 13);
-  ctx.stroke();
-  ctx.restore();
-
-  // 해금 — 숫자가 아니라 행동이 바뀐 것들이라 위에 따로 둔다
-  let y = 122;
+  let y = 120;
   if (sum.unlocks.length > 0) {
-    const h = 34 + sum.unlocks.length * 30;
-    panel(ctx, 28, y, b.designW - 56, h, '#FFFDF6', 5, 18);
+    const h = 34 + sum.unlocks.length * 34;
+    panel(ctx, 24, y, b.designW - 48, h, '#FFFDF6', 5, 18);
     ctx.textAlign = 'left';
     ctx.font = 'bold 16px system-ui, sans-serif';
     ctx.fillStyle = PALETTE.woodDark;
-    ctx.fillText('해금한 능력', 50, y + 22);
+    ctx.fillText('해금한 능력', 46, y + 22);
     sum.unlocks.forEach((u, i) => {
-      const ly = y + 48 + i * 30;
+      const ly = y + 50 + i * 34;
+      const node = NODES.find((n) => n.name === u.name);
       ctx.fillStyle = BRANCH[u.branch].color;
-      ctx.beginPath(); ctx.arc(57, ly - 5, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(60, ly - 4, 14, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
-      ctx.font = 'bold 16px system-ui, sans-serif';
+      drawIcon(ctx, iconForNode(node), 60, ly - 4, 8, '#FFFFFF');
+      ctx.font = 'bold 17px system-ui, sans-serif';
       ctx.fillStyle = PALETTE.woodDark;
-      ctx.fillText(u.name, 74, ly - 4);
-      ctx.font = '14px system-ui, sans-serif';
+      ctx.fillText(u.name, 84, ly - 4);
+      ctx.font = '15px system-ui, sans-serif';
       ctx.fillStyle = '#9C8B6E';
-      ctx.fillText(u.unit, 74 + ctx.measureText(u.name).width + 26, ly - 4);
+      ctx.fillText(u.unit, 84 + ctx.measureText(u.name).width + 26, ly - 3);
     });
     y += h + 12;
   } else {
     ctx.font = '15px system-ui, sans-serif';
     ctx.fillStyle = '#7C8B96';
-    ctx.fillText('아직 해금한 능력이 없다 — 갈래 끝의 별 노드가 해금이다', b.designW / 2, y + 14);
+    ctx.fillText('아직 해금한 능력이 없다 — 갈래 끝의 큰 노드가 해금이다', b.designW / 2, y + 14);
     y += 40;
   }
 
-  // 수치 표
-  const rowH = 30;
-  const h2 = 34 + sum.rows.length * rowH + 8;
-  panel(ctx, 28, y, b.designW - 56, h2, '#FFFDF6', 5, 18);
+  const rowH = 31;
+  const h2 = 34 + sum.rows.length * rowH + 10;
+  panel(ctx, 24, y, b.designW - 48, h2, '#FFFDF6', 5, 18);
   ctx.textAlign = 'left';
   ctx.font = 'bold 16px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText('수치', 50, y + 22);
+  ctx.fillText('수치', 46, y + 22);
   ctx.textAlign = 'right';
   ctx.font = 'bold 13px system-ui, sans-serif';
   ctx.fillStyle = '#B7ADA0';
   ctx.fillText('기본', b.designW - 168, y + 22);
-  ctx.fillText('지금', b.designW - 52, y + 22);
+  ctx.fillText('지금', b.designW - 46, y + 22);
 
   sum.rows.forEach((r, i) => {
-    const ly = y + 48 + i * rowH;
+    const ly = y + 50 + i * rowH;
     ctx.textAlign = 'left';
     ctx.fillStyle = BRANCH[r.branch].color;
-    ctx.beginPath(); ctx.arc(56, ly, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.font = '15px system-ui, sans-serif';
+    ctx.beginPath(); ctx.arc(52, ly, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.font = r.changed ? 'bold 16px system-ui, sans-serif' : '16px system-ui, sans-serif';
     ctx.fillStyle = r.changed ? PALETTE.woodDark : '#A79C8C';
-    ctx.fillText(r.label, 70, ly);
+    ctx.fillText(r.label, 66, ly);
     ctx.textAlign = 'right';
-    ctx.font = '14px system-ui, sans-serif';
+    ctx.font = '15px system-ui, sans-serif';
     ctx.fillStyle = '#B7ADA0';
     ctx.fillText(r.base, b.designW - 168, ly);
-    ctx.font = r.changed ? 'bold 17px system-ui, sans-serif' : '15px system-ui, sans-serif';
+    ctx.font = r.changed ? 'bold 19px system-ui, sans-serif' : '16px system-ui, sans-serif';
     ctx.fillStyle = r.changed ? '#1E7A3C' : '#A79C8C';
-    ctx.fillText(r.now, b.designW - 52, ly);
+    ctx.fillText(r.now, b.designW - 46, ly);
   });
+}
+
+/* -------------------------------------------------------- 옵션 화면 */
+
+/**
+ * 옵션. 지금은 개발용 초기화만 있고, 사운드는 자리만 잡아 둔다.
+ * 초기화는 되돌릴 수 없으므로 **두 번 눌러야** 실행된다.
+ */
+function renderOptions(ctx, state, t, b = B) {
+  const { askingReset, bio, learned } = state;
+  const L = lobbyLayout(b);
+
+  ctx.fillStyle = 'rgba(12,24,34,0.96)';
+  ctx.fillRect(0, 0, b.designW, b.designH);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 36px system-ui, sans-serif';
+  outlinedText(ctx, '옵션', b.designW / 2, 56, 8);
+  overlayClose(ctx, L);
+
+  // 사운드 — 아직 없다. 없다는 걸 숨기지 않는다.
+  panel(ctx, 40, 130, b.designW - 80, 96, 'rgba(255,255,255,0.06)', 4, 18);
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 22px system-ui, sans-serif';
+  ctx.fillStyle = '#7C8B96';
+  ctx.fillText('사운드', 70, 168);
+  ctx.font = '16px system-ui, sans-serif';
+  ctx.fillText('아직 없다 — 붙이면 여기에 생긴다', 70, 196);
+
+  // 현재 세이브
+  panel(ctx, 40, 246, b.designW - 80, 130, '#FFFDF6', 5, 18);
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText('지금 저장되어 있는 것', 70, 282);
+  ctx.font = '17px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText(`유전자 ${learned}단계 · 보유 조각 ${bio}`, 70, 316);
+  ctx.fillText('최고 기록 · 총 시도 횟수', 70, 348);
+
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = '#9FB4C4';
+  ctx.fillText('개발용', b.designW / 2, 456);
+
+  const R = L.reset;
+  panel(ctx, R.x, R.y, R.w, R.h, askingReset ? '#8E3A34' : PALETTE.parchment, 6, 20);
+  ctx.font = 'bold 27px system-ui, sans-serif';
+  if (askingReset) {
+    outlinedText(ctx, '정말 지울까?', R.x + R.w / 2, R.y + 32, 7);
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    outlinedText(ctx, '유전자·조각·기록이 전부 사라진다', R.x + R.w / 2, R.y + 62, 5);
+  } else {
+    ctx.fillStyle = PALETTE.woodDark;
+    ctx.fillText('데이터 초기화', R.x + R.w / 2, R.y + R.h / 2 + 1);
+  }
+
+  if (askingReset) {
+    const C = L.confirm;
+    panel(ctx, C.x, C.y, C.w, C.h, PALETTE.hpRed, 6, 20);
+    ctx.font = 'bold 28px system-ui, sans-serif';
+    outlinedText(ctx, '지운다', C.x + C.w / 2, C.y + C.h / 2 + 1, 7);
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.fillStyle = '#9FB4C4';
+    ctx.fillText('취소하려면 X 를 눌러라', b.designW / 2, C.y + C.h + 34);
+  }
 }
 
 /* -------------------------------------------------------- 로비 본체 */
 
 function renderLobby(ctx, state, t, b = B) {
-  const { bio, owned: rawOwned, best, lastRun, lastBio, lastLost, lastWave, lastStage, selected } = state;
+  const {
+    bio, owned: rawOwned, best, lastRun, lastBio, lastLost, lastWave, lastStage,
+    selected, pan = { x: 0, y: 0 },
+  } = state;
   const owned = normalizeOwned(rawOwned);
   const L = lobbyLayout(b);
+  const V = treeViewport(b);
 
   ctx.fillStyle = PALETTE.backdrop;
   ctx.fillRect(0, 0, b.designW, b.designH);
 
-  /* --- 상단: 지난 판의 결과 --- */
-  panel(ctx, 24, 26, b.designW - 148, 138, PALETTE.parchment, 5);
+  /* --- 지난 판의 결과 --- */
+  const R = L.record;
+  panel(ctx, R.x, R.y, R.w, R.h, PALETTE.parchment, 5);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 22px system-ui, sans-serif';
-  ctx.fillStyle = PALETTE.woodDark;
-  const hx = (b.designW - 148) / 2 + 24;
-  ctx.fillText('쓰러졌다', hx, 52);
-  ctx.font = 'bold 54px system-ui, sans-serif';
-  ctx.fillText(formatTime(lastRun), hx, 92);
-  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.font = 'bold 21px system-ui, sans-serif';
   ctx.fillStyle = '#8A7355';
-  ctx.fillText(`스테이지 ${lastStage} · 웨이브 ${lastWave}   ·   최고 ${formatTime(best)}`, hx, 132);
-
-  totalsButton(ctx, L, statSummary(owned, b).learned, t);
-
-  /* --- 보유 조각 + 흘린 조각 --- */
-  panel(ctx, b.designW / 2 - 150, 172, 300, 44, '#FFFFFF', 4, 22);
-  bioIcon(ctx, b.designW / 2 - 116, 194, 24);
-  ctx.font = 'bold 24px system-ui, sans-serif';
-  ctx.textAlign = 'left';
+  ctx.fillText('쓰러졌다', b.designW / 2, R.y + 26);
+  ctx.font = 'bold 52px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(`${bio}`, b.designW / 2 - 96, 195);
+  ctx.fillText(formatTime(lastRun), b.designW / 2, R.y + 66);
+  ctx.font = 'bold 16px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText(`스테이지 ${lastStage} · 웨이브 ${lastWave}   ·   최고 ${formatTime(best)}`,
+    b.designW / 2, R.y + 104);
+
+  /* --- 능력 · 옵션 · 지갑 --- */
+  const sum = statSummary(owned, b);
+  iconButton(ctx, L.totals, '얻은 능력', sum.learned, (c, gx, gy) => {
+    c.fillStyle = PALETTE.woodDark;
+    for (let i = 0; i < 3; i += 1) {
+      c.beginPath(); c.roundRect(gx - 15, gy - 11 + i * 10, 30 - i * 7, 6, 3); c.fill();
+    }
+  });
+  iconButton(ctx, L.options, null, 0, (c, gx, gy) => {
+    // 톱니
+    c.save();
+    c.translate(gx + 6, gy);
+    c.fillStyle = PALETTE.woodDark;
+    for (let i = 0; i < 8; i += 1) {
+      c.save(); c.rotate((i / 8) * Math.PI * 2);
+      c.beginPath(); c.roundRect(-4, -18, 8, 8, 2); c.fill();
+      c.restore();
+    }
+    c.beginPath(); c.arc(0, 0, 12, 0, Math.PI * 2); c.fill();
+    c.globalCompositeOperation = 'destination-out';
+    c.beginPath(); c.arc(0, 0, 5, 0, Math.PI * 2); c.fill();
+    c.restore();
+  });
+
+  const P = L.purse;
+  ctx.save();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath(); ctx.roundRect(P.x, P.y, P.w, P.h, 16); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(P.x, P.y, P.w, P.h, 16); ctx.stroke();
+  ctx.restore();
+  bioIcon(ctx, P.x + 26, P.y + P.h / 2, 26);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 26px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(`${bio}`, P.x + 46, P.y + P.h / 2 + 1);
   if (lastBio > 0) {
-    ctx.font = 'bold 17px system-ui, sans-serif';
+    ctx.font = 'bold 16px system-ui, sans-serif';
     ctx.fillStyle = '#1E7A3C';
-    ctx.fillText(`+${lastBio}`, b.designW / 2 - 30, 195);
+    ctx.textAlign = 'right';
+    ctx.fillText(`+${lastBio}`, P.x + P.w - 14, P.y + 20);
   }
-  // 못 주운 조각 — "어디서 흘렸나" 가 다음 판의 동기가 된다
   if (lastLost > 0) {
-    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.font = 'bold 14px system-ui, sans-serif';
     ctx.fillStyle = '#B03A3A';
     ctx.textAlign = 'right';
-    ctx.fillText(`못 주움 −${lastLost}`, b.designW / 2 + 138, 195);
+    ctx.fillText(`못 주움 −${lastLost}`, P.x + P.w - 14, P.y + 42);
   }
 
-  ctx.textAlign = 'center';
-  ctx.font = 'bold 17px system-ui, sans-serif';
-  ctx.fillStyle = '#9FB4C4';
-  ctx.fillText('노드를 눌러 살펴본 뒤 배운다', b.designW / 2, 240);
+  /* --- 트리 (양피지 위, 창 안으로 잘린다) --- */
+  paperPage(ctx, V);
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(V.x, V.y, V.w, V.h, 11); ctx.clip();
 
-  /* --- 트리 (안개) --- */
   const vis = revealedNodes(owned);
   const visIds = new Set(vis.map((n) => n.id));
   for (const n of vis) {
     if (!n.req) continue;
-    wire(ctx, nodePos(NODE_BY_ID[n.req]), nodePos(n), (owned[n.id] ?? 0) > 0);
+    wire(ctx, screenPos(NODE_BY_ID[n.req], pan, b), screenPos(n, pan, b), (owned[n.id] ?? 0) > 0);
   }
-  // 아직 안 드러난 앞길이 있다는 것만 짧은 토막으로 알린다 — 무엇인지는 안 알린다
+  // 아직 안 드러난 앞길은 짧은 토막으로만 알린다 — 무엇인지는 안 알린다
   for (const n of vis) {
-    const lv = owned[n.id] ?? 0;
-    if (lv <= 0) continue;
+    if ((owned[n.id] ?? 0) <= 0) continue;
     for (const c of NODES) {
       if (c.req !== n.id || visIds.has(c.id)) continue;
-      const a = nodePos(n), z = nodePos(c);
+      const a = screenPos(n, pan, b), z = screenPos(c, pan, b);
       const d = Math.hypot(z.x - a.x, z.y - a.y) || 1;
       ctx.save();
-      ctx.globalAlpha = 0.3;
-      ctx.strokeStyle = '#5B7793'; ctx.lineWidth = 5;
-      ctx.setLineDash([5, 7]);
+      ctx.globalAlpha = 0.45;
+      ctx.strokeStyle = '#8B7E66'; ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.setLineDash([6, 10]);
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
-      ctx.lineTo(a.x + ((z.x - a.x) / d) * 26, a.y + ((z.y - a.y) / d) * 26);
+      ctx.lineTo(a.x + ((z.x - a.x) / d) * 46, a.y + ((z.y - a.y) / d) * 46);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.restore();
@@ -4949,19 +5141,26 @@ function renderLobby(ctx, state, t, b = B) {
   for (const n of vis) {
     const lv = owned[n.id] ?? 0;
     const afford = canLearn(n.id, owned) && bio >= nextCost(n.id, owned);
-    drawNode(ctx, n, nodePos(n), lv, afford, selected === n.id, t);
+    drawNode(ctx, n, screenPos(n, pan, b), lv, afford, selected === n.id);
   }
+  ctx.restore();
+
+  // 끌 수 있다는 힌트
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '14px system-ui, sans-serif';
+  ctx.fillStyle = '#7C8B96';
+  ctx.fillText('끌어서 움직이고, 노드를 눌러 살펴본다', b.designW / 2, V.y + V.h + 16);
 
   /* --- 정보창 --- */
   const n = selected ? NODE_BY_ID[selected] : null;
   if (!n) {
-    panel(ctx, L.panel.x, L.panel.y, L.panel.w, 120, 'rgba(255,255,255,0.06)', 4, 20);
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.font = 'bold 19px system-ui, sans-serif';
+    panel(ctx, L.panel.x, L.panel.y, L.panel.w, 128, 'rgba(255,255,255,0.06)', 4, 20);
+    ctx.font = 'bold 21px system-ui, sans-serif';
+    ctx.fillStyle = '#8FA6B6';
+    ctx.fillText('노드를 하나 골라 보라', b.designW / 2, L.panel.y + 52);
+    ctx.font = '16px system-ui, sans-serif';
     ctx.fillStyle = '#7C8B96';
-    ctx.fillText('노드를 하나 골라 보라', b.designW / 2, L.panel.y + 48);
-    ctx.font = '15px system-ui, sans-serif';
-    ctx.fillText('배운 노드의 다음 길만 드러난다', b.designW / 2, L.panel.y + 78);
+    ctx.fillText('배운 노드의 다음 길만 드러난다', b.designW / 2, L.panel.y + 84);
   } else {
     drawNodeCard(ctx, n, owned, bio, L, b);
   }
@@ -4981,8 +5180,13 @@ function renderLobby(ctx, state, t, b = B) {
 }
 
 /**
- * 노드 정보창 — 탭이 곧 구매가 아니다.
- * 무엇이 얼마나 오르는지 읽고 나서 배울지 고른다.
+ * 노드 정보창.
+ *
+ * 【위계】 글자 크기가 곧 중요도다. 다 같은 크기면 아무것도 안 읽힌다.
+ *   1순위 — 이름(36) 과 **효과(28)**. 이게 결정에 쓰이는 정보다
+ *   2순위 — 단계 표시. 그림(칸)이 숫자보다 빨리 읽힌다
+ *   3순위 — 왜 배우는가(18). 읽고 싶은 사람만 읽는다
+ *   4순위 — 갈래 이름(15). 색으로 이미 알 수 있다
  */
 function drawNodeCard(ctx, n, owned, bio, L, b) {
   const col = n.branch ? BRANCH[n.branch].color : '#F0C64A';
@@ -4991,66 +5195,77 @@ function drawNodeCard(ctx, n, owned, bio, L, b) {
   const cost = nextCost(n.id, owned);
   const afford = !maxed && bio >= cost;
   const P = L.panel;
+  const big = n.kind === 'unlock';
 
   panel(ctx, P.x, P.y, P.w, P.h, PALETTE.parchment, 6, 22);
-
-  // 갈래 띠
   ctx.fillStyle = col;
-  ctx.beginPath(); ctx.roundRect(P.x + 6, P.y + 14, 10, P.h - 28, 5); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(P.x + 6, P.y + 14, 11, P.h - 28, 6); ctx.fill();
   ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
+
+  // 아이콘 — 트리에서 본 그 그림 그대로. 어느 노드를 보고 있는지 이어져야 한다.
+  const ix = P.x + 68, iy = P.y + 62;
+  ctx.beginPath(); ctx.arc(ix, iy, 36, 0, Math.PI * 2);
+  ctx.fillStyle = lv > 0 ? col : '#A79C8C'; ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 5; ctx.stroke();
+  drawIcon(ctx, iconForNode(n), ix, iy, 20, lv > 0 ? '#FFFFFF' : '#6E6558');
 
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 15px system-ui, sans-serif';
-  ctx.fillStyle = '#8A7355';
-  ctx.fillText(n.branch ? BRANCH[n.branch].name : '시작점', P.x + 34, P.y + 32);
-  if (n.kind === 'unlock' && n.id !== 'root') {
+  ctx.fillStyle = '#9C8B6E';
+  const branchName = n.branch ? BRANCH[n.branch].name : '시작점';
+  ctx.fillText(branchName, ix + 52, P.y + 34);
+  if (big && n.id !== 'root') {
+    const bw = 78;
+    const bx = ix + 52 + ctx.measureText(branchName).width + 12;
     ctx.fillStyle = col;
-    ctx.beginPath(); ctx.roundRect(P.x + 34 + ctx.measureText(n.branch ? BRANCH[n.branch].name : '시작점').width + 14, P.y + 21, 74, 22, 11); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(bx, P.y + 23, bw, 23, 11); ctx.fill();
     ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.textAlign = 'center';
     ctx.font = 'bold 13px system-ui, sans-serif';
-    outlinedText(ctx, '기능 해금', P.x + 34 + ctx.measureText(n.branch ? BRANCH[n.branch].name : '시작점').width + 51, P.y + 33, 4);
+    outlinedText(ctx, '기능 해금', bx + bw / 2, P.y + 35, 4);
     ctx.textAlign = 'left';
   }
 
-  ctx.font = 'bold 32px system-ui, sans-serif';
+  // 1순위 — 이름
+  ctx.font = 'bold 36px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(n.name, P.x + 34, P.y + 68);
+  ctx.fillText(n.name, ix + 52, P.y + 72);
 
-  // 단계
+  // 2순위 — 단계
   if (n.max > 1) {
-    ctx.textAlign = 'left';
-    ctx.font = 'bold 15px system-ui, sans-serif';
+    levelPips(ctx, ix + 52, P.y + 108, lv, n.max, col, 18, 7);
+    ctx.font = 'bold 17px system-ui, sans-serif';
     ctx.fillStyle = '#8A7355';
-    ctx.fillText(`단계  ${lv} / ${n.max}`, P.x + 34, P.y + 104);
-    levelPips(ctx, P.x + 34 + 110 + (n.max * 17) / 2, P.y + 104, lv, n.max, col);
+    ctx.fillText(`${lv} / ${n.max}`, ix + 52 + n.max * 25 + 12, P.y + 108);
   } else {
-    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.font = 'bold 17px system-ui, sans-serif';
     ctx.fillStyle = lv > 0 ? '#1E7A3C' : '#8A7355';
-    ctx.fillText(lv > 0 ? '해금됨' : '아직 해금하지 않음', P.x + 34, P.y + 104);
+    ctx.fillText(lv > 0 ? '해금됨' : '아직 해금하지 않음', ix + 52, P.y + 106);
   }
 
-  // 효과
-  panel(ctx, P.x + 22, P.y + 124, P.w - 44, n.max > 1 ? 88 : 62, '#FFFDF6', 4, 14);
+  // 1순위 — 효과. 이 화면에서 가장 크게 읽혀야 하는 줄이다.
+  const eh = 84;
+  panel(ctx, P.x + 22, P.y + 134, P.w - 44, eh, '#FFFDF6', 4, 14);
   ctx.font = 'bold 14px system-ui, sans-serif';
-  ctx.fillStyle = '#9C8B6E';
-  ctx.fillText(n.max > 1 ? '한 단계당' : '효과', P.x + 40, P.y + 146);
-  ctx.font = 'bold 21px system-ui, sans-serif';
+  ctx.fillStyle = '#B0A288';
+  ctx.fillText(n.max > 1 ? '한 단계당' : '효과', P.x + 42, P.y + 156);
+  ctx.font = 'bold 28px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(n.unit ?? n.desc ?? '—', P.x + 40, P.y + 172);
-  if (n.max > 1) {
-    ctx.font = '15px system-ui, sans-serif';
-    ctx.fillStyle = lv > 0 ? '#1E7A3C' : '#B7ADA0';
-    ctx.fillText(lv > 0 ? `지금까지 ${lv}단계 적용 중` : '아직 적용된 것이 없다', P.x + 40, P.y + 197);
+  ctx.fillText(n.unit ?? n.desc ?? '—', P.x + 42, P.y + 188);
+  if (n.max > 1 && lv > 0) {
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 16px system-ui, sans-serif';
+    ctx.fillStyle = '#1E7A3C';
+    ctx.fillText(`${lv}단계 적용 중`, P.x + P.w - 42, P.y + 188);
+    ctx.textAlign = 'left';
   }
 
-  // 설명 — 왜 이걸 배우는가
-  const text = n.long ?? n.desc ?? '';
-  ctx.font = '16px system-ui, sans-serif';
+  // 3순위 — 왜 배우는가
+  ctx.font = '18px system-ui, sans-serif';
   ctx.fillStyle = '#8A7355';
-  wrapText(ctx, text, P.x + 34, P.y + (n.max > 1 ? 240 : 214), P.w - 68, 24, 5);
+  wrapText(ctx, n.long ?? n.desc ?? '', P.x + 26, P.y + 250, P.w - 52, 27, 4);
 
-  // 배우기 버튼
+  // 배우기
   const Lb = L.learn;
   const fill = maxed ? '#C8BFAE' : (afford ? '#2E9E52' : '#B8AE9C');
   panel(ctx, Lb.x, Lb.y, Lb.w, Lb.h, fill, 6, 20);
@@ -5060,17 +5275,37 @@ function drawNodeCard(ctx, n, owned, bio, L, b) {
     ctx.fillStyle = '#6E6355';
     ctx.fillText('더 올릴 것이 없다', Lb.x + Lb.w / 2, Lb.y + Lb.h / 2 + 1);
   } else {
-    ctx.font = 'bold 26px system-ui, sans-serif';
-    outlinedText(ctx, lv > 0 ? `${lv + 1}단계로` : '배우기', Lb.x + Lb.w / 2 - 44, Lb.y + Lb.h / 2 + 1, 6);
-    ctx.font = 'bold 25px system-ui, sans-serif';
-    const cx2 = Lb.x + Lb.w / 2 + 74;
-    outlinedText(ctx, `${cost}`, cx2 + 12, Lb.y + Lb.h / 2 + 1, 6);
-    bioIcon(ctx, cx2 - 14, Lb.y + Lb.h / 2, 24);
+    const label = lv > 0 ? `${lv + 1}단계로` : '배우기';
+    ctx.font = 'bold 28px system-ui, sans-serif';
+    const lw = ctx.measureText(label).width;
+    ctx.font = 'bold 27px system-ui, sans-serif';
+    const cw = ctx.measureText(`${cost}`).width;
+    const total = lw + 34 + cw + 26;
+    const x0 = Lb.x + Lb.w / 2 - total / 2;
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 28px system-ui, sans-serif';
+    outlinedText(ctx, label, x0, Lb.y + Lb.h / 2 - (afford ? 0 : 8), 6);
+    bioIcon(ctx, x0 + lw + 26, Lb.y + Lb.h / 2 - (afford ? 1 : 9), 26);
+    ctx.font = 'bold 27px system-ui, sans-serif';
+    outlinedText(ctx, `${cost}`, x0 + lw + 44, Lb.y + Lb.h / 2 - (afford ? 0 : 8), 6);
     if (!afford) {
-      ctx.font = 'bold 14px system-ui, sans-serif';
-      ctx.fillStyle = '#7A3A3A';
-      ctx.fillText(`${cost - bio} 더 필요하다`, Lb.x + Lb.w / 2, Lb.y + Lb.h - 12);
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 15px system-ui, sans-serif';
+      ctx.fillStyle = '#6B3A34';
+      ctx.fillText(`${cost - bio} 더 모아야 한다`, Lb.x + Lb.w / 2, Lb.y + Lb.h - 15);
     }
+  }
+}
+
+/** 단계 표시 — 숫자보다 칸이 먼저 읽힌다. */
+function levelPips(ctx, x, y, level, max, color, size = 18, gap = 7) {
+  for (let i = 0; i < max; i += 1) {
+    ctx.beginPath();
+    ctx.roundRect(x + i * (size + gap), y - size / 2, size, size, 5);
+    ctx.fillStyle = i < level ? color : 'rgba(0,0,0,0.13)';
+    ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5;
+    ctx.stroke();
   }
 }
 
@@ -5475,8 +5710,14 @@ function renderPause(ctx, state, t, b = B) {
  * 뜨는 스틱은 아무 데나 눌러도 바로 잡힌다 — 첫 10초 이탈을 줄이는 장치다.
  */
 
-function createInput(canvas, getViewport, layout, onTap = null) {
+const TAP_SLOP = 8;   // 이만큼 안 움직이면 탭, 넘으면 드래그
+
+function createInput(canvas, getViewport, layout, onTap = null, onPan = null) {
   let enabled = true;
+  // 패닝 모드 — 로비 트리처럼 화면을 끌어 움직이는 곳에서 켠다.
+  // 게임 중에는 꺼 둔다. 스틱은 손이 닿는 순간 잡혀야 하기 때문이다.
+  let panMode = false;
+  let drag = null;
   const state = {
     mx: 0, my: 0,
     skill: false,
@@ -5499,6 +5740,12 @@ function createInput(canvas, getViewport, layout, onTap = null) {
   function onDown(ev) {
     canvas.setPointerCapture?.(ev.pointerId);
     const p = toGame(ev);
+    // 패닝 모드에서는 손을 뗄 때 판정한다 — 끌었으면 패닝, 안 끌었으면 탭.
+    // 누르는 순간 탭으로 처리하면 트리를 끌 수가 없다.
+    if (panMode) {
+      drag = { id: ev.pointerId, x: p.x, y: p.y, sx: p.x, sy: p.y, moved: 0 };
+      return;
+    }
     // 로비 탭이 소비한 이벤트는 여기서 끝낸다.
     // 안 그러면 "시작" 을 누른 그 손가락이 그대로 이동 스틱이 되어버린다.
     if (onTap?.(p.x, p.y)) return;
@@ -5514,6 +5761,14 @@ function createInput(canvas, getViewport, layout, onTap = null) {
   }
 
   function onMove(ev) {
+    if (drag && drag.id === ev.pointerId) {
+      const p = toGame(ev);
+      const dx = p.x - drag.x, dy = p.y - drag.y;
+      drag.moved += Math.hypot(dx, dy);
+      drag.x = p.x; drag.y = p.y;
+      if (drag.moved > TAP_SLOP) onPan?.(dx, dy);
+      return;
+    }
     if (!state.stick || state.stick.id !== ev.pointerId) return;
     const p = toGame(ev);
     state.stick.x = p.x;
@@ -5521,6 +5776,12 @@ function createInput(canvas, getViewport, layout, onTap = null) {
   }
 
   function onUp(ev) {
+    if (drag && drag.id === ev.pointerId) {
+      // 거의 안 움직였으면 탭이다. 끌었으면 이미 패닝으로 처리했다.
+      if (drag.moved <= TAP_SLOP) onTap?.(drag.sx, drag.sy);
+      drag = null;
+      return;
+    }
     if (state.stick && state.stick.id === ev.pointerId) state.stick = null;
     state.skillHeld = false;
   }
@@ -5543,6 +5804,11 @@ function createInput(canvas, getViewport, layout, onTap = null) {
     setEnabled(v) {
       enabled = v;
       if (!v) { state.stick = null; state.skillHeld = false; skillEdge = false; }
+    },
+    /** 끌어서 화면을 움직이는 화면(로비 트리)에서 켠다. */
+    setPanMode(v) {
+      panMode = v;
+      drag = null;
     },
     /** 매 프레임 호출. skill 은 눌린 순간 1회만 true (엣지 트리거). */
     read() {
@@ -5673,11 +5939,30 @@ async function boot() {
   // 탭이 곧 구매가 아니므로 "무엇을 고르고 있는가" 를 들고 있어야 한다.
   let lobbySel = null;
   let lobbyView = 'tree';
+  let lobbyPan = { x: 0, y: 0 };
+  let askingReset = false;
   let autoPlay = false;
   let deathCine = null;   // 사망 슬로우모션 — 끝나야 로비로 넘어간다
   const aiMemory = {};
 
-  const input = createInput(canvas, () => viewport, () => layoutFor(B), onTap);
+  const input = createInput(canvas, () => viewport, () => layoutFor(B), onTap, onPan);
+
+  /** 로비 트리를 끌어 움직인다. */
+  function onPan(dx, dy) {
+    if (mode !== 'lobby' || lobbyView !== 'tree') return;
+    lobbyPan = clampPan({ x: lobbyPan.x + dx, y: lobbyPan.y + dy }, B);
+  }
+
+  /** 로비에 들어갈 때마다 화면 상태를 초기화한다. */
+  function enterLobby() {
+    mode = 'lobby';
+    lobbySel = null;
+    lobbyView = 'tree';
+    lobbyPan = { x: 0, y: 0 };
+    askingReset = false;
+    input.setEnabled(false);
+    input.setPanMode(true);
+  }
   input.setEnabled(false);
 
   function startRun() {
@@ -5686,6 +5971,7 @@ async function boot() {
     deathCine = null;
     mode = 'run';
     input.setEnabled(true);
+    input.setPanMode(false);
   }
 
   function endRun() {
@@ -5701,10 +5987,7 @@ async function boot() {
       save.bestScore = lastRun;
       bridge.sendScore(save.bestScore);   // 요건: 전송 점수 = 세이브 최고 기록
     }
-    mode = 'lobby';
-    lobbySel = null;
-    lobbyView = 'tree';
-    input.setEnabled(false);
+    enterLobby();
     persist();
   }
 
@@ -5724,15 +6007,26 @@ async function boot() {
     if (mode === 'title') {
       const hit = titleHitTest(x, y, B);
       if (hit.type === 'start') startRun();
-      else if (hit.type === 'lobby') { mode = 'lobby'; lobbySel = null; lobbyView = 'tree'; }
+      else if (hit.type === 'lobby') enterLobby();
       return true;
     }
     if (mode === 'lobby') {
-      const hit = lobbyHitTest(x, y, save.owned, lobbySel, lobbyView, B);
+      const hit = lobbyHitTest(x, y, save.owned, lobbySel, lobbyView, lobbyPan, B);
       if (hit.type === 'start') startRun();
       else if (hit.type === 'totals') lobbyView = 'totals';
-      else if (hit.type === 'closeTotals') lobbyView = 'tree';
-      else if (hit.type === 'select') lobbySel = hit.id;
+      else if (hit.type === 'options') { lobbyView = 'options'; askingReset = false; }
+      else if (hit.type === 'closeOverlay') { lobbyView = 'tree'; askingReset = false; }
+      else if (hit.type === 'resetAsk') askingReset = true;
+      else if (hit.type === 'resetDo') {
+        // 되돌릴 수 없는 동작이라 두 번 눌러야 여기 온다.
+        Object.assign(save, defaultSave());
+        lastRun = 0; lastBio = 0; lastLost = 0; lastWave = 1; lastStage = 1;
+        askingReset = false;
+        lobbyView = 'tree';
+        lobbySel = null;
+        persist();
+      } else if (hit.type === 'select') lobbySel = hit.id;
+      else if (hit.type === 'deselect') lobbySel = null;
       else if (hit.type === 'learn') {
         // 배우기는 정보창에서 한 번 더 눌러야 일어난다. 노드를 탭하는 것만으로는 안 산다.
         const r = learnNode(hit.id, save.bio, save.owned);
@@ -5826,10 +6120,16 @@ async function boot() {
     } else if (mode === 'lobby') {
       if (lobbyView === 'totals') {
         renderTotals(ctx, { owned: save.owned, bio: save.bio }, elapsed, B);
+      } else if (lobbyView === 'options') {
+        renderOptions(ctx, {
+          askingReset, bio: save.bio,
+          learned: deriveStats(save.owned).learned,
+        }, elapsed, B);
       } else {
         renderLobby(ctx, {
           bio: save.bio, owned: save.owned, best: save.bestScore,
-          lastRun, lastBio, lastLost, lastWave, lastStage, selected: lobbySel,
+          lastRun, lastBio, lastLost, lastWave, lastStage,
+          selected: lobbySel, pan: lobbyPan,
         }, elapsed, B);
       }
     } else {
@@ -5877,7 +6177,8 @@ async function boot() {
         save.owned = normalizeOwned(Object.fromEntries(NODES.map((n) => [n.id, n.max])));
         persist(); return Object.keys(save.owned).length;
       },
-      lobby: (view = 'tree', sel = null) => { mode = 'lobby'; lobbyView = view; lobbySel = sel; renderFrame(); return view; },
+      lobby: (view = 'tree', sel = null) => { enterLobby(); lobbyView = view; lobbySel = sel; renderFrame(); return view; },
+      pan: (x, y) => { lobbyPan = clampPan({ x, y }, B); renderFrame(); return lobbyPan; },
       bio: (n) => { save.bio += n; return save.bio; },
       give: (id) => { if (world) equipWeapon(world, id); return world?.weapon; },
       /** 특정 웨이브로 건너뛴다 (보스 검수용) */
