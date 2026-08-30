@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GUN DUDE 기획 보드</title>
+<!--
+  폰에서 URL 로 여는 기획 보드. 의존성 0, 단일 파일.
+
+  구조:
+    원본(base)   = data/design.json — 코드에서 생성된 값. 절대 덮어쓰지 않는다.
+    변경(ov)     = 경로 → 값. localStorage 에만 산다.
+    현재(cur)    = 원본 + 변경. 화면과 "JSON 복사" 가 보는 값.
+
+  변경을 통째 문서로 저장하지 않고 '경로 → 값' 으로만 저장하는 이유:
+  코드가 바뀌어 design.json 이 재생성돼도 내 편집이 그 위에 그대로 얹히기 때문이다.
+
+  화풍은 게임과 같은 규칙을 따른다 — 굵은 검정 외곽선 · 플랫 채색 · 종이.
+  색은 src/game/art/palette.js 에서 그대로 가져왔다 (시안에서 측정한 값이라 임의 변경 금지).
+-->
+<style>
+:root{
+  /* palette.js 그대로 */
+  --paper:#FFFFFF; --ink:#000000;
+  --boyz:#FFD8B9; --demonz:#E07363; --machinz:#CCDBDE; --slate:#9097C8;
+  --gold:#F7BE00; --goldDark:#F4D17C; --hpRed:#DD3131; --xpAmber:#F5A623;
+  --parchment:#EEE4CD; --parchDark:#C8B58B; --wood:#715846; --woodDark:#4C2E1E;
+  --backdrop:#28475F;
+  /* 가지 색 — meta.js BRANCH */
+  --spec:#D9534F; --gun:#4E8FBF; --bomb:#E8A33D; --loot:#5FA36A;
+
+  --line:3px;
+  --shadow:4px 4px 0 var(--ink);
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--backdrop);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.10'/%3E%3C/svg%3E");
+  color:var(--ink);
+  font-family:system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  font-size:15px; line-height:1.5;
+  padding-bottom:64px;
+  overscroll-behavior-y:none;
+}
+
+/* ---------------------------------------------------------- 헤더 · 탭 */
+.hdr{
+  position:sticky; top:0; z-index:30;
+  display:flex; align-items:center; gap:8px;
+  padding:10px 12px calc(10px + env(safe-area-inset-top,0)) 12px;
+  padding-top:calc(10px + env(safe-area-inset-top,0));
+  background:var(--wood);
+  border-bottom:var(--line) solid var(--ink);
+}
+.brand{font-weight:900;font-size:17px;color:var(--paper);letter-spacing:-.02em;line-height:1.1}
+.brand small{display:block;font-size:11px;font-weight:700;color:var(--goldDark);letter-spacing:.06em}
+.acts{margin-left:auto;display:flex;gap:6px}
+
+button{
+  font:inherit; font-weight:800; color:var(--ink);
+  background:var(--parchment);
+  border:var(--line) solid var(--ink); border-radius:10px;
+  padding:9px 11px; min-height:42px;
+  box-shadow:3px 3px 0 var(--ink);
+  cursor:pointer;
+}
+button:active{transform:translate(3px,3px);box-shadow:none}
+button.gold{background:var(--gold)}
+button.ghost{background:var(--parchDark)}
+button.tiny{min-height:36px;padding:5px 11px;font-size:12px;box-shadow:2px 2px 0 var(--ink);border-width:2px}
+
+.tabs{
+  position:sticky; top:var(--hdrH,62px); z-index:29;
+  display:flex; gap:6px; overflow-x:auto; scrollbar-width:none;
+  padding:8px 12px; background:var(--woodDark);
+  border-bottom:var(--line) solid var(--ink);
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:0 0 auto; font-weight:900; font-size:14px;
+  padding:8px 13px; min-height:40px;
+  background:var(--parchDark); color:var(--ink);
+  border:var(--line) solid var(--ink); border-radius:999px;
+  box-shadow:2px 2px 0 var(--ink); cursor:pointer;
+}
+.tab[aria-selected="true"]{background:var(--gold)}
+.tab .badge{
+  display:inline-block; margin-left:5px; padding:0 6px; border-radius:999px;
+  background:var(--hpRed); color:#fff; font-size:11px; line-height:17px;
+}
+
+/* -------------------------------------------------------------- 본문 */
+main{padding:12px 12px 0}
+.hint{
+  background:var(--parchDark); border:var(--line) solid var(--ink); border-radius:12px;
+  box-shadow:var(--shadow); padding:10px 12px; margin-bottom:12px;
+  font-size:12.5px; font-weight:700;
+}
+.hint b{background:var(--gold);padding:0 4px;border-radius:4px}
+
+.card{
+  background:var(--parchment);
+  border:var(--line) solid var(--ink); border-radius:14px;
+  box-shadow:var(--shadow);
+  margin-bottom:12px; overflow:hidden;
+}
+.card.dirty{box-shadow:4px 4px 0 var(--ink),0 0 0 3px var(--gold) inset}
+
+.chead{
+  display:flex; align-items:center; gap:9px;
+  padding:11px 12px; cursor:pointer; user-select:none;
+  min-height:56px;
+}
+.chip{
+  flex:0 0 auto; width:34px; height:34px; border-radius:9px;
+  border:var(--line) solid var(--ink);
+  display:grid; place-items:center; font-weight:900; font-size:13px;
+}
+.ctitle{flex:1 1 auto;min-width:0}
+.ctitle .t{font-weight:900;font-size:15.5px;letter-spacing:-.01em}
+.ctitle .s{font-size:12px;font-weight:700;color:var(--woodDark);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.caret{flex:0 0 auto;font-weight:900;font-size:15px;opacity:.55}
+.card[open] .caret{transform:rotate(90deg)}
+
+.cbody{display:none;border-top:var(--line) dashed var(--ink);padding:10px 12px 14px}
+.card[open] .cbody{display:block}
+
+/* 필드 */
+.sect{margin:12px 0 6px;font-size:11.5px;font-weight:900;letter-spacing:.12em;
+  color:var(--woodDark);text-transform:uppercase}
+.sect:first-child{margin-top:2px}
+
+.f{margin-bottom:9px}
+.f>label{display:block;font-size:11.5px;font-weight:900;color:var(--woodDark);margin-bottom:3px}
+.f textarea,.f input{
+  width:100%; font:inherit; font-weight:700; color:var(--ink);
+  background:var(--paper);
+  border:2px solid var(--ink); border-radius:9px;
+  padding:8px 9px; resize:none;
+}
+.f textarea{line-height:1.45}
+.f input{min-height:42px}
+.f.changed textarea,.f.changed input{background:var(--goldDark)}
+.f.changed>label::after{content:" ● 변경됨";color:var(--hpRed)}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@media (min-width:560px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.ro{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.ro span{
+  font-size:11.5px;font-weight:800;background:var(--paper);
+  border:2px solid var(--ink);border-radius:999px;padding:3px 9px;
+}
+.ro span b{color:var(--woodDark)}
+
+/* 웨이브 점 시각화 */
+.groups{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.grp{
+  display:inline-flex;align-items:center;gap:3px;
+  background:var(--paper);border:2px solid var(--ink);border-radius:999px;
+  padding:4px 8px;
+}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--ink);display:inline-block}
+.grp.g4{background:var(--demonz)}
+.grp.g3{background:var(--boyz)}
+.bosstag{
+  display:inline-flex;align-items:center;gap:5px;font-weight:900;font-size:12.5px;
+  background:var(--hpRed);color:#fff;border:2px solid var(--ink);border-radius:999px;padding:4px 10px;
+}
+.gedit{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.gedit .unit{display:flex;align-items:center;gap:4px;background:var(--paper);
+  border:2px solid var(--ink);border-radius:10px;padding:3px 5px}
+.gedit .unit .n{font-weight:900;min-width:16px;text-align:center}
+
+/* 페이싱 스트립 */
+.strip{
+  background:var(--paper);border:var(--line) solid var(--ink);border-radius:14px;
+  box-shadow:var(--shadow);padding:10px 12px;margin-bottom:12px;overflow-x:auto;
+}
+.strip .row{display:flex;align-items:center;gap:8px;padding:3px 0;white-space:nowrap}
+.strip .w{font-weight:900;font-size:12px;width:34px;flex:0 0 auto}
+.strip .cnt{font-size:11.5px;font-weight:800;color:var(--woodDark);margin-left:auto;padding-left:10px}
+
+/* 변경점 표 */
+.diff{width:100%;border-collapse:collapse;font-size:12.5px}
+.diff th,.diff td{border:2px solid var(--ink);padding:7px 8px;text-align:left;vertical-align:top}
+.diff th{background:var(--parchDark);font-weight:900;font-size:11.5px}
+.diff td.old{background:var(--paper);color:var(--woodDark);text-decoration:line-through}
+.diff td.new{background:var(--gold);font-weight:900}
+.diff .src{display:block;margin-top:4px;font-size:10.5px;font-weight:800;color:var(--woodDark)}
+.wrap{overflow-x:auto;background:var(--parchment);border:var(--line) solid var(--ink);
+  border-radius:14px;box-shadow:var(--shadow);padding:10px}
+
+.empty{text-align:center;padding:34px 14px;font-weight:800;color:var(--parchDark)}
+
+/* 모달 · 토스트 */
+.modal{position:fixed;inset:0;z-index:60;display:none;background:rgba(0,0,0,.55);
+  padding:16px;overflow:auto}
+.modal[open]{display:block}
+.modal .sheet{background:var(--parchment);border:var(--line) solid var(--ink);
+  border-radius:14px;box-shadow:var(--shadow);padding:12px;max-width:760px;margin:0 auto}
+.modal textarea{width:100%;height:52vh;font:12px/1.4 ui-monospace,Menlo,monospace;
+  border:2px solid var(--ink);border-radius:9px;padding:8px;background:var(--paper)}
+#toast{
+  position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:70;
+  background:var(--ink);color:var(--gold);font-weight:900;font-size:13px;
+  padding:10px 16px;border-radius:999px;opacity:0;transition:opacity .18s;pointer-events:none;
+}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="brand">GUN DUDE<small>기획 보드</small></div>
+  <div class="acts">
+    <button id="btnCopy" class="gold">JSON</button>
+    <button id="btnReset" class="ghost">되돌리기</button>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs" role="tablist"></nav>
+<main id="view"><div class="empty">불러오는 중…</div></main>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <b style="font-size:15px">design.json</b>
+      <button id="mCopy" class="gold tiny" style="margin-left:auto">복사</button>
+      <button id="mClose" class="tiny">닫기</button>
+    </div>
+    <textarea id="mText" readonly spellcheck="false"></textarea>
+    <div style="font-size:11.5px;font-weight:800;margin-top:8px">
+      이 내용을 <b>data/design.json</b> 에 붙여넣고 커밋한다.
+      그다음 <b>node tools/board/validate.js</b> 로 코드와 어긋나지 않는지 확인한다.
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+/* =========================================================== 상태 */
+
+const LS_KEY = 'gundude.board.overrides.v1';
+const TABS = [
+  { id: 'enemies', label: '적' },
+  { id: 'waves',   label: '웨이브' },
+  { id: 'genes',   label: '유전자' },
+  { id: 'weapons', label: '무기' },
+  { id: 'bosses',  label: '보스' },
+  { id: 'diff',    label: '변경점' },
+];
+
+let BASE = null;          // data/design.json 원본
+let OV = {};              // 경로(문자열) → 값
+let TAB = 'enemies';
+const OPEN = new Set();   // 펼쳐 둔 카드
+
+/* 로컬 저장 — 폰에서 새로고침해도 안 날아가게 */
+function loadOv() {
+  try { OV = JSON.parse(localStorage.getItem(LS_KEY) || '{}') || {}; }
+  catch { OV = {}; }
+}
+function saveOv() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(OV)); }
+  catch { toast('저장 실패 — 시크릿 모드인가?'); }
+}
+
+/* ------------------------------------------------- 경로로 값 읽고 쓰기 */
+/* 경로는 인덱스가 아니라 id 로 쓴다. 코드가 바뀌어 순서가 변해도 편집이 살아남는다. */
+
+function childOf(obj, seg) {
+  if (Array.isArray(obj)) {
+    return obj.find((x) => String(x.id) === seg || String(x.n) === seg || String(x.key) === seg);
+  }
+  return obj ? obj[seg] : undefined;
+}
+function getPath(doc, path) {
+  return path.split('/').reduce((o, s) => childOf(o, s), doc);
+}
+function setPath(doc, path, value) {
+  const segs = path.split('/');
+  const leaf = segs.pop();
+  const parent = segs.reduce((o, s) => childOf(o, s), doc);
+  if (parent) parent[leaf] = value;
+}
+
+/** 구형 폰 브라우저(사파리 15.3 이하)에는 structuredClone 이 없다. */
+const clone = (o) => (typeof structuredClone === 'function'
+  ? structuredClone(o) : JSON.parse(JSON.stringify(o)));
+
+/** 원본 + 변경 = 현재 문서 */
+function current() {
+  const d = clone(BASE);
+  for (const [p, v] of Object.entries(OV)) setPath(d, p, v);
+  return d;
+}
+
+function setValue(path, value) {
+  const orig = getPath(BASE, path);
+  if (JSON.stringify(orig) === JSON.stringify(value)) delete OV[path];
+  else OV[path] = value;
+  saveOv();
+}
+
+const changedCount = () => Object.keys(OV).length;
+const isChanged = (p) => Object.prototype.hasOwnProperty.call(OV, p);
+
+/* ==================================================== 파생값 재계산 */
+/*
+  화면에 보여 주는 파생값은 편집한 수치를 즉시 반영해야 한다.
+  안 그러면 "이걸 바꾸면 어떻게 되지" 를 볼 수 없어서 보드의 쓸모가 없다.
+  단, 내보내는 JSON 의 derived 는 손대지 않는다 — 그건 코드가 계산한 값이고,
+  코드를 안 고친 채 파생값만 바꾸면 그게 곧 조용한 갈라짐이다.
+*/
+const r = (x, n) => {
+  if (typeof x !== 'number' || !isFinite(x)) return x;
+  const p = Math.pow(10, n);
+  return Math.round(x * p) / p;
+};
+
+function enemyHpAt(d, wave) {
+  const c = d.globals.enemyCommon;
+  return c.baseHp * (1 + c.hpGrowthPerWave * Math.max(0, Math.floor(wave) - 1));
+}
+function liveEnemyDerived(d, e) {
+  const s = e.stats;
+  return {
+    '등장 웨이브 체력': r(enemyHpAt(d, s.unlockWave) * s.hpMul, 2),
+    '등장 웨이브 피해': r(s.damage * (1 + d.globals.enemyCommon.damageGrowthPerWave * (s.unlockWave - 1)), 2),
+    '경직÷예비동작': r(s.recover / s.windup, 3),
+    '플레이어 대비 속도': r(s.speed / d.globals.player.speed, 3),
+  };
+}
+function liveWaveDerived(d, w) {
+  const out = {
+    '적 기본 체력': r(enemyHpAt(d, w.n), 2),
+    '피해 배율': r(1 + d.globals.enemyCommon.damageGrowthPerWave * (w.n - 1), 3),
+  };
+  if (w.isBoss) {
+    const b = d.bosses.find((x) => x.id === w.bossId);
+    if (b) out['보스 체력'] = r(b.stats.hpBase + b.stats.hpPerWave * (w.stage - 1), 2);
+  } else {
+    out['총 마릿수'] = w.groups.reduce((s, g) => s + g, 0);
+    out['그룹 최대'] = w.groups.length ? Math.max.apply(null, w.groups) : 0;
+  }
+  return out;
+}
+function liveWeaponDerived(d, w) {
+  const s = w.stats;
+  const dmg = d.globals.combat.baseDamage * s.dmgMul;
+  const itv = Math.max(0.09, d.globals.combat.fireIntervalBase * s.intervalMul);
+  const shotsPerMag = Math.floor(s.mag / Math.max(1, s.burst));
+  const cycle = shotsPerMag * itv + s.reload;
+  return {
+    '지속 화력': r((shotsPerMag * s.burst * s.count * dmg) / cycle, 2),
+    '순간 화력': r((dmg * s.count * s.burst) / itv, 2),
+    '탄창 소모 시간': r(shotsPerMag * itv, 2) + 's',
+  };
+}
+function livePatternDerived(p) {
+  return {
+    '공략 창': r(p.stats.recover - p.stats.windup, 3) + 's',
+    '한 사이클': r(p.stats.windup + (p.stats.active || 0) + p.stats.recover, 3) + 's',
+  };
+}
+
+/* ==================================================== 렌더 도구 */
+
+const esc = (s) => String(s == null ? '' : s)
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
+
+function fText(path, label, value, rows) {
+  const c = isChanged(path) ? ' changed' : '';
+  return '<div class="f' + c + '"><label>' + esc(label) + '</label>'
+    + '<textarea data-path="' + esc(path) + '" data-kind="text" rows="' + (rows || 2) + '">'
+    + esc(value) + '</textarea></div>';
+}
+function fNum(path, label, value) {
+  const c = isChanged(path) ? ' changed' : '';
+  return '<div class="f' + c + '"><label>' + esc(label) + '</label>'
+    + '<input data-path="' + esc(path) + '" data-kind="num" type="text" inputmode="decimal" '
+    + 'value="' + esc(value) + '"></div>';
+}
+function fStr(path, label, value) {
+  const c = isChanged(path) ? ' changed' : '';
+  return '<div class="f' + c + '"><label>' + esc(label) + '</label>'
+    + '<input data-path="' + esc(path) + '" data-kind="text" type="text" value="' + esc(value) + '"></div>';
+}
+function numGrid(base, stats, skip) {
+  const out = [];
+  for (const k of Object.keys(stats)) {
+    if (skip && skip.indexOf(k) >= 0) continue;
+    const v = stats[k];
+    if (typeof v === 'number') out.push(fNum(base + '/' + k, k, v));
+  }
+  return '<div class="grid">' + out.join('') + '</div>';
+}
+function roChips(map) {
+  return '<div class="ro">' + Object.keys(map)
+    .map((k) => '<span><b>' + esc(k) + '</b> ' + esc(map[k]) + '</span>').join('') + '</div>';
+}
+function dots(n) {
+  let s = '';
+  for (let i = 0; i < n; i += 1) s += '<i class="dot"></i>';
+  return s;
+}
+function groupsHtml(groups) {
+  if (!groups.length) return '';
+  return '<div class="groups">' + groups
+    .map((g) => '<span class="grp g' + g + '">' + dots(g) + '</span>').join('') + '</div>';
+}
+
+function card(key, chipHtml, title, sub, bodyHtml, dirty) {
+  const open = OPEN.has(key) ? ' open' : '';
+  return '<div class="card' + open + (dirty ? ' dirty' : '') + '" data-key="' + esc(key) + '">'
+    + '<div class="chead" data-toggle="' + esc(key) + '">' + chipHtml
+    + '<div class="ctitle"><div class="t">' + title + '</div><div class="s">' + sub + '</div></div>'
+    + '<div class="caret">▸</div></div>'
+    + '<div class="cbody">' + bodyHtml + '</div></div>';
+}
+
+/** 어느 카드가 수정됐는지 — 카드 테두리를 금색으로 바꾼다 */
+const dirtyUnder = (prefix) => Object.keys(OV).some((p) => p.indexOf(prefix) === 0);
+
+/* ==================================================== 탭별 화면 */
+
+function viewEnemies(d) {
+  const color = { boyz: 'var(--boyz)', demonz: 'var(--demonz)', machinz: 'var(--machinz)' };
+  return d.enemies.map((e) => {
+    const p = 'enemies/' + e.id;
+    const chip = '<div class="chip" style="background:' + (color[e.id] || 'var(--slate)') + '">'
+      + esc(e.name.slice(0, 2)) + '</div>';
+    const body = '<div class="sect">기획</div>'
+      + fText(p + '/concept', '컨셉 — 무엇인가', e.concept, 2)
+      + fText(p + '/intent', '의도 — 어떤 고민을 강요하는가', e.intent, 3)
+      + fText(p + '/gimmick', '기믹 — 그 고민을 만드는 메커니즘', e.gimmick, 3)
+      + '<div class="sect">스탯</div>' + numGrid(p + '/stats', e.stats)
+      + fStr(p + '/stats/attack', 'attack (공격 형태)', e.stats.attack)
+      + '<div class="sect">지금 값 기준 계산</div>' + roChips(liveEnemyDerived(d, e));
+    return card(p, chip, esc(e.name), 'W' + e.stats.unlockWave + ' 등장 · 속도 ' + e.stats.speed
+      + ' · 예비 ' + e.stats.windup + 's', body, dirtyUnder(p));
+  }).join('');
+}
+
+function viewWaves(d) {
+  const strip = '<div class="strip">' + d.waves.map((w) => '<div class="row">'
+    + '<span class="w">W' + w.n + '</span>'
+    + (w.isBoss
+      ? '<span class="bosstag">☠ ' + esc((d.bosses.find((b) => b.id === w.bossId) || {}).name || 'BOSS') + '</span>'
+      : groupsHtml(w.groups))
+    + '<span class="cnt">' + (w.isBoss ? '보스' : w.groups.reduce((s, g) => s + g, 0) + '마리') + '</span>'
+    + '</div>').join('') + '</div>';
+
+  const cards = d.waves.map((w) => {
+    const p = 'waves/' + w.n;
+    const chip = '<div class="chip" style="background:' + (w.isBoss ? 'var(--hpRed);color:#fff' : 'var(--gold)') + '">'
+      + (w.isBoss ? '☠' : w.n) + '</div>';
+    let body = '<div class="sect">편성</div>';
+    if (w.isBoss) {
+      body += '<div class="bosstag">☠ ' + esc((d.bosses.find((b) => b.id === w.bossId) || {}).name || '') + '</div>';
+    } else {
+      body += groupsHtml(w.groups)
+        + '<div class="gedit" data-gedit="' + w.n + '">'
+        + w.groups.map((g, i) => '<span class="unit">'
+            + '<button class="tiny" data-gd="' + w.n + ':' + i + ':-1">−</button>'
+            + '<span class="n">' + g + '</span>'
+            + '<button class="tiny" data-gd="' + w.n + ':' + i + ':1">+</button>'
+            + '<button class="tiny" data-gx="' + w.n + ':' + i + '">✕</button></span>').join('')
+        + '<button class="tiny gold" data-ga="' + w.n + '">＋ 그룹</button></div>';
+    }
+    body += '<div class="sect">기획</div>'
+      + fText(p + '/concept', '컨셉', w.concept, 2)
+      + fText(p + '/intent', '의도 — 이 웨이브가 강요하는 고민', w.intent, 3)
+      + fText(p + '/teaches', '가르치는 규칙', w.teaches, 3)
+      + '<div class="sect">지금 값 기준 계산</div>' + roChips(liveWaveDerived(d, w))
+      + '<div class="ro"><span><b>등장 종족</b> ' + esc(w.kinds.join(' · ')) + '</span>'
+      + '<span><b>스테이지</b> ' + w.stage + '-' + w.waveInStage + '</span></div>';
+    // 접힌 상태에서도 페이싱이 읽혀야 한다 — 숫자보다 점이 빠르다
+    const sub = w.isBoss
+      ? '보스 웨이브 — ' + esc((d.bosses.find((b) => b.id === w.bossId) || {}).title || '')
+      : groupsHtml(w.groups) ;
+    return card(p, chip, 'WAVE ' + w.n, sub, body, dirtyUnder(p));
+  }).join('');
+
+  return strip + cards;
+}
+
+function viewGenes(d) {
+  const cvar = { spec: 'var(--spec)', gun: 'var(--gun)', bomb: 'var(--bomb)', loot: 'var(--loot)' };
+  const order = [null, 'spec', 'gun', 'bomb', 'loot'];
+  let out = '';
+  for (const br of order) {
+    const list = d.genes.filter((g) => g.branch === br);
+    if (!list.length) continue;
+    out += '<div class="sect" style="color:var(--parchDark);font-size:13px">'
+      + esc(list[0].branchName) + '</div>';
+    out += list.map((g) => {
+      const p = 'genes/' + g.id;
+      const chip = '<div class="chip" style="background:' + (cvar[g.branch] || 'var(--parchDark)')
+        + ';color:#fff">' + (g.stats.big ? '◆' : '●') + '</div>';
+      const effKeys = Object.keys(g.stats.eff);
+      const body = '<div class="sect">기획</div>'
+        + fText(p + '/concept', '컨셉', g.concept, 2)
+        + fText(p + '/intent', '의도 — 어떤 고민을 만드는가', g.intent, 3)
+        + '<div class="sect">수치</div>'
+        + '<div class="grid">' + fNum(p + '/stats/cost', '비용 (생명에너지)', g.stats.cost) + '</div>'
+        + (effKeys.length
+          ? '<div class="grid">' + effKeys.map((k) => fNum(p + '/stats/eff/' + k, 'eff.' + k, g.stats.eff[k])).join('') + '</div>'
+          : '<div class="ro"><span>효과 없음 (뿌리)</span></div>')
+        + fStr(p + '/stats/desc', '게임 화면 설명문', g.stats.desc)
+        + '<div class="ro"><span><b>선행</b> ' + esc(g.stats.req || '없음') + '</span>'
+        + '<span><b>격자</b> ' + g.stats.g.join(', ') + '</span>'
+        + '<span><b>' + (g.stats.big ? '큰 노드' : '작은 노드') + '</b></span></div>';
+      return card(p, chip, esc(g.name), g.stats.cost + ' bio · ' + esc(g.stats.desc), body, dirtyUnder(p));
+    }).join('');
+  }
+  return out;
+}
+
+function viewWeapons(d) {
+  return d.weapons.slice().sort((a, b) => a.stats.tier - b.stats.tier).map((w) => {
+    const p = 'weapons/' + w.id;
+    const chip = '<div class="chip" style="background:var(--slate);color:#fff">T' + w.stats.tier + '</div>';
+    const body = '<div class="sect">기획</div>'
+      + fText(p + '/concept', '컨셉', w.concept, 2)
+      + fText(p + '/intent', '의도 — 어떤 고민을 만드는가', w.intent, 3)
+      + fStr(p + '/real', '실제 계열 (고증)', w.real)
+      + fStr(p + '/text/desc', '상점 설명문', w.text.desc)
+      + fStr(p + '/text/style', '상점 스타일 한 줄', w.text.style)
+      + '<div class="sect">제원</div>' + numGrid(p + '/stats', w.stats)
+      + '<div class="sect">지금 값 기준 계산 (트리 0단계)</div>' + roChips(liveWeaponDerived(d, w));
+    return card(p, chip, esc(w.name), esc(w.real) + ' · ' + w.stats.mag + '발 / ' + w.stats.reload + 's',
+      body, dirtyUnder(p));
+  }).join('');
+}
+
+function viewBosses(d) {
+  return d.bosses.map((b) => {
+    const p = 'bosses/' + b.id;
+    const chip = '<div class="chip" style="background:var(--hpRed);color:#fff">☠</div>';
+    let body = '<div class="sect">기획</div>'
+      + fStr(p + '/title', '직함', b.title)
+      + fStr(p + '/question', '이 보스가 던지는 질문', b.question)
+      + fText(p + '/concept', '컨셉', b.concept, 2)
+      + fText(p + '/intent', '의도', b.intent, 3)
+      + '<div class="sect">스탯</div>' + numGrid(p + '/stats', b.stats)
+      + '<div class="ro"><span><b>패턴 순환</b> ' + esc(b.cycle.join(' → ')) + '</span></div>';
+    body += b.patterns.map((pt) => {
+      const pp = p + '/patterns/' + pt.key;
+      return '<div class="sect">패턴 · ' + esc(pt.key) + ' (' + esc(pt.kind) + ')</div>'
+        + fStr(pp + '/tell', '텔 — 죽기 전에 읽히는 문구', pt.tell)
+        + fText(pp + '/concept', '컨셉', pt.concept, 2)
+        + fText(pp + '/intent', '의도', pt.intent, 3)
+        + numGrid(pp + '/stats', pt.stats)
+        + roChips(livePatternDerived(pt));
+    }).join('');
+    return card(p, chip, esc(b.name), esc(b.title) + ' — "' + esc(b.question) + '"', body, dirtyUnder(p));
+  }).join('');
+}
+
+/* ------------------------------------------------------- 변경점 뷰 */
+/*
+  이게 없으면 폰에서 뭘 고쳤는지 잊는다.
+  그래서 "어디를 · 무엇에서 무엇으로 · 코드 어디를 같이 고쳐야 하는지" 를 한 표에 둔다.
+*/
+function sourceHint(path) {
+  const s = path.split('/');
+  const kind = s[0];
+  const last = s[s.length - 1];
+  const isProse = ['concept', 'intent', 'gimmick', 'teaches'].indexOf(last) >= 0;
+  if (isProse) return 'tools/board/design-prose.js';
+  if (kind === 'enemies') return 'src/core/balance.js › B.kinds.' + s[1] + '.' + last;
+  if (kind === 'waves') return 'src/core/balance.js › HAND_AUTHORED[' + s[1] + '] (자동 편성이면 waveGroups)';
+  if (kind === 'genes') return 'src/core/meta.js › NODES ' + s[1] + '.' + s.slice(3).join('.');
+  if (kind === 'weapons') return 'src/core/weapons.js › WEAPONS.' + s[1] + '.' + s.slice(2).join('.');
+  if (kind === 'bosses') {
+    return 'src/core/balance.js › B.bosses[' + s[1] + ']'
+      + (s[2] === 'patterns' ? '.patterns.' + s[3] + '.' + last : '.' + s.slice(2).join('.'));
+  }
+  return '—';
+}
+function label(path) {
+  const s = path.split('/');
+  const head = { enemies: '적', waves: '웨이브', genes: '유전자', weapons: '무기', bosses: '보스' }[s[0]] || s[0];
+  return head + ' ' + s.slice(1).join(' › ');
+}
+const short = (v) => {
+  const t = Array.isArray(v) ? v.join(',') : String(v);
+  return t.length > 90 ? t.slice(0, 88) + '…' : t;
+};
+
+function viewDiff() {
+  const keys = Object.keys(OV).sort();
+  if (!keys.length) {
+    return '<div class="wrap"><div class="empty">아직 바꾼 게 없다.<br>'
+      + '탭에서 카드를 눌러 편집하면 여기 쌓인다.</div></div>';
+  }
+  const rows = keys.map((p) => '<tr>'
+    + '<td><b>' + esc(label(p)) + '</b><span class="src">' + esc(sourceHint(p)) + '</span></td>'
+    + '<td class="old">' + esc(short(getPath(BASE, p))) + '</td>'
+    + '<td class="new">' + esc(short(OV[p])) + '</td>'
+    + '<td><button class="tiny" data-revert="' + esc(p) + '">되돌림</button></td></tr>').join('');
+  return '<div class="hint">수치를 바꿨다면 <b>코드도 같이</b> 고쳐야 한다. '
+    + '오른쪽 출처가 어느 파일의 어느 값인지 알려 준다. '
+    + '고친 뒤 <b>node tools/board/validate.js</b> 가 통과해야 갈라지지 않은 것이다.</div>'
+    + '<div class="wrap"><table class="diff">'
+    + '<tr><th>항목 / 코드 출처</th><th>원본</th><th>바꾼 값</th><th></th></tr>'
+    + rows + '</table></div>';
+}
+
+/* ==================================================== 렌더 */
+
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = TABS.map((t) => {
+    const n = t.id === 'diff' ? changedCount() : 0;
+    return '<button class="tab" role="tab" data-tab="' + t.id + '" aria-selected="'
+      + (TAB === t.id) + '">' + t.label
+      + (n ? '<span class="badge">' + n + '</span>' : '') + '</button>';
+  }).join('');
+}
+
+function render() {
+  renderTabs();
+  const view = document.getElementById('view');
+  if (!BASE) { view.innerHTML = '<div class="empty">불러오는 중…</div>'; return; }
+  const d = current();
+  let html = '';
+  if (TAB === 'enemies') html = viewEnemies(d);
+  else if (TAB === 'waves') html = viewWaves(d);
+  else if (TAB === 'genes') html = viewGenes(d);
+  else if (TAB === 'weapons') html = viewWeapons(d);
+  else if (TAB === 'bosses') html = viewBosses(d);
+  else html = viewDiff();
+  view.innerHTML = html;
+  view.querySelectorAll('textarea').forEach(grow);
+}
+
+function grow(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = (ta.scrollHeight + 2) + 'px';
+}
+
+/* ==================================================== 이벤트 */
+
+document.addEventListener('click', (ev) => {
+  const t = ev.target;
+
+  const tab = t.closest('[data-tab]');
+  if (tab) { TAB = tab.getAttribute('data-tab'); window.scrollTo(0, 0); render(); return; }
+
+  const rev = t.closest('[data-revert]');
+  if (rev) { delete OV[rev.getAttribute('data-revert')]; saveOv(); render(); return; }
+
+  // 웨이브 그룹 편집 — 점 하나가 적 한 마리다
+  const gd = t.closest('[data-gd]');
+  if (gd) {
+    const a = gd.getAttribute('data-gd').split(':');
+    const w = current().waves.find((x) => String(x.n) === a[0]);
+    const g = w.groups.slice();
+    g[+a[1]] = Math.max(1, Math.min(9, g[+a[1]] + (+a[2])));
+    setValue('waves/' + a[0] + '/groups', g);
+    render(); return;
+  }
+  const gx = t.closest('[data-gx]');
+  if (gx) {
+    const a = gx.getAttribute('data-gx').split(':');
+    const w = current().waves.find((x) => String(x.n) === a[0]);
+    const g = w.groups.slice();
+    if (g.length > 1) g.splice(+a[1], 1);
+    setValue('waves/' + a[0] + '/groups', g);
+    render(); return;
+  }
+  const ga = t.closest('[data-ga]');
+  if (ga) {
+    const n = ga.getAttribute('data-ga');
+    const w = current().waves.find((x) => String(x.n) === n);
+    setValue('waves/' + n + '/groups', w.groups.concat([3]));
+    render(); return;
+  }
+
+  const head = t.closest('[data-toggle]');
+  if (head) {
+    const key = head.getAttribute('data-toggle');
+    if (OPEN.has(key)) OPEN.delete(key); else OPEN.add(key);
+    head.parentElement.toggleAttribute('open');
+    head.parentElement.querySelectorAll('textarea').forEach(grow);
+  }
+});
+
+document.addEventListener('input', (ev) => {
+  const el = ev.target;
+  const path = el.getAttribute && el.getAttribute('data-path');
+  if (!path) return;
+  if (el.tagName === 'TEXTAREA') grow(el);
+
+  if (el.getAttribute('data-kind') === 'num') {
+    const raw = el.value.trim();
+    if (raw === '' || isNaN(Number(raw))) return;   // 입력 중간 상태는 무시한다
+    setValue(path, Number(raw));
+  } else {
+    setValue(path, el.value);
+  }
+
+  const f = el.closest('.f');
+  if (f) f.classList.toggle('changed', isChanged(path));
+  const cardEl = el.closest('.card');
+  if (cardEl) cardEl.classList.toggle('dirty', dirtyUnder(cardEl.getAttribute('data-key')));
+  renderTabs();
+});
+
+/* ------------------------------------------------------- JSON 내보내기 */
+
+function exportJson() {
+  const d = current();
+  d.meta.updatedAt = new Date().toISOString().slice(0, 10);
+  d.meta.counts = {
+    enemies: d.enemies.length, waves: d.waves.length, genes: d.genes.length,
+    weapons: d.weapons.length, bosses: d.bosses.length,
+    bossPatterns: d.bosses.reduce((s, b) => s + b.patterns.length, 0),
+  };
+  return JSON.stringify(d, null, 2) + '\n';
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('on'), 1800);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch { return false; }
+}
+
+document.getElementById('btnCopy').addEventListener('click', async () => {
+  const text = exportJson();
+  const ok = await copyText(text);
+  if (ok) { toast('복사됨 — data/design.json 에 붙여넣어라'); return; }
+  // 폰 브라우저가 클립보드를 막는 경우가 흔하다. 손으로 복사할 판을 열어 준다.
+  const m = document.getElementById('modal');
+  document.getElementById('mText').value = text;
+  m.setAttribute('open', '');
+  document.getElementById('mText').select();
+});
+document.getElementById('mCopy').addEventListener('click', async () => {
+  const ta = document.getElementById('mText');
+  ta.select();
+  const ok = await copyText(ta.value);
+  toast(ok ? '복사됨' : '길게 눌러 복사해라');
+});
+document.getElementById('mClose').addEventListener('click', () => {
+  document.getElementById('modal').removeAttribute('open');
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  if (!changedCount()) { toast('바꾼 게 없다'); return; }
+  if (!confirm('바꾼 ' + changedCount() + '개를 전부 원본으로 되돌린다. 계속?')) return;
+  OV = {}; saveOv(); render(); toast('원본으로 되돌렸다');
+});
+
+/* ==================================================== 부팅 */
+
+function fixTabTop() {
+  const h = document.querySelector('.hdr').offsetHeight;
+  document.documentElement.style.setProperty('--hdrH', h + 'px');
+}
+window.addEventListener('resize', fixTabTop);
+
+async function boot() {
+  loadOv();
+  const paths = ['../../data/design.json', './design.json', 'data/design.json'];
+  for (const p of paths) {
+    try {
+      const res = await fetch(p, { cache: 'no-store' });
+      if (!res.ok) continue;
+      BASE = await res.json();
+      break;
+    } catch { /* 다음 경로 */ }
+  }
+  fixTabTop();
+  if (!BASE) {
+    document.getElementById('view').innerHTML =
+      '<div class="hint">design.json 을 못 읽었다. <b>file://</b> 로 연 것 같다.<br><br>'
+      + '터미널에서 <b>npm run serve</b> 를 띄우고<br>'
+      + '<b>http://localhost:8080/tools/board/</b> 로 열어라.</div>';
+    return;
+  }
+  render();
+}
+boot();
+</script>
+</body>
+</html>
