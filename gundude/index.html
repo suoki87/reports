@@ -636,94 +636,109 @@ const COST_GROWTH = 1.75;
  *  eff  : **단계당** 효과. 3단계면 세 번 적용된다
  */
 const NODES = [
-  { id: 'root', branch: null, g: [0, 0], req: null, max: 1, base: 0, kind: 'unlock',
-    name: '각성', eff: {}, desc: '여기서 시작한다',
-    long: '모든 갈래가 여기서 뻗는다. 어느 쪽을 먼저 키울지가 첫 판단이다.' },
+  // 첫 화면에는 이것 하나뿐이다. 이걸 사야 나머지가 드러난다.
+  // 공짜로 주면 "당한 것에서 하는 것으로" 바뀌는 그 전환이 아무 의미도 없다.
+  { id: 'root', branch: null, g: [0, 0], req: null, max: 1, base: 3, kind: 'unlock',
+    name: '각성', eff: {}, unit: '유전자 조작을 시작한다',
+    long: '마취가 풀렸다. 실험대에서 내려온다. 놈들이 내 몸에 무슨 짓을 했는지는 모른다. '
+        + '다만 이제 — 내가 직접 한다.' },
 
   /* ================= 북: 기본 스펙 ================= */
   { id: 'sp1', branch: 'spec', g: [0, -1], req: 'root', max: 5, base: 4, kind: 'stat',
     name: '근육 섬유', eff: { dmg: 1.12 }, unit: '피해 +12%',
-    long: '적이 몇 발에 죽는지가 이 게임의 체감 전부다. 가장 먼저 손대는 곳.' },
+    long: '팔에 놈들의 조직을 엮어 넣었다. 두 발에 쓰러지느냐 다섯 발에 쓰러지느냐 — '
+        + '그 차이가 목숨이다.' },
   { id: 'sp2', branch: 'spec', g: [0, -2], req: 'sp1', max: 5, base: 5, kind: 'stat',
     name: '두꺼운 표피', eff: { hp: 6 }, unit: '최대 체력 +6',
-    long: '한 대 더 맞고 버틴다. 초반에는 이 한 대가 스테이지 하나를 가른다.' },
+    long: '살가죽이 짐승 쪽으로 한 걸음 갔다. 한 대 더 맞고 버틴다. '
+        + '초반에는 그 한 대가 스테이지 하나를 가른다.' },
   { id: 'sp3', branch: 'spec', g: [-1, -3], req: 'sp2', max: 3, base: 9, kind: 'stat',
     name: '경련 반사', eff: { spd: 1.05 }, unit: '이동 속도 +5%',
-    long: '빨리 피하면 빨리 멈출 수 있다. 이동 속도는 곧 사격 시간이다.' },
+    long: '신경이 제멋대로 앞서 움직인다. 빨리 피하면 빨리 멈춰 설 수 있다. '
+        + '이 섬에서는 서 있는 시간이 곧 쏘는 시간이다.' },
   { id: 'sp4', branch: 'spec', g: [1, -3], req: 'sp2', max: 4, base: 12, kind: 'stat',
     name: '연골 갑피', eff: { dr: 0.05 }, unit: '받는 피해 −5%',
-    long: '체력을 늘리는 것과 다르다. 후반의 큰 한 방을 깎는 쪽이다.' },
+    long: '뼈 위에 한 겹을 더 앉혔다. 맷집이 느는 것과는 다르다. '
+        + '큰 한 방이 들어올 때 그 한 방을 깎는다.' },
   { id: 'sp6', branch: 'spec', g: [-1, -4], req: 'sp3', max: 3, base: 26, kind: 'stat',
     name: '과부하 심장', eff: { dmg: 1.18 }, unit: '피해 +18%',
-    long: '근육 섬유의 상위. 비싸지만 한 단계가 크다.' },
+    long: '심장이 두 배로 뛴다. 오래 쓰면 무엇이 남을지 모르겠다. '
+        + '어차피 오래 쓸 생각도 없다.' },
   { id: 'sp5', branch: 'spec', g: [1, -4], req: 'sp4', max: 1, base: 60, kind: 'unlock',
     name: '재생 조직', eff: { lifesteal: 2 }, unit: '적을 죽일 때마다 체력 +2',
-    long: '싸울수록 회복한다. 도망치는 대신 맞서는 선택지가 생긴다 — '
-        + '체력이 자원이 되고, 그 자원은 오직 공격으로만 번다.' },
+    long: '쓰러뜨린 것의 조직이 내 상처를 메운다. 도망치는 대신 맞설 수 있게 됐다. '
+        + '살아남으려면 죽여야 한다 — 이제 그게 문장 그대로다.' },
 
   /* ================= 동: 총기 이해 ================= */
   { id: 'gn1', branch: 'gun', g: [1, 0], req: 'root', max: 5, base: 4, kind: 'stat',
     name: '방아쇠 감각', eff: { itv: 0.94 }, unit: '발사 간격 −6%',
-    long: '멈춰 있는 시간이 같아도 더 많이 나간다. 정지사격 게임의 정석 투자.' },
+    long: '손가락이 생각보다 빠르다. 같은 시간을 서 있어도 더 많이 나간다. '
+        + '용병 시절에도 이 정도는 아니었다.' },
   { id: 'gn2', branch: 'gun', g: [2, 0], req: 'gn1', max: 4, base: 6, kind: 'stat',
     name: '탄창 숙련', eff: { rld: 0.90 }, unit: '재장전 −10%',
-    long: '재장전은 이동 중에도 돈다. 짧아질수록 "도망치며 채우는" 리듬이 빨라진다.' },
+    long: '보지 않고 갈아 끼운다. 재장전은 뛰면서도 돌아간다 — '
+        + '짧아질수록 도망치는 시간이 짧아진다.' },
   { id: 'gn3', branch: 'gun', g: [3, -1], req: 'gn2', max: 3, base: 10, kind: 'stat',
     name: '총열 연장', eff: { rng: 1.15 }, unit: '사거리 +15%',
-    long: '멀리서 시작할 수 있으면 그만큼 덜 위험한 자리에서 쏜다.' },
+    long: '멀리서 시작할 수 있으면 그만큼 덜 위험한 자리에 서 있어도 된다. '
+        + '이 절벽에서는 한 걸음이 전부다.' },
   { id: 'gn4', branch: 'gun', g: [3, 1], req: 'gn2', max: 3, base: 8, kind: 'stat',
     name: '고압 장약', eff: { kb: 1.35 }, unit: '탄 넉백 +35%',
-    long: '적을 밀어내면 그만큼 더 쏠 시간을 번다. 피해가 아니라 시간을 사는 투자.' },
+    long: '탄이 놈들을 뒤로 밀어낸다. 죽이지 못해도 시간을 산다. '
+        + '여기서는 시간이 피해보다 비싸다.' },
   { id: 'gn6', branch: 'gun', g: [4, -1], req: 'gn3', max: 3, base: 24, kind: 'stat',
     name: '속사 훈련', eff: { itv: 0.92 }, unit: '발사 간격 −8%',
-    long: '방아쇠 감각의 상위. 둘을 겹치면 체감이 확실히 달라진다.' },
+    long: '방아쇠 감각 위에 겹친다. 둘을 다 올리면 손이 총을 앞질러 간다.' },
   { id: 'gn5', branch: 'gun', g: [4, 1], req: 'gn4', max: 1, base: 70, kind: 'unlock',
     name: '철갑탄', eff: { pierce: 1 }, unit: '모든 탄이 1명 더 관통',
-    long: '줄지어 오는 적을 한 발로 꿴다. 적을 "몇 마리" 가 아니라 "어떤 줄" 로 보게 만든다 — '
-        + '겨냥할 수 없는 게임에서 위치를 잡는 이유가 생긴다.' },
+    long: '줄지어 오는 놈들을 한 발로 꿴다. 이제 놈들이 몇 마리인지가 아니라 '
+        + '어떤 줄로 오는지를 본다.' },
 
   /* ================= 남: 폭탄 ================= */
   { id: 'bm1', branch: 'bomb', g: [0, 1], req: 'root', max: 5, base: 5, kind: 'stat',
     name: '기폭 회로', eff: { skCd: 0.90 }, unit: '충격파 대기 −10%',
-    long: '런당 한 번짜리 기술을 두 번, 세 번 쓰게 만든다. 폭탄 갈래의 시작.' },
+    long: '가슴에 심은 것이 다시 차오르는 데 걸리는 시간. 한 판에 한 번이던 것이 '
+        + '두 번이 되고 세 번이 된다.' },
   { id: 'bm2', branch: 'bomb', g: [0, 2], req: 'bm1', max: 4, base: 7, kind: 'stat',
     name: '확산 장약', eff: { skR: 1.20 }, unit: '충격파 범위 +20%',
-    long: '처음엔 발밑만 쓸어낸다. 범위가 곧 살아남는 반경이다.' },
+    long: '처음엔 발밑만 겨우 쓸어냈다. 이 반경이 곧 내가 숨 쉴 수 있는 넓이다.' },
   { id: 'bm3', branch: 'bomb', g: [-1, 3], req: 'bm2', max: 4, base: 9, kind: 'stat',
     name: '고폭 탄두', eff: { skDmg: 1.35 }, unit: '충격파 피해 +35%',
-    long: '밀어내는 용도에서 죽이는 용도로 바뀌는 지점.' },
+    long: '밀어내던 것이 죽이는 것으로 바뀌는 지점이 있다. 여기가 그 지점이다.' },
   { id: 'bm4', branch: 'bomb', g: [1, 3], req: 'bm2', max: 3, base: 8, kind: 'stat',
     name: '충격 증폭', eff: { skKb: 1.30 }, unit: '밀치는 힘 +30%',
-    long: '죽이지 못해도 벼랑까지 밀어낼 수 있다. 절벽이 무기가 된다.' },
+    long: '죽이지 못해도 벼랑까지 밀어낼 수 있다. 이 섬에서 가장 잘 드는 무기는 낭떠러지다.' },
   { id: 'bm6', branch: 'bomb', g: [-1, 4], req: 'bm3', max: 3, base: 22, kind: 'stat',
     name: '축전기', eff: { skCd: 0.88 }, unit: '충격파 대기 −12%',
-    long: '기폭 회로의 상위. 겹치면 대기가 눈에 띄게 짧아진다.' },
+    long: '기폭 회로 위에 겹친다. 겹칠수록 기다리는 시간이 눈에 띄게 줄어든다.' },
   { id: 'bm5', branch: 'bomb', g: [1, 4], req: 'bm4', max: 1, base: 80, kind: 'unlock',
     name: '이중 기폭', eff: { charges: 1 }, unit: '충격파를 2회까지 모아 둔다',
-    long: '한 번 더 들고 다닌다. "지금 쓸까, 아껴 둘까" 가 처음으로 진짜 고민이 된다 — '
-        + '한 발뿐일 때는 아낄 이유가 없었다.' },
+    long: '두 발을 품고 다닌다. 처음으로 아낄 이유가 생겼다 — '
+        + '한 발뿐일 때는 아낄 이유가 없었으니까.' },
 
   /* ================= 서: 자원 획득 ================= */
   { id: 'lt1', branch: 'loot', g: [-1, 0], req: 'root', max: 4, base: 4, kind: 'stat',
     name: '전리품 감각', eff: { money: 1.15 }, unit: '돈 획득 +15%',
-    long: '돈은 보급소에서 쓴다. 이번 판이 끝나면 사라지지만, 그 판을 길게 만든다.' },
+    long: '시설 물자가 어디 떨어졌는지 눈에 밟힌다. 섬을 벗어나면 종잇조각이지만, '
+        + '벗어나기 전까지는 총을 사 준다.' },
   { id: 'lt2', branch: 'loot', g: [-2, 0], req: 'lt1', max: 4, base: 5, kind: 'stat',
     name: '조직 채취', eff: { bio: 1.15 }, unit: '유전자 조각 +15%',
-    long: '조각 하나가 더 굵어진다. 다음 판이 빨라지는 유일한 길.' },
+    long: '뜯는 손이 정확해졌다. 같은 시체에서 더 많이 나온다. '
+        + '이게 다음 판을 앞당기는 유일한 길이다.' },
   { id: 'lt3', branch: 'loot', g: [-3, -1], req: 'lt2', max: 3, base: 10, kind: 'stat',
     name: '비상 자금', eff: { startMoney: 25 }, unit: '판 시작 시 돈 +25',
-    long: '첫 보급소에서 살 수 있는 게 달라진다. 시작이 다르면 끝도 다르다.' },
+    long: '주머니에 넣어 두고 시작한다. 첫 보급소에서 살 수 있는 게 달라진다.' },
   { id: 'lt4', branch: 'loot', g: [-3, 1], req: 'lt2', max: 1, base: 45, kind: 'unlock',
     name: '촉수 감각', eff: { magnet: 1 }, unit: '유전자 조각을 멀리서 끌어당긴다',
-    long: '조각은 걸어가서 주워야 한다. 줍는 동안은 못 쏜다 — 그게 이 게임의 값이다. '
-        + '이걸 배우면 그 값을 안 치른다. 자원 갈래에서 가장 크게 체감되는 해금.' },
+    long: '조각은 걸어가서 손으로 뜯어야 한다. 뜯는 동안은 총을 못 쏜다 — 그게 값이다. '
+        + '이걸 배우면 몸이 알아서 끌어당긴다. 그만큼 나는 덜 사람이 된다.' },
   { id: 'lt5', branch: 'loot', g: [-4, 1], req: 'lt4', max: 3, base: 30, kind: 'stat',
     name: '흡인장', eff: { magR: 1.20 }, unit: '끌어당기는 범위 +20%',
-    long: '촉수 감각을 더 멀리. 다만 맵 전체를 덮지는 못한다 — '
-        + '어디에 설지를 고르는 일은 끝까지 남는다.' },
+    long: '더 멀리까지 딸려온다. 다만 절벽 전체를 덮지는 못한다. '
+        + '어디에 설지는 끝까지 내가 고른다.' },
   { id: 'lt6', branch: 'loot', g: [-4, -1], req: 'lt3', max: 3, base: 26, kind: 'stat',
     name: '포식자', eff: { money: 1.15, bio: 1.15 }, unit: '돈·조각 +15%',
-    long: '두 재화를 같이 올린다. 자원 갈래의 마무리.' },
+    long: '쓰러진 것에서 남길 게 없을 때까지 가져간다. 죄책감은 실험대에 두고 왔다.' },
 ];
 
 const NODE_BY_ID = Object.fromEntries(NODES.map((n) => [n.id, n]));
@@ -761,7 +776,9 @@ function totalCost() {
  * 반환은 `{ id: level }` 맵이다. 예전 배열 형태(v5)도 받아 준다.
  */
 function normalizeOwned(raw) {
-  const out = { root: 1 };
+  // 【v3】 각성(root)도 배워야 한다. 자동으로 채워 주지 않는다.
+  // 첫 화면에 노드가 하나뿐이고, 그것을 사면 넷이 드러나는 경험을 만들기 위해서다.
+  const out = {};
   if (Array.isArray(raw)) {
     // v5 형태 — 배운 노드의 id 배열. 전부 1단계로 본다.
     for (const id of raw) if (typeof id === 'string' && NODE_BY_ID[id]) out[id] = 1;
@@ -782,7 +799,6 @@ function normalizeOwned(raw) {
       if (n?.req && !(out[n.req] > 0)) { delete out[id]; changed = true; }
     }
   }
-  out.root = 1;
   return out;
 }
 
@@ -867,7 +883,8 @@ function deriveStats(owned, b = B) {
       }
     }
   }
-  const learned = Object.entries(own).reduce((s, [id, lv]) => s + (id === 'root' ? 0 : lv), 0);
+  // 각성도 배우는 것이므로 습득 단계에 센다. 첫 구매가 화면에 반영되어야 한다.
+  const learned = Object.values(own).reduce((s, lv) => s + lv, 0);
   return {
     damage: b.baseDamage * m.dmg,
     fireInterval: Math.max(0.09, b.fireIntervalBase * m.itv),
@@ -934,11 +951,14 @@ function migrateFromTracks(upgrades) {
   const map = {
     power: 'sp1', rate: 'gn1', vigor: 'sp2', swift: 'sp3', shock: 'bm1',
   };
-  const owned = { root: 1 };
+  const owned = {};
   for (const [k, id] of Object.entries(map)) {
     const lv = Math.max(0, Math.floor(Number(upgrades?.[k]) || 0));
     if (lv > 0) owned[id] = Math.min(NODE_BY_ID[id].max, lv);
   }
+  // 각성은 **진행이 있던 사람에게만** 이어 준다.
+  // 아무것도 안 배운 옛 세이브에 각성을 공짜로 얹으면 첫 구매의 의미가 사라진다.
+  if (Object.keys(owned).length > 0) owned.root = 1;
   return normalizeOwned(owned);
 }
 
@@ -950,11 +970,14 @@ function migrateFromTracks(upgrades) {
 function migrateFromFlatTree(ownedArray) {
   // v4 → v5 단계가 이미 맵을 만들어 넘겼을 수 있다. 그때는 그대로 통과시킨다.
   // (배열로만 받으면 v3 이하에서 올라온 진행이 통째로 사라진다 — 실제로 났던 버그다)
+  // 각성은 배워야 하는 것으로 바뀌었지만, **이미 진행한 사람에게서 뺏지 않는다.**
   if (ownedArray && !Array.isArray(ownedArray) && typeof ownedArray === 'object') {
-    return normalizeOwned(ownedArray);
+    const has = Object.values(ownedArray).some((v) => Number(v) > 0);
+    return normalizeOwned(has ? { root: 1, ...ownedArray } : {});
   }
-  const out = { root: 1 };
+  const out = {};
   const absorb = { spec: 'sp1', gun: 'gn1', bomb: 'bm1', loot: 'lt1' };
+  if (Array.isArray(ownedArray) && ownedArray.length > 0) out.root = 1;
   if (Array.isArray(ownedArray)) {
     for (const id of ownedArray) {
       if (id === 'root') continue;
@@ -4633,7 +4656,8 @@ const BIG_R = 31;           // 기능 해금 노드
 
 /** 트리를 보여 주는 창. 이 밖으로는 안 그린다. */
 function treeViewport(b = B) {
-  return { x: 22, y: 232, w: b.designW - 44, h: 424 };
+  // 트리 전용 화면이 되었으니 창을 크게 쓴다. 위에 기록 카드가 없다.
+  return { x: 22, y: 100, w: b.designW - 44, h: 540 };
 }
 
 /** 격자 좌표 → 트리 내부 좌표 (패닝 전). */
@@ -4660,16 +4684,40 @@ function clampPan(pan, b = B) {
   };
 }
 
+/**
+ * 【화면 분리】 예전에는 로비 하나가 기록·지갑·트리·설정을 전부 이고 있었다.
+ * 유전자 조작에 필요 없는 것들이 트리 옆에 붙어 있으니 화면이 무엇을 하는 곳인지 흐렸다.
+ *
+ * 이제 셋으로 나눈다:
+ *   홈      — 지난 판의 결과와 갈 곳. 판단만 한다
+ *   유전자  — 트리 전용. 다른 게 없으니 창을 크게 쓴다
+ *   설정    — 사운드·초기화. 성장과 무관하다
+ */
+function homeLayout(b = B) {
+  return {
+    record: { x: 22, y: 24, w: b.designW - 44, h: 168 },
+    purse:  { x: 22, y: 206, w: b.designW - 44, h: 66 },
+    gene:   { x: 40, y: 300, w: b.designW - 80, h: 118 },
+    start:  { x: 40, y: 434, w: b.designW - 80, h: 130 },
+    totals: { x: 40, y: b.designH - 118, w: (b.designW - 100) / 2, h: 78 },
+    options: { x: b.designW / 2 + 10, y: b.designH - 118, w: (b.designW - 100) / 2, h: 78 },
+  };
+}
+
+function homeHitTest(x, y, b = B) {
+  const L = homeLayout(b);
+  for (const k of ['gene', 'start', 'totals', 'options']) {
+    if (inside(L[k], x, y)) return { type: k };
+  }
+  return { type: 'none' };
+}
+
 function lobbyLayout(b = B) {
   return {
-    record: { x: 22, y: 22, w: b.designW - 44, h: 126 },
-    // 능력·옵션은 기록 카드 **아래**에 둔다 (디렉터 지시).
-    // 위에 겹쳐 두면 기록을 가리고, 무엇이 상위 정보인지도 흐려진다.
-    totals:  { x: 22, y: 158, w: 214, h: 60 },
-    options: { x: 244, y: 158, w: 116, h: 60 },
-    purse:   { x: 372, y: 158, w: b.designW - 394, h: 60 },
-    panel:   { x: 22, y: 668, w: b.designW - 44, h: 424 },
-    learn:   { x: 46, y: 1000, w: b.designW - 92, h: 78 },
+    back:    { x: 22, y: 22, w: 74, h: 62 },
+    purse:   { x: b.designW - 244, y: 22, w: 222, h: 62 },
+    panel:   { x: 22, y: 654, w: b.designW - 44, h: 424 },
+    learn:   { x: 46, y: 986, w: b.designW - 92, h: 78 },
     start:   { x: 34, y: b.designH - 106, w: b.designW - 68, h: 84 },
     close:   { x: b.designW - 88, y: 24, w: 64, h: 64 },
     reset:   { x: 70, y: 520, w: b.designW - 140, h: 86 },
@@ -4677,22 +4725,10 @@ function lobbyLayout(b = B) {
   };
 }
 
-/**
- * 탭 판정.
- * @param view 'tree' | 'totals' | 'options'
- */
-function lobbyHitTest(x, y, owned, selected, view = 'tree', pan = { x: 0, y: 0 }, b = B) {
+/** 유전자 조작 화면의 탭 판정. */
+function lobbyHitTest(x, y, owned, selected, pan = { x: 0, y: 0 }, b = B) {
   const L = lobbyLayout(b);
-  if (view === 'totals' || view === 'options') {
-    if (inside(L.close, x, y)) return { type: 'closeOverlay' };
-    if (view === 'options') {
-      if (inside(L.reset, x, y)) return { type: 'resetAsk' };
-      if (inside(L.confirm, x, y)) return { type: 'resetDo' };
-    }
-    return { type: 'none' };
-  }
-  if (inside(L.totals, x, y)) return { type: 'totals' };
-  if (inside(L.options, x, y)) return { type: 'options' };
+  if (inside(L.back, x, y)) return { type: 'back' };
   if (inside(L.start, x, y)) return { type: 'start' };
   if (selected && inside(L.learn, x, y)) return { type: 'learn', id: selected };
 
@@ -4869,6 +4905,16 @@ function iconButton(ctx, r, label, badge, drawGlyph) {
 
 /* -------------------------------------------------- 능력 총합 화면 */
 
+function overlayHitTest(x, y, screen, b = B) {
+  const L = lobbyLayout(b);
+  if (inside(L.close, x, y)) return { type: 'back' };
+  if (screen === 'options') {
+    if (inside(L.reset, x, y)) return { type: 'resetAsk' };
+    if (inside(L.confirm, x, y)) return { type: 'resetDo' };
+  }
+  return { type: 'none' };
+}
+
 function overlayClose(ctx, L) {
   ctx.save();
   ctx.fillStyle = PALETTE.parchment;
@@ -5031,11 +5077,175 @@ function renderOptions(ctx, state, t, b = B) {
 
 /* -------------------------------------------------------- 로비 본체 */
 
+/* ------------------------------------------------------------ 홈 */
+
+/** 조각 지갑 — 홈과 유전자 화면이 같은 그림을 쓴다. */
+function purseBox(ctx, P, bio, lastBio, lastLost, compact = false) {
+  ctx.save();
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath(); ctx.roundRect(P.x, P.y, P.w, P.h, 16); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(P.x, P.y, P.w, P.h, 16); ctx.stroke();
+  ctx.restore();
+  bioIcon(ctx, P.x + 28, P.y + P.h / 2, 28);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 28px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(`${bio}`, P.x + 50, P.y + P.h / 2 + 1);
+  if (compact) return;
+  ctx.textAlign = 'right';
+  if (lastBio > 0) {
+    ctx.font = 'bold 17px system-ui, sans-serif';
+    ctx.fillStyle = '#1E7A3C';
+    ctx.fillText(`이번 판 +${lastBio}`, P.x + P.w - 16, P.y + 24);
+  }
+  if (lastLost > 0) {
+    ctx.font = 'bold 15px system-ui, sans-serif';
+    ctx.fillStyle = '#B03A3A';
+    ctx.fillText(`못 주움 −${lastLost}`, P.x + P.w - 16, P.y + 46);
+  }
+}
+
+/**
+ * 홈 — 죽고 나서 도착하는 곳.
+ * 여기서 하는 일은 둘뿐이다: **무슨 일이 있었는지 보고, 어디로 갈지 고른다.**
+ * 트리를 여기 두면 그 판단이 흐려진다.
+ */
+function renderHome(ctx, state, t, b = B) {
+  const { bio, owned: rawOwned, best, lastRun, lastBio, lastLost, lastWave, lastStage, killedBy } = state;
+  const owned = normalizeOwned(rawOwned);
+  const L = homeLayout(b);
+  const sum = statSummary(owned, b);
+
+  // 지금 살 수 있는 것이 몇 개인가 — 갈 이유를 숫자로 보여 준다
+  let ready = 0;
+  for (const n of revealedNodes(owned)) {
+    if (canLearn(n.id, owned) && bio >= nextCost(n.id, owned)) ready += 1;
+  }
+
+  ctx.fillStyle = PALETTE.backdrop;
+  ctx.fillRect(0, 0, b.designW, b.designH);
+
+  const R = L.record;
+  panel(ctx, R.x, R.y, R.w, R.h, PALETTE.parchment, 5);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 22px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText('쓰러졌다', b.designW / 2, R.y + 30);
+  ctx.font = 'bold 58px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(formatTime(lastRun), b.designW / 2, R.y + 76);
+  if (killedBy) {
+    ctx.font = 'bold 17px system-ui, sans-serif';
+    ctx.fillStyle = '#9C6B5E';
+    const line = /다$/.test(killedBy) ? killedBy : `${killedBy}에 당했다`;
+    ctx.fillText(line, b.designW / 2, R.y + 116);
+  }
+  ctx.font = 'bold 16px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText(`스테이지 ${lastStage} · 웨이브 ${lastWave}   ·   최고 ${formatTime(best)}`,
+    b.designW / 2, R.y + 146);
+
+  purseBox(ctx, L.purse, bio, lastBio, lastLost);
+
+  // 유전자 조작으로 가는 문
+  const G = L.gene;
+  panel(ctx, G.x, G.y, G.w, G.h, '#3E7A5C', 6, 22);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(G.x + 62, G.y + G.h / 2, 34, 0, Math.PI * 2);
+  ctx.fillStyle = '#5FA36A'; ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 5; ctx.stroke();
+  drawIcon(ctx, 'syringe', G.x + 62, G.y + G.h / 2, 19, '#FFFFFF');
+  ctx.restore();
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 34px system-ui, sans-serif';
+  outlinedText(ctx, '유전자 조작', G.x + 110, G.y + 48, 7);
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = '#CDE8D6';
+  ctx.fillText(sum.learned > 0 ? `${sum.learned}단계 습득함` : '아직 아무것도 안 했다',
+    G.x + 110, G.y + 82);
+  if (ready > 0) {
+    const bx = G.x + G.w - 52;
+    const pulse = 1 + Math.sin(t * 4) * 0.06;
+    ctx.save();
+    ctx.translate(bx, G.y + 34);
+    ctx.scale(pulse, pulse);
+    ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2);
+    ctx.fillStyle = PALETTE.gold; ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3.5; ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 21px system-ui, sans-serif';
+    outlinedText(ctx, `${ready}`, 0, 1, 5);
+    ctx.restore();
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 14px system-ui, sans-serif';
+    ctx.fillStyle = '#CDE8D6';
+    ctx.fillText('지금 살 수 있다', G.x + G.w - 22, G.y + 82);
+  }
+
+  const S = L.start;
+  const pulse = 1 + Math.sin(t * 3.2) * 0.014;
+  ctx.save();
+  ctx.translate(S.x + S.w / 2, S.y + S.h / 2);
+  ctx.scale(pulse, pulse);
+  ctx.translate(-(S.x + S.w / 2), -(S.y + S.h / 2));
+  panel(ctx, S.x, S.y, S.w, S.h, PALETTE.hpRed, 7, 24);
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 46px system-ui, sans-serif';
+  outlinedText(ctx, '다시 도전', S.x + S.w / 2, S.y + S.h / 2 + 2, 8);
+  ctx.restore();
+
+  // 주인공. 홈이 비어 보이지 않게, 그리고 이 사람이 누구인지 계속 보이게.
+  drawCharacter(ctx, {
+    kind: 'dude', x: b.designW / 2, y: 820, size: 138, seed: 1337, facing: 1,
+    aimA: 0.30,
+    pose: { walk: 0, moving: false, lean: 0, state: null, prog: 0 },
+  });
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '15px system-ui, sans-serif';
+  ctx.fillStyle = '#7C8B96';
+  ctx.fillText('섬을 벗어날 때까지, 몇 번이든', b.designW / 2, 886);
+
+  smallButton(ctx, L.totals, '얻은 능력', (c, gx, gy) => {
+    c.fillStyle = PALETTE.woodDark;
+    for (let i = 0; i < 3; i += 1) {
+      c.beginPath(); c.roundRect(gx - 14, gy - 11 + i * 10, 28 - i * 7, 6, 3); c.fill();
+    }
+  });
+  smallButton(ctx, L.options, '설정', (c, gx, gy) => {
+    c.save();
+    c.translate(gx, gy);
+    c.fillStyle = PALETTE.woodDark;
+    for (let i = 0; i < 8; i += 1) {
+      c.save(); c.rotate((i / 8) * Math.PI * 2);
+      c.beginPath(); c.roundRect(-3.5, -16, 7, 7, 2); c.fill();
+      c.restore();
+    }
+    c.beginPath(); c.arc(0, 0, 10.5, 0, Math.PI * 2); c.fill();
+    c.globalCompositeOperation = 'destination-out';
+    c.beginPath(); c.arc(0, 0, 4.5, 0, Math.PI * 2); c.fill();
+    c.restore();
+  });
+}
+
+function smallButton(ctx, r, label, drawGlyph) {
+  ctx.save();
+  ctx.fillStyle = PALETTE.parchment;
+  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18); ctx.stroke();
+  drawGlyph(ctx, r.x + 36, r.y + r.h / 2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 20px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(label, r.x + 60, r.y + r.h / 2 + 1);
+  ctx.restore();
+}
+
+/* -------------------------------------------------- 유전자 조작 화면 */
+
 function renderLobby(ctx, state, t, b = B) {
-  const {
-    bio, owned: rawOwned, best, lastRun, lastBio, lastLost, lastWave, lastStage,
-    selected, pan = { x: 0, y: 0 },
-  } = state;
+  const { bio, owned: rawOwned, selected, pan = { x: 0, y: 0 } } = state;
   const owned = normalizeOwned(rawOwned);
   const L = lobbyLayout(b);
   const V = treeViewport(b);
@@ -5043,71 +5253,26 @@ function renderLobby(ctx, state, t, b = B) {
   ctx.fillStyle = PALETTE.backdrop;
   ctx.fillRect(0, 0, b.designW, b.designH);
 
-  /* --- 지난 판의 결과 --- */
-  const R = L.record;
-  panel(ctx, R.x, R.y, R.w, R.h, PALETTE.parchment, 5);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 21px system-ui, sans-serif';
-  ctx.fillStyle = '#8A7355';
-  ctx.fillText('쓰러졌다', b.designW / 2, R.y + 26);
-  ctx.font = 'bold 52px system-ui, sans-serif';
-  ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(formatTime(lastRun), b.designW / 2, R.y + 66);
-  ctx.font = 'bold 16px system-ui, sans-serif';
-  ctx.fillStyle = '#8A7355';
-  ctx.fillText(`스테이지 ${lastStage} · 웨이브 ${lastWave}   ·   최고 ${formatTime(best)}`,
-    b.designW / 2, R.y + 104);
-
-  /* --- 능력 · 옵션 · 지갑 --- */
-  const sum = statSummary(owned, b);
-  iconButton(ctx, L.totals, '얻은 능력', sum.learned, (c, gx, gy) => {
-    c.fillStyle = PALETTE.woodDark;
-    for (let i = 0; i < 3; i += 1) {
-      c.beginPath(); c.roundRect(gx - 15, gy - 11 + i * 10, 30 - i * 7, 6, 3); c.fill();
-    }
-  });
-  iconButton(ctx, L.options, null, 0, (c, gx, gy) => {
-    // 톱니
-    c.save();
-    c.translate(gx + 6, gy);
-    c.fillStyle = PALETTE.woodDark;
-    for (let i = 0; i < 8; i += 1) {
-      c.save(); c.rotate((i / 8) * Math.PI * 2);
-      c.beginPath(); c.roundRect(-4, -18, 8, 8, 2); c.fill();
-      c.restore();
-    }
-    c.beginPath(); c.arc(0, 0, 12, 0, Math.PI * 2); c.fill();
-    c.globalCompositeOperation = 'destination-out';
-    c.beginPath(); c.arc(0, 0, 5, 0, Math.PI * 2); c.fill();
-    c.restore();
-  });
-
-  const P = L.purse;
+  // 뒤로
   ctx.save();
-  ctx.fillStyle = '#FFFFFF';
-  ctx.beginPath(); ctx.roundRect(P.x, P.y, P.w, P.h, 16); ctx.fill();
+  ctx.fillStyle = PALETTE.parchment;
+  ctx.beginPath(); ctx.roundRect(L.back.x, L.back.y, L.back.w, L.back.h, 16); ctx.fill();
   ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.roundRect(P.x, P.y, P.w, P.h, 16); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(L.back.x, L.back.y, L.back.w, L.back.h, 16); ctx.stroke();
+  ctx.strokeStyle = PALETTE.woodDark; ctx.lineWidth = 5.5;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const bx = L.back.x + L.back.w / 2 + 5, by = L.back.y + L.back.h / 2;
+  ctx.beginPath();
+  ctx.moveTo(bx + 5, by - 12); ctx.lineTo(bx - 8, by); ctx.lineTo(bx + 5, by + 12);
+  ctx.stroke();
   ctx.restore();
-  bioIcon(ctx, P.x + 26, P.y + P.h / 2, 26);
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 26px system-ui, sans-serif';
-  ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(`${bio}`, P.x + 46, P.y + P.h / 2 + 1);
-  if (lastBio > 0) {
-    ctx.font = 'bold 16px system-ui, sans-serif';
-    ctx.fillStyle = '#1E7A3C';
-    ctx.textAlign = 'right';
-    ctx.fillText(`+${lastBio}`, P.x + P.w - 14, P.y + 20);
-  }
-  if (lastLost > 0) {
-    ctx.font = 'bold 14px system-ui, sans-serif';
-    ctx.fillStyle = '#B03A3A';
-    ctx.textAlign = 'right';
-    ctx.fillText(`못 주움 −${lastLost}`, P.x + P.w - 14, P.y + 42);
-  }
 
-  /* --- 트리 (양피지 위, 창 안으로 잘린다) --- */
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 27px system-ui, sans-serif';
+  outlinedText(ctx, '유전자 조작', L.back.x + L.back.w + 18, L.back.y + L.back.h / 2 + 1, 7);
+  purseBox(ctx, L.purse, bio, 0, 0, true);
+
+  /* --- 트리 --- */
   paperPage(ctx, V);
   ctx.save();
   ctx.beginPath(); ctx.roundRect(V.x, V.y, V.w, V.h, 11); ctx.clip();
@@ -5118,7 +5283,6 @@ function renderLobby(ctx, state, t, b = B) {
     if (!n.req) continue;
     wire(ctx, screenPos(NODE_BY_ID[n.req], pan, b), screenPos(n, pan, b), (owned[n.id] ?? 0) > 0);
   }
-  // 아직 안 드러난 앞길은 짧은 토막으로만 알린다 — 무엇인지는 안 알린다
   for (const n of vis) {
     if ((owned[n.id] ?? 0) <= 0) continue;
     for (const c of NODES) {
@@ -5145,7 +5309,6 @@ function renderLobby(ctx, state, t, b = B) {
   }
   ctx.restore();
 
-  // 끌 수 있다는 힌트
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '14px system-ui, sans-serif';
   ctx.fillStyle = '#7C8B96';
@@ -5165,18 +5328,11 @@ function renderLobby(ctx, state, t, b = B) {
     drawNodeCard(ctx, n, owned, bio, L, b);
   }
 
-  /* --- 다시 도전 --- */
   const s2 = L.start;
-  const pulse = 1 + Math.sin(t * 3.4) * 0.012;
-  ctx.save();
-  ctx.translate(s2.x + s2.w / 2, s2.y + s2.h / 2);
-  ctx.scale(pulse, pulse);
-  ctx.translate(-(s2.x + s2.w / 2), -(s2.y + s2.h / 2));
   panel(ctx, s2.x, s2.y, s2.w, s2.h, PALETTE.hpRed, 6, 20);
   ctx.textAlign = 'center';
   ctx.font = 'bold 34px system-ui, sans-serif';
   outlinedText(ctx, '다시 도전', s2.x + s2.w / 2, s2.y + s2.h / 2 + 2, 7);
-  ctx.restore();
 }
 
 /**
@@ -5935,10 +6091,10 @@ async function boot() {
   let rng = makeRng(1);
   let elapsed = 0;
   let lastRun = 0, lastBio = 0, lastLost = 0, lastWave = 1, lastStage = 1;
+  let lastKilledBy = null;
   // 로비 안의 상태 — 지금 고른 노드와 보고 있는 화면.
   // 탭이 곧 구매가 아니므로 "무엇을 고르고 있는가" 를 들고 있어야 한다.
   let lobbySel = null;
-  let lobbyView = 'tree';
   let lobbyPan = { x: 0, y: 0 };
   let askingReset = false;
   let autoPlay = false;
@@ -5949,17 +6105,23 @@ async function boot() {
 
   /** 로비 트리를 끌어 움직인다. */
   function onPan(dx, dy) {
-    if (mode !== 'lobby' || lobbyView !== 'tree') return;
+    if (mode !== 'gene') return;
     lobbyPan = clampPan({ x: lobbyPan.x + dx, y: lobbyPan.y + dy }, B);
   }
 
-  /** 로비에 들어갈 때마다 화면 상태를 초기화한다. */
-  function enterLobby() {
-    mode = 'lobby';
-    lobbySel = null;
-    lobbyView = 'tree';
-    lobbyPan = { x: 0, y: 0 };
+  /** 홈 — 죽고 나서 도착하는 곳. 여기서 어디로 갈지 고른다. */
+  function enterHome() {
+    mode = 'home';
     askingReset = false;
+    input.setEnabled(false);
+    input.setPanMode(false);
+  }
+
+  /** 유전자 조작 — 트리 전용 화면. 여기서만 패닝을 켠다. */
+  function enterGene() {
+    mode = 'gene';
+    lobbySel = null;
+    lobbyPan = { x: 0, y: 0 };
     input.setEnabled(false);
     input.setPanMode(true);
   }
@@ -5979,6 +6141,7 @@ async function boot() {
     lastRun = Math.floor(world.t);
     lastBio = world.bio;
     lastLost = world.bioLost;
+    lastKilledBy = world.killedBy;
     lastWave = world.wave;
     lastStage = stageOf(world.wave, B);
     save.bio += world.bio;      // 돈(금색)은 런과 함께 사라진다. 생명에너지만 남는다.
@@ -5987,7 +6150,7 @@ async function boot() {
       save.bestScore = lastRun;
       bridge.sendScore(save.bestScore);   // 요건: 전송 점수 = 세이브 최고 기록
     }
-    enterLobby();
+    enterHome();
     persist();
   }
 
@@ -6007,30 +6170,41 @@ async function boot() {
     if (mode === 'title') {
       const hit = titleHitTest(x, y, B);
       if (hit.type === 'start') startRun();
-      else if (hit.type === 'lobby') enterLobby();
+      else if (hit.type === 'lobby') enterHome();
       return true;
     }
-    if (mode === 'lobby') {
-      const hit = lobbyHitTest(x, y, save.owned, lobbySel, lobbyView, lobbyPan, B);
+    if (mode === 'home') {
+      const hit = homeHitTest(x, y, B);
       if (hit.type === 'start') startRun();
-      else if (hit.type === 'totals') lobbyView = 'totals';
-      else if (hit.type === 'options') { lobbyView = 'options'; askingReset = false; }
-      else if (hit.type === 'closeOverlay') { lobbyView = 'tree'; askingReset = false; }
-      else if (hit.type === 'resetAsk') askingReset = true;
-      else if (hit.type === 'resetDo') {
-        // 되돌릴 수 없는 동작이라 두 번 눌러야 여기 온다.
-        Object.assign(save, defaultSave());
-        lastRun = 0; lastBio = 0; lastLost = 0; lastWave = 1; lastStage = 1;
-        askingReset = false;
-        lobbyView = 'tree';
-        lobbySel = null;
-        persist();
-      } else if (hit.type === 'select') lobbySel = hit.id;
+      else if (hit.type === 'gene') enterGene();
+      else if (hit.type === 'totals') mode = 'totals';
+      else if (hit.type === 'options') { mode = 'options'; askingReset = false; }
+      return true;
+    }
+    if (mode === 'gene') {
+      const hit = lobbyHitTest(x, y, save.owned, lobbySel, lobbyPan, B);
+      if (hit.type === 'start') startRun();
+      else if (hit.type === 'back') enterHome();
+      else if (hit.type === 'select') lobbySel = hit.id;
       else if (hit.type === 'deselect') lobbySel = null;
       else if (hit.type === 'learn') {
         // 배우기는 정보창에서 한 번 더 눌러야 일어난다. 노드를 탭하는 것만으로는 안 산다.
         const r = learnNode(hit.id, save.bio, save.owned);
         if (r.ok) { save.bio = r.bio; save.owned = r.owned; persist(); }
+      }
+      return true;
+    }
+    if (mode === 'totals' || mode === 'options') {
+      const hit = overlayHitTest(x, y, mode, B);
+      if (hit.type === 'back') enterHome();
+      else if (hit.type === 'resetAsk') askingReset = true;
+      else if (hit.type === 'resetDo') {
+        // 되돌릴 수 없는 동작이라 두 번 눌러야 여기 온다.
+        Object.assign(save, defaultSave());
+        lastRun = 0; lastBio = 0; lastLost = 0; lastWave = 1; lastStage = 1; lastKilledBy = null;
+        lobbySel = null;
+        enterHome();
+        persist();
       }
       return true;
     }
@@ -6117,21 +6291,21 @@ async function boot() {
         options: world.shop.options, money: world.money, stage: world.shop.stage,
         currentWeapon: world.weapon, hp: world.player.hp, maxHp: world.player.maxHp,
       }, elapsed, B);
-    } else if (mode === 'lobby') {
-      if (lobbyView === 'totals') {
-        renderTotals(ctx, { owned: save.owned, bio: save.bio }, elapsed, B);
-      } else if (lobbyView === 'options') {
-        renderOptions(ctx, {
-          askingReset, bio: save.bio,
-          learned: deriveStats(save.owned).learned,
-        }, elapsed, B);
-      } else {
-        renderLobby(ctx, {
-          bio: save.bio, owned: save.owned, best: save.bestScore,
-          lastRun, lastBio, lastLost, lastWave, lastStage,
-          selected: lobbySel, pan: lobbyPan,
-        }, elapsed, B);
-      }
+    } else if (mode === 'home') {
+      renderHome(ctx, {
+        bio: save.bio, owned: save.owned, best: save.bestScore,
+        lastRun, lastBio, lastLost, lastWave, lastStage, killedBy: lastKilledBy,
+      }, elapsed, B);
+    } else if (mode === 'gene') {
+      renderLobby(ctx, {
+        bio: save.bio, owned: save.owned, selected: lobbySel, pan: lobbyPan,
+      }, elapsed, B);
+    } else if (mode === 'totals') {
+      renderTotals(ctx, { owned: save.owned, bio: save.bio }, elapsed, B);
+    } else if (mode === 'options') {
+      renderOptions(ctx, {
+        askingReset, bio: save.bio, learned: deriveStats(save.owned).learned,
+      }, elapsed, B);
     } else {
       renderTitle(ctx, { best: save.bestScore, bio: save.bio }, elapsed, B);
     }
@@ -6177,7 +6351,11 @@ async function boot() {
         save.owned = normalizeOwned(Object.fromEntries(NODES.map((n) => [n.id, n.max])));
         persist(); return Object.keys(save.owned).length;
       },
-      lobby: (view = 'tree', sel = null) => { enterLobby(); lobbyView = view; lobbySel = sel; renderFrame(); return view; },
+      lobby: (view = 'home', sel = null) => {
+        if (view === 'gene') { enterGene(); lobbySel = sel; } else if (view === 'home') enterHome();
+        else { enterHome(); mode = view; }
+        renderFrame(); return mode;
+      },
       pan: (x, y) => { lobbyPan = clampPan({ x, y }, B); renderFrame(); return lobbyPan; },
       bio: (n) => { save.bio += n; return save.bio; },
       give: (id) => { if (world) equipWeapon(world, id); return world?.weapon; },
@@ -6194,7 +6372,7 @@ async function boot() {
       pauseScreen: () => { mode = 'pause'; input.setEnabled(false); renderFrame(); return 'pause'; },
       /** rAF 없이 n 초 진행하고 한 프레임 그린다 (백그라운드 탭 검증용) */
       fast: (sec, autoShop = true) => {
-        if (mode === 'title' || mode === 'lobby') startRun();
+        if (mode !== 'run') startRun();
         for (let i = 0; i < Math.round(sec * 60); i += 1) {
           if (mode === 'shop') { if (autoShop) closeShop(); else break; }
           if (mode !== 'run') break;
