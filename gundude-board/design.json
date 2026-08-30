@@ -1216,7 +1216,7 @@
         "tier": 0,
         "price": 0,
         "dmgMul": 0.62,
-        "intervalMul": 1,
+        "intervalMul": 1.45,
         "count": 1,
         "spread": 0.03,
         "pierce": 1,
@@ -1242,13 +1242,13 @@
         "shape": "pistol"
       },
       "text": {
-        "desc": "6발 · 기본 지급품 · 약하다",
+        "desc": "6발 · 느리다 · 기본 지급품",
         "style": "살아남아서 더 나은 총을 구해라"
       },
       "derived": {
-        "sustainedDps": 4.28,
-        "burstDps": 6,
-        "magSeconds": 3.72
+        "sustainedDps": 3.24,
+        "burstDps": 4.14,
+        "magSeconds": 5.39
       },
       "starter": true
     },

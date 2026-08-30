@@ -277,7 +277,12 @@ const B = {
    * 그래서 보급품은 **플레이어에게서 먼 자리**에 놓고 **수명을 건다.**
    * 가까이 놓거나 안 사라지면 그건 선물이지 결단이 아니다.
    */
-  supplyChance: 0.55,         // 웨이브 시작 시 등장 확률
+  // 【스테이지당 정확히 1회】 확률로 두면 어떤 판은 세 번 나오고 어떤 판은 안 나온다.
+  // 희소해야 "저기로 가고 싶다" 가 성립하는데, 흔해지면 그냥 길목이 된다.
+  // 그래서 스테이지마다 보급 웨이브를 하나 미리 뽑아 두고 거기서만 낸다.
+  // 첫 웨이브는 제외한다 — 규칙도 모르는데 갈 곳부터 생기면 배울 게 없다.
+  supplyFirstWaveInStage: 2,  // 이 순번 이후의 웨이브에서만
+  supplyChance: 1.0,          // 뽑힌 웨이브에서는 반드시 나온다
   supplyLife: 15,             // 수명(초)
   supplyBlink: 4,
   supplyMinDist: 230,         // 플레이어로부터 최소 이 거리 밖에 놓는다
@@ -973,12 +978,14 @@ const WEAPONS = {
   pistol: {
     id: 'pistol', name: '9mm 권총', tier: 0, price: 0,
     real: '반자동 권총 · 기본 지급품',
-    dmgMul: 0.62, intervalMul: 1.0, count: 1, spread: 0.03, pierce: 1,
+    // 연사가 빠르면 "한 발 한 발" 의 무게가 사라진다. 시작 총은 느려야
+    // 다가오는 놈을 보며 "이 탄창으로 될까" 를 세게 된다.
+    dmgMul: 0.62, intervalMul: 1.45, count: 1, spread: 0.03, pierce: 1,
     speed: 520, life: 1.2, blast: 0, arm: 0,
     mag: 6, reload: 1.5, burst: 1, burstGap: 0,
     bloom: 0.020, bloomMax: 0.18, falloff: [200, 380, 0.6],
     kick: 5, flash: 0.7, shake: 0.9, muzzle: 36, shape: 'pistol',
-    desc: '6발 · 기본 지급품 · 약하다',
+    desc: '6발 · 느리다 · 기본 지급품',
     style: '살아남아서 더 나은 총을 구해라',
   },
 
@@ -1269,6 +1276,8 @@ function createWorld(owned = [], b = B) {
     bio: 0,                   // 파랑 — 생명에너지. 로비의 유전자 조작에 쓴다. 세이브에 쌓인다
     bioLost: 0,               // 못 줍고 사라진 조각 — 로비가 "얼마를 흘렸나" 를 보여 준다
     supplyTaken: 0,
+    supplyStage: 0,           // 보급 웨이브를 뽑아 둔 스테이지
+    supplyWave: 0,            // 이번 스테이지에서 보급이 떨어질 웨이브
     damageTaken: 0,
     lastHurt: null,              // 마지막으로 맞은 원인
     killedBy: null,              // 죽인 원인 — 사망 화면이 읽는다
@@ -1965,8 +1974,27 @@ function dropShards(world, x, y, amount, rnd = () => 0.5) {
  * 보급품은 "저기로 가고 싶다" 를 만들기 위한 장치이므로, 반드시 멀리 놓고 수명을 건다.
  * 가까이 놓으면 선물이고, 안 사라지면 결단이 아니다.
  */
+/**
+ * 이번 스테이지의 보급 웨이브를 뽑는다. 스테이지마다 딱 한 번 부른다.
+ * 첫 웨이브와 보스 웨이브는 제외한다 —
+ * 첫 웨이브는 규칙을 배우는 자리이고, 보스 웨이브는 이미 충분히 바쁘다.
+ */
+function pickSupplyWave(world, rnd) {
+  const b = world.b;
+  const stage = stageOf(world.wave, b);
+  if (world.supplyStage === stage) return;
+  world.supplyStage = stage;
+  const first = Math.max(2, b.supplyFirstWaveInStage);
+  const last = b.wavesPerStage - 1;              // 보스 웨이브 바로 앞까지
+  if (last < first) { world.supplyWave = 0; return; }
+  const pick = first + Math.floor(rnd() * (last - first + 1));
+  world.supplyWave = (stage - 1) * b.wavesPerStage + Math.min(last, pick);
+}
+
 function maybeDropSupply(world, rnd) {
   const b = world.b;
+  // 스테이지당 한 번, 미리 뽑아 둔 그 웨이브에서만.
+  if (world.wave !== world.supplyWave) return;
   if (rnd() > b.supplyChance) return;
   const p = world.player;
 
@@ -2178,6 +2206,7 @@ function startWave(world, rnd) {
   world.groupAge = b.groupTimeout;   // 웨이브 첫 그룹은 기다리지 않는다
   world.spawnTimer = 0;
 
+  pickSupplyWave(world, rnd);
   maybeDropSupply(world, rnd);
 
   if (isBossWave(world.wave, b)) {

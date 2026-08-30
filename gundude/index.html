@@ -41,6 +41,7 @@
      11초 뒤 사라지는 띠는 읽을 새도 없고 다시 볼 방법도 없었다. -->
 
 <script type="module">
+globalThis.__LAYOUT__ = {};
 
 /* ===== src/game/art/palette.js ===== */
 /**
@@ -618,6 +619,111 @@ function drawIcon(ctx, name, cx, cy, r, color = '#FFFFFF') {
 const ICON_NAMES = Object.keys(SHAPES);
 
 
+/* ===== src/core/layout.js ===== */
+/**
+ * 레이아웃 덮어쓰기 층.
+ *
+ * 【왜 있나】
+ * 화면 배치를 말로 주고받는 것이 너무 느렸다.
+ * "이 버튼을 조금 아래로" 를 문장으로 옮기고, 코드를 고치고, 빌드하고, 폰에서 보고,
+ * 다시 말로 고치는 왕복이 한 번에 몇 분씩 걸린다.
+ *
+ * 이 게임의 배치는 **전부 순수 함수가 돌려주는 사각형 목록**이다.
+ * 그러니 그 결과를 데이터로 덮어쓸 수 있게 하면, 디렉터가 폰에서 직접 끌어 옮기고
+ * 그 값이 그대로 게임에 들어온다. 왕복이 사라진다.
+ *
+ * 【규칙】
+ *  1. **덮어쓰기가 없으면 코드가 진실이다.** layout.json 이 없어도 게임은 그대로 돈다
+ *  2. 덮어쓰기는 **있는 항목만** 바꾼다. 없는 이름은 조용히 무시한다 —
+ *     코드에서 항목이 사라져도 옛 layout.json 때문에 죽으면 안 된다
+ *  3. 값은 숫자만 받는다. 무엇이 들어와도 throw 하지 않는다
+ *
+ * 【진실 공급원】
+ * 코드가 기본값이고 layout.json 은 그 위에 얹는 패치다.
+ * 그래서 보드에서 옮긴 값은 **언젠가 코드로 굳혀야 한다** — 그때까지는 패치로 산다.
+ */
+
+/** { 화면이름: { 항목이름: {x,y,w,h} } } */
+let OVERRIDES = {};
+
+const KEYS = ['x', 'y', 'w', 'h'];
+
+/** 숫자만 통과시킨다. 문자열 "120" 도 받아 준다 — 폰에서 온 값이라. */
+function num(v) {
+  const n = typeof v === 'string' ? Number(v) : v;
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * 덮어쓰기 표를 갈아 끼운다. 어떤 입력에도 throw 하지 않는다.
+ * @returns {number} 실제로 받아들인 항목 수
+ */
+function setLayoutOverrides(raw) {
+  const next = {};
+  let count = 0;
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    for (const [screen, items] of Object.entries(raw)) {
+      if (!items || typeof items !== 'object' || Array.isArray(items)) continue;
+      const bucket = {};
+      for (const [name, rect] of Object.entries(items)) {
+        if (!rect || typeof rect !== 'object') continue;
+        const out = {};
+        for (const k of KEYS) {
+          const n = num(rect[k]);
+          if (n !== null) out[k] = n;
+        }
+        if (Object.keys(out).length > 0) { bucket[name] = out; count += 1; }
+      }
+      if (Object.keys(bucket).length > 0) next[screen] = bucket;
+    }
+  }
+  OVERRIDES = next;
+  return count;
+}
+
+function getLayoutOverrides() {
+  return OVERRIDES;
+}
+
+function clearLayoutOverrides() {
+  OVERRIDES = {};
+}
+
+/**
+ * 레이아웃 함수의 결과에 덮어쓰기를 얹는다.
+ * `*Layout()` 의 마지막 줄에서 부른다.
+ *
+ * @param {string} screen  화면 이름 ('title' | 'home' | 'gene' | ...)
+ * @param {object} rects   코드가 계산한 사각형 목록
+ */
+function withOverrides(screen, rects) {
+  const patch = OVERRIDES[screen];
+  if (!patch) return rects;
+  const out = { ...rects };
+  for (const [name, rect] of Object.entries(patch)) {
+    // 코드에 없는 항목은 무시한다. 옛 layout.json 이 게임을 깨면 안 된다.
+    if (!out[name] || typeof out[name] !== 'object') continue;
+    out[name] = { ...out[name], ...rect };
+  }
+  return out;
+}
+
+/**
+ * 보드가 읽어 갈 화면 목록.
+ * 여기에 없는 화면은 보드에서 편집할 수 없다 —
+ * 무엇을 편집 가능하게 열지는 **의도적인 결정**이어야 한다.
+ */
+const EDITABLE_SCREENS = [
+  { id: 'title', name: '타이틀', mode: 'title' },
+  { id: 'home', name: '홈', mode: 'home' },
+  { id: 'gene', name: '유전자 조작', mode: 'gene' },
+  { id: 'how', name: '조작법', mode: 'how' },
+  { id: 'shop', name: '보급소', mode: 'shop' },
+  { id: 'pause', name: '일시정지', mode: 'pause' },
+  { id: 'hud', name: '전투 HUD', mode: 'run' },
+];
+
+
 /* ===== src/core/balance.js ===== */
 /**
  * 밸런스 수식 — 단일 진실 공급원.
@@ -698,7 +804,12 @@ const B = {
    * 그래서 보급품은 **플레이어에게서 먼 자리**에 놓고 **수명을 건다.**
    * 가까이 놓거나 안 사라지면 그건 선물이지 결단이 아니다.
    */
-  supplyChance: 0.55,         // 웨이브 시작 시 등장 확률
+  // 【스테이지당 정확히 1회】 확률로 두면 어떤 판은 세 번 나오고 어떤 판은 안 나온다.
+  // 희소해야 "저기로 가고 싶다" 가 성립하는데, 흔해지면 그냥 길목이 된다.
+  // 그래서 스테이지마다 보급 웨이브를 하나 미리 뽑아 두고 거기서만 낸다.
+  // 첫 웨이브는 제외한다 — 규칙도 모르는데 갈 곳부터 생기면 배울 게 없다.
+  supplyFirstWaveInStage: 2,  // 이 순번 이후의 웨이브에서만
+  supplyChance: 1.0,          // 뽑힌 웨이브에서는 반드시 나온다
   supplyLife: 15,             // 수명(초)
   supplyBlink: 4,
   supplyMinDist: 230,         // 플레이어로부터 최소 이 거리 밖에 놓는다
@@ -1398,12 +1509,14 @@ const WEAPONS = {
   pistol: {
     id: 'pistol', name: '9mm 권총', tier: 0, price: 0,
     real: '반자동 권총 · 기본 지급품',
-    dmgMul: 0.62, intervalMul: 1.0, count: 1, spread: 0.03, pierce: 1,
+    // 연사가 빠르면 "한 발 한 발" 의 무게가 사라진다. 시작 총은 느려야
+    // 다가오는 놈을 보며 "이 탄창으로 될까" 를 세게 된다.
+    dmgMul: 0.62, intervalMul: 1.45, count: 1, spread: 0.03, pierce: 1,
     speed: 520, life: 1.2, blast: 0, arm: 0,
     mag: 6, reload: 1.5, burst: 1, burstGap: 0,
     bloom: 0.020, bloomMax: 0.18, falloff: [200, 380, 0.6],
     kick: 5, flash: 0.7, shake: 0.9, muzzle: 36, shape: 'pistol',
-    desc: '6발 · 기본 지급품 · 약하다',
+    desc: '6발 · 느리다 · 기본 지급품',
     style: '살아남아서 더 나은 총을 구해라',
   },
 
@@ -1699,6 +1812,8 @@ function createWorld(owned = [], b = B) {
     bio: 0,                   // 파랑 — 생명에너지. 로비의 유전자 조작에 쓴다. 세이브에 쌓인다
     bioLost: 0,               // 못 줍고 사라진 조각 — 로비가 "얼마를 흘렸나" 를 보여 준다
     supplyTaken: 0,
+    supplyStage: 0,           // 보급 웨이브를 뽑아 둔 스테이지
+    supplyWave: 0,            // 이번 스테이지에서 보급이 떨어질 웨이브
     damageTaken: 0,
     lastHurt: null,              // 마지막으로 맞은 원인
     killedBy: null,              // 죽인 원인 — 사망 화면이 읽는다
@@ -2395,8 +2510,27 @@ function dropShards(world, x, y, amount, rnd = () => 0.5) {
  * 보급품은 "저기로 가고 싶다" 를 만들기 위한 장치이므로, 반드시 멀리 놓고 수명을 건다.
  * 가까이 놓으면 선물이고, 안 사라지면 결단이 아니다.
  */
+/**
+ * 이번 스테이지의 보급 웨이브를 뽑는다. 스테이지마다 딱 한 번 부른다.
+ * 첫 웨이브와 보스 웨이브는 제외한다 —
+ * 첫 웨이브는 규칙을 배우는 자리이고, 보스 웨이브는 이미 충분히 바쁘다.
+ */
+function pickSupplyWave(world, rnd) {
+  const b = world.b;
+  const stage = stageOf(world.wave, b);
+  if (world.supplyStage === stage) return;
+  world.supplyStage = stage;
+  const first = Math.max(2, b.supplyFirstWaveInStage);
+  const last = b.wavesPerStage - 1;              // 보스 웨이브 바로 앞까지
+  if (last < first) { world.supplyWave = 0; return; }
+  const pick = first + Math.floor(rnd() * (last - first + 1));
+  world.supplyWave = (stage - 1) * b.wavesPerStage + Math.min(last, pick);
+}
+
 function maybeDropSupply(world, rnd) {
   const b = world.b;
+  // 스테이지당 한 번, 미리 뽑아 둔 그 웨이브에서만.
+  if (world.wave !== world.supplyWave) return;
   if (rnd() > b.supplyChance) return;
   const p = world.player;
 
@@ -2608,6 +2742,7 @@ function startWave(world, rnd) {
   world.groupAge = b.groupTimeout;   // 웨이브 첫 그룹은 기다리지 않는다
   world.spawnTimer = 0;
 
+  pickSupplyWave(world, rnd);
   maybeDropSupply(world, rnd);
 
   if (isBossWave(world.wave, b)) {
@@ -3908,6 +4043,7 @@ function createBridge() {
 
 
 
+
 /**
  * 렌더 계층 — 시뮬레이션 상태를 그림으로 바꾼다. 상태를 절대 수정하지 않는다.
  *
@@ -3934,12 +4070,24 @@ function loadImages(paths) {
 }
 
 function layoutFor(b = B) {
-  return {
-    stickR: 88,
-    skillX: b.designW - 108, skillY: b.designH - 138, skillR: 62,
+  // 보드에서 옮길 수 있는 것은 사각형이다. 스킬 버튼도 사각형으로 열고 중심을 계산한다.
+  const L = withOverrides('hud', {
+    waveBar: { x: 46, y: 52, w: b.designW - 92, h: 30 },
+    timer:   { x: b.designW / 2 - 90, y: 128, w: 180, h: 40 },
+    money:   { x: 28, y: 128, w: 160, h: 40 },
+    bio:     { x: b.designW - 188, y: 128, w: 160, h: 40 },
+    weapon:  { x: 34, y: b.designH - 210, w: 240, h: 110 },
     // 일시정지 — 전투 동사가 아니라 화면 도구다. 조작 예산(스틱1+버튼1)에 들어가지 않는다.
     // 그래서 엄지가 닿지 않는 상단 구석에 둔다. 실수로 눌리면 안 되기 때문이다.
-    pause: { x: b.designW - 74, y: 34, w: 52, h: 52 },
+    pause:   { x: b.designW - 74, y: 34, w: 52, h: 52 },
+    skill:   { x: b.designW - 170, y: b.designH - 200, w: 124, h: 124 },
+  });
+  return {
+    ...L,
+    stickR: 88,
+    skillX: L.skill.x + L.skill.w / 2,
+    skillY: L.skill.y + L.skill.h / 2,
+    skillR: Math.min(L.skill.w, L.skill.h) / 2,
   };
 }
 
@@ -4584,7 +4732,8 @@ function drawFx(ctx, world) {
 function drawTopBar(ctx, world) {
   const b = world.b;
   const boss = world.enemies.find((e) => e.isBoss && e.state !== ST.FALL);
-  const x = 46, w = b.designW - 92, y = 52, h = 30;
+  const bar = layoutFor(b).waveBar;
+  const x = bar.x, w = bar.w, y = bar.y, h = bar.h;
 
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath(); ctx.roundRect(x, y, w, h, h / 2); ctx.fill();
@@ -4654,19 +4803,19 @@ function drawHud(ctx, world, images) {
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 42px system-ui, sans-serif';
-  outlinedText(ctx, formatTime(world.t), b.designW / 2, 148);
+  outlinedText(ctx, formatTime(world.t), L.timer.x + L.timer.w / 2, L.timer.y + L.timer.h / 2);
 
-  // 재화 두 종류 — 골드(로비용) · 부품(상점용)
+  // 재화 두 종류 — 골드(상점용) · 유전자 조각(로비용)
   ctx.textAlign = 'left';
   ctx.font = 'bold 26px system-ui, sans-serif';
-  drawGold(ctx, 40, 148, 24, 3);
-  outlinedText(ctx, `${world.money}`, 58, 148, 6);
-  bioIcon(ctx, b.designW - 100, 148, 22);
-  outlinedText(ctx, `${world.bio}`, b.designW - 84, 148, 6);
+  drawGold(ctx, L.money.x + 12, L.money.y + L.money.h / 2, 24, 3);
+  outlinedText(ctx, `${world.money}`, L.money.x + 30, L.money.y + L.money.h / 2, 6);
+  bioIcon(ctx, L.bio.x + L.bio.w - 72, L.bio.y + L.bio.h / 2, 22);
+  outlinedText(ctx, `${world.bio}`, L.bio.x + L.bio.w - 56, L.bio.y + L.bio.h / 2, 6);
 
   // 무기·탄창 — 지금 몇 발 남았나가 판단의 재료다
   const wep = weaponById(world.weapon);
-  const bx = 34, by = b.designH - 196;
+  const bx = L.weapon.x, by = L.weapon.y + 14;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 22px system-ui, sans-serif';
   outlinedText(ctx, wep.name, bx, by, 6);
@@ -4919,6 +5068,7 @@ function renderWorld(ctx, world, images, t, stick, cam = null) {
 
 
 
+
 /**
  * 게임 밖 화면들 — 타이틀 · 로비(영구 성장) · 상점(인게임 무기).
  *
@@ -4940,13 +5090,19 @@ const inside = (r, x, y) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y +
 /* ============================================================ 타이틀 */
 
 function titleLayout(b = B) {
-  return {
-    start:  { x: 84, y: 790, w: b.designW - 168, h: 118 },
-    lobby:  { x: 84, y: 928, w: b.designW - 168, h: 88 },
+  // 그리기 좌표를 여기로 끌어모았다. 보드에서 끌어 옮기려면 배치가 데이터여야 한다.
+  return withOverrides('title', {
+    logo:    { x: 0, y: 200, w: b.designW, h: 160 },   // GUN / DUDE 두 줄
+    tagline: { x: 0, y: 430, w: b.designW, h: 30 },
+    hero:    { x: b.designW / 2 - 70, y: 560, w: 140, h: 140 },
+    best:    { x: b.designW / 2 - 150, y: 716, w: 300, h: 58 },
+    start:   { x: 84, y: 790, w: b.designW - 168, h: 118 },
+    lobby:   { x: 84, y: 928, w: b.designW - 168, h: 88 },
     // 조작법은 명시적인 버튼이어야 한다. 하단에 흐르는 띠는 읽을 새도 없이 사라진다.
-    how:    { x: 84, y: 1030, w: (b.designW - 180) / 2, h: 74 },
+    how:     { x: 84, y: 1030, w: (b.designW - 180) / 2, h: 74 },
     options: { x: b.designW / 2 + 6, y: 1030, w: (b.designW - 180) / 2, h: 74 },
-  };
+    mobs:    { x: 0, y: 1150, w: b.designW, h: 100 },  // 배경 잡몹 띠
+  });
 }
 
 function titleHitTest(x, y, b = B) {
@@ -4965,43 +5121,48 @@ function renderTitle(ctx, state, t, b = B) {
   // 배경 — 잡몹들이 아래에서 어슬렁거린다
   for (let i = 0; i < 7; i += 1) {
     const kx = ['boyz', 'demonz', 'machinz'][i % 3];
-    const px = 60 + i * 96 + Math.sin(t * 0.6 + i) * 22;
+    const px = L.mobs.x + 60 + i * (L.mobs.w / 7.5) + Math.sin(t * 0.6 + i) * 22;
     ctx.save();
     ctx.globalAlpha = 0.30;
     drawCharacter(ctx, {
-      kind: kx, x: px, y: 1180 + (i % 3) * 26, size: 44, seed: i * 17 + 3, facing: 1,
+      kind: kx, x: px, y: L.mobs.y + 30 + (i % 3) * 26, size: 44, seed: i * 17 + 3, facing: 1,
       pose: { walk: t * 2 + i, moving: true, lean: 0, state: null, prog: 0 },
     });
     ctx.restore();
   }
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lg = L.logo;
   ctx.font = 'bold 104px system-ui, sans-serif';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 20;
-  ctx.strokeText('GUN', b.designW / 2, 250);
-  ctx.strokeText('DUDE', b.designW / 2, 352);
+  const lgx = lg.x + lg.w / 2;
+  ctx.strokeText('GUN', lgx, lg.y + 50);
+  ctx.strokeText('DUDE', lgx, lg.y + 152);
   ctx.fillStyle = PALETTE.parchment;
-  ctx.fillText('GUN', b.designW / 2, 250);
-  ctx.fillText('DUDE', b.designW / 2, 352);
+  ctx.fillText('GUN', lgx, lg.y + 50);
+  ctx.fillText('DUDE', lgx, lg.y + 152);
 
   // 부제는 제목 아래로 충분히 띄운다. 104px 글자의 아랫단이 여기까지 내려온다.
   ctx.font = 'bold 24px system-ui, sans-serif';
   ctx.fillStyle = '#9FB4C4';
-  ctx.fillText('절벽에서 살아남기', b.designW / 2, 430);
+  ctx.fillText('절벽에서 살아남기', L.tagline.x + L.tagline.w / 2, L.tagline.y + L.tagline.h / 2);
 
   // 총을 수평으로 들면 얼굴을 가로지른다. 타이틀에서는 총구를 살짝 내린다.
   drawCharacter(ctx, {
-    kind: 'dude', x: b.designW / 2, y: 690, size: 130, seed: 1337, facing: 1,
+    kind: 'dude', x: L.hero.x + L.hero.w / 2, y: L.hero.y + L.hero.h,
+    size: L.hero.w * 0.93, seed: 1337, facing: 1,
     aimA: 0.30,
     pose: { walk: 0, moving: false, lean: 0, state: null, prog: 0 },
   });
 
   if (state.best > 0) {
-    panel(ctx, b.designW / 2 - 150, 716, 300, 58, PALETTE.parchment, 4, 29);
+    const bp = L.best;
+    panel(ctx, bp.x, bp.y, bp.w, bp.h, PALETTE.parchment, 4, bp.h / 2);
     ctx.font = 'bold 28px system-ui, sans-serif';
     ctx.fillStyle = PALETTE.woodDark;
-    ctx.fillText(`최고 기록  ${formatTime(state.best)}`, b.designW / 2, 746);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`최고 기록  ${formatTime(state.best)}`, bp.x + bp.w / 2, bp.y + bp.h / 2);
   }
 
   const pulse = 1 + Math.sin(t * 3.2) * 0.014;
@@ -5052,7 +5213,12 @@ function renderTitle(ctx, state, t, b = B) {
 /* ============================================================ 조작법 */
 
 function howLayout(b = B) {
-  return { close: { x: b.designW - 88, y: 24, w: 64, h: 64 } };
+  return withOverrides('how', {
+    close:  { x: b.designW - 88, y: 24, w: 64, h: 64 },
+    header: { x: 0, y: 30, w: b.designW, h: 80 },
+    pad:    { x: 28, y: 118, w: b.designW - 56, h: 132 },
+    rules:  { x: 28, y: 274, w: b.designW - 56, h: 92 },   // 첫 카드. 아래로 102 씩 쌓인다
+  });
 }
 
 function howHitTest(x, y, b = B) {
@@ -5167,7 +5333,7 @@ const BIG_R = 31;           // 기능 해금 노드
 /** 트리를 보여 주는 창. 이 밖으로는 안 그린다. */
 function treeViewport(b = B) {
   // 트리 전용 화면이 되었으니 창을 크게 쓴다. 위에 기록 카드가 없다.
-  return { x: 22, y: 100, w: b.designW - 44, h: 540 };
+  return lobbyLayout(b).tree;
 }
 
 /** 격자 좌표 → 트리 내부 좌표 (패닝 전). */
@@ -5204,7 +5370,7 @@ function clampPan(pan, b = B) {
  *   설정    — 사운드·초기화. 성장과 무관하다
  */
 function homeLayout(b = B) {
-  return {
+  return withOverrides('home', {
     record: { x: 22, y: 24, w: b.designW - 44, h: 168 },
     purse:  { x: 22, y: 206, w: b.designW - 44, h: 66 },
     gene:   { x: 40, y: 300, w: b.designW - 80, h: 118 },
@@ -5212,7 +5378,9 @@ function homeLayout(b = B) {
     totals:  { x: 40, y: b.designH - 118, w: (b.designW - 116) / 3, h: 78 },
     how:     { x: 40 + (b.designW - 116) / 3 + 18, y: b.designH - 118, w: (b.designW - 116) / 3, h: 78 },
     options: { x: 40 + ((b.designW - 116) / 3 + 18) * 2, y: b.designH - 118, w: (b.designW - 116) / 3, h: 78 },
-  };
+    hero:    { x: b.designW / 2 - 69, y: 682, w: 138, h: 138 },
+    tagline: { x: 0, y: 872, w: b.designW, h: 28 },
+  });
 }
 
 function homeHitTest(x, y, b = B) {
@@ -5224,7 +5392,8 @@ function homeHitTest(x, y, b = B) {
 }
 
 function lobbyLayout(b = B) {
-  return {
+  return withOverrides('gene', {
+    tree:    { x: 22, y: 100, w: b.designW - 44, h: 540 },
     back:    { x: 22, y: 22, w: 74, h: 62 },
     purse:   { x: b.designW - 244, y: 22, w: 222, h: 62 },
     panel:   { x: 22, y: 654, w: b.designW - 44, h: 424 },
@@ -5233,7 +5402,7 @@ function lobbyLayout(b = B) {
     close:   { x: b.designW - 88, y: 24, w: 64, h: 64 },
     reset:   { x: 70, y: 520, w: b.designW - 140, h: 86 },
     confirm: { x: 70, y: 640, w: b.designW - 140, h: 78 },
-  };
+  });
 }
 
 /** 유전자 조작 화면의 탭 판정. */
@@ -6010,11 +6179,19 @@ const CARD_H = 150;
 const CARD_TOP = 250;
 
 function shopLayout(options, b = B) {
+  // 카드는 개수가 유동이라 항목으로 못 연다. 대신 **첫 카드 자리와 간격**을 연다.
+  const L = withOverrides('shop', {
+    header:  { x: 0, y: 50, w: b.designW, h: 56 },
+    current: { x: 30, y: 112, w: b.designW - 60, h: 116 },
+    card0:   { x: 30, y: CARD_TOP, w: b.designW - 60, h: CARD_H },
+    skip:    { x: 30, y: b.designH - 118, w: b.designW - 60, h: 86 },
+  });
+  const gap = L.card0.h + 14;
   return {
+    ...L,
     cards: options.map((o, i) => ({
-      i, x: 30, y: CARD_TOP + i * (CARD_H + 14), w: b.designW - 60, h: CARD_H,
+      i, x: L.card0.x, y: L.card0.y + i * gap, w: L.card0.w, h: L.card0.h,
     })),
-    skip: { x: 30, y: b.designH - 118, w: b.designW - 60, h: 86 },
   };
 }
 
@@ -6232,10 +6409,14 @@ function renderShop(ctx, state, t, b = B) {
 /* ============================================================ 일시정지 */
 
 function pauseLayout(b = B) {
-  return {
+  return withOverrides('pause', {
+    weapon: { x: 30, y: 130, w: b.designW - 60, h: 104 },
+    bomb:   { x: 30, y: 248, w: b.designW - 60, h: 96 },
+    genes:  { x: 30, y: 358, w: b.designW - 60, h: 128 },
+    got:    { x: 30, y: 500, w: b.designW - 60, h: 132 },
     resume: { x: 40, y: b.designH - 210, w: b.designW - 80, h: 86 },
     quit:   { x: 40, y: b.designH - 110, w: b.designW - 80, h: 68 },
-  };
+  });
 }
 
 function pauseScreenHitTest(x, y, b = B) {
@@ -6268,8 +6449,8 @@ function renderPause(ctx, state, t, b = B) {
   ctx.fillText(`${formatTime(world.t)} 생존 중 · 웨이브 ${world.wave}`, b.designW / 2, 100);
 
   // --- 무기 ---
-  let y = 130;
-  panel(ctx, 30, y, b.designW - 60, 104, PALETTE.parchment, 5, 20);
+  let y = L.weapon.y;
+  panel(ctx, L.weapon.x, y, L.weapon.w, L.weapon.h, PALETTE.parchment, 5, 20);
   optionIcon(ctx, { type: 'weapon', id: world.weapon }, 80, y + 52, 36);
   ctx.textAlign = 'left';
   ctx.font = 'bold 15px system-ui, sans-serif';
@@ -6283,8 +6464,8 @@ function renderPause(ctx, state, t, b = B) {
   ctx.fillText(`${world.player.mag} / ${world.shot.mag}발 · 재장전 ${world.shot.reload.toFixed(1)}초`, 130, y + 82);
 
   // --- 폭탄 4축 ---
-  y += 118;
-  panel(ctx, 30, y, b.designW - 60, 96, '#FFFDF6', 5, 20);
+  y = L.bomb.y;
+  panel(ctx, L.bomb.x, y, L.bomb.w, L.bomb.h, '#FFFDF6', 5, 20);
   ctx.font = 'bold 17px system-ui, sans-serif';
   ctx.fillStyle = BRANCH.bomb.color;
   ctx.fillText('폭탄', 52, y + 24);
@@ -6305,7 +6486,7 @@ function renderPause(ctx, state, t, b = B) {
   });
 
   // --- 유전자 ---
-  y += 110;
+  y = L.genes.y;
   // 단계형 트리 — "몇 개" 가 아니라 "몇 단계" 를 센다
   const own = normalizeOwned(owned);
   const perBranch = {};
@@ -6317,10 +6498,10 @@ function renderPause(ctx, state, t, b = B) {
     if (br) perBranch[br] = (perBranch[br] ?? 0) + lv;
   }
   const maxSteps = NODES.reduce((s2, n) => s2 + (n.id === 'root' ? 0 : n.max), 0);
-  panel(ctx, 30, y, b.designW - 60, 128, '#FFFDF6', 5, 20);
+  panel(ctx, L.genes.x, y, L.genes.w, L.genes.h, '#FFFDF6', 5, 20);
   ctx.font = 'bold 17px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(`유전자  ${learned} / ${maxSteps} 단계`, 52, y + 24);
+  ctx.fillText(`유전자  ${learned} / ${maxSteps} 단계`, L.genes.x + 22, y + 24);
   Object.keys(BRANCH).forEach((key, i) => {
     const cnt = perBranch[key] ?? 0;
     const cx = 52 + (i % 2) * ((b.designW - 104) / 2);
@@ -6334,9 +6515,9 @@ function renderPause(ctx, state, t, b = B) {
   });
 
   // --- 이번 판 획득 ---
-  y += 142;
+  y = L.got.y;
   const got = world.acquired ?? [];
-  panel(ctx, 30, y, b.designW - 60, 132, '#FFFDF6', 5, 20);
+  panel(ctx, L.got.x, y, L.got.w, L.got.h, '#FFFDF6', 5, 20);
   ctx.font = 'bold 17px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
   ctx.fillText('이번 판에 얻은 것', 52, y + 24);
@@ -6358,7 +6539,7 @@ function renderPause(ctx, state, t, b = B) {
   }
 
   // --- 세이브가 무엇을 남기는가 ---
-  y += 144;
+  y = L.got.y + L.got.h + 12;
   ctx.font = '14px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillStyle = '#8FA6B6';
@@ -6535,6 +6716,7 @@ function createInput(canvas, getViewport, layout, onTap = null, onPan = null) {
 
 
 
+
 /**
  * 화면 네 개: 타이틀 → 런 → (웨이브 돌파) 상점 → 런 → (사망) 로비 → 런
  *
@@ -6562,6 +6744,24 @@ function resize() {
   viewport = computeViewport(B.designW, B.designH, w, h, dpr, 2);
   applyViewport(canvas, viewport);
   return true;
+}
+
+/**
+ * data/layout.json 을 읽어 배치를 덮어쓴다.
+ *
+ * 실패해도 조용히 넘어간다 — 이건 편의 기능이지 게임의 전제가 아니다.
+ * 아티팩트 빌드는 이 파일을 인라인해 두므로 fetch 없이 바로 들어온다.
+ */
+async function loadLayoutPatch() {
+  try {
+    // 아티팩트 빌드는 값을 심어 둔다 (빈 객체라도). 그러면 fetch 를 안 한다.
+    if (globalThis.__LAYOUT__ !== undefined) { setLayoutOverrides(globalThis.__LAYOUT__); return; }
+    const res = await fetch('data/layout.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    setLayoutOverrides(await res.json());
+  } catch {
+    /* 없으면 코드 기본값으로 간다 */
+  }
 }
 
 function drawLoadingFrame() {
@@ -6604,6 +6804,10 @@ async function boot() {
   bridge.firstFrameReady();
 
   const [raw, images] = await Promise.all([bridge.loadRaw(), loadImages(IMAGES)]);
+
+  // 레이아웃 패치 — 디렉터가 보드에서 옮긴 배치.
+  // **없으면 코드가 그대로 진실이다.** 못 읽어도 게임은 멀쩡히 돌아야 한다.
+  await loadLayoutPatch();
   const save = migrateSave(raw);
   let lastPersisted = migrateSave(raw);
 
