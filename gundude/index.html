@@ -1,12 +1,3 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#28475F">
 <title>GUN DUDE</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&display=swap">
 <style>
@@ -58,9 +49,6 @@
     #hint { animation: none; opacity: .55; }
   }
 </style>
-</head>
-<body>
-
 
 <div id="stage"><canvas id="game"></canvas></div>
 <div id="loading">loading</div>
@@ -333,36 +321,106 @@ const B = {
   },
 
   /**
-   * 보스 — Sergent Dude.
-   * 패턴을 읽고 피한 뒤 경직에 딜을 넣는 구조. 경직이 곧 공략 창이다.
-   * 그래서 모든 패턴의 recover 는 windup 보다 길다.
+   * 보스 3종 — 스테이지마다 돌아가며 나온다.
+   *
+   * 셋을 나눈 기준은 체력·피해가 아니라 **플레이어에게 던지는 질문**이다.
+   * 숫자만 다른 보스는 새 고민을 만들지 않으므로 기각한다 (설계 기둥 6번).
+   *
+   *   Sergent  — "붙을까, 뗄까"       근접 압박. 돌진·내려찍기가 거리를 강요한다.
+   *   Doc      — "보스냐, 부하냐"     자동 조준이라 부하가 내 탄을 가져간다.
+   *   Siren    — "어디에 서서 쏠까"   정지사격 게임에서 멈출 자리를 지운다.
+   *
+   * 공통 규칙: **모든 패턴의 recover > windup.** 그 차이가 유일한 공략 창이다.
    */
-  boss: {
-    r: 46,
-    speed: 58,
-    hpBase: 130,
-    hpPerWave: 210,
-    money: 45,
-    bio: 14,
-    approachSec: 1.15,          // 패턴 사이 추격 구간
-    patterns: {
-      charge: {
-        windup: 1.00, active: 0.55, recover: 2.00,
-        speed: 640, damage: 18,
-        tell: '몸을 뒤로 젖힌다 — 옆으로 피해라',
-      },
-      slam: {
-        windup: 0.90, active: 0.28, recover: 1.45,
-        radius: 158, damage: 16,
-        tell: '위로 솟구친다 — 멀어져라',
-      },
-      volley: {
-        windup: 0.95, active: 0.30, recover: 1.20,
-        shots: 5, spread: 0.9, damage: 10, shotSpeed: 290,
-        tell: '총구를 든다 — 부채꼴 밖으로',
+  bosses: [
+    {
+      id: 'sergent', name: 'SERGENT DUDE', title: '돌격 상사',
+      question: '붙을까, 뗄까',
+      r: 46, speed: 58, hpBase: 130, hpPerWave: 210, money: 45, bio: 14,
+      approachSec: 1.15,
+      cycle: ['charge', 'volley', 'slam', 'charge', 'slam', 'volley'],
+      patterns: {
+        charge: {
+          kind: 'charge', windup: 1.00, active: 0.55, recover: 2.00,
+          speed: 640, damage: 18,
+          tell: '몸을 뒤로 젖힌다 — 옆으로 피해라',
+        },
+        slam: {
+          kind: 'slam', windup: 0.90, active: 0.28, recover: 1.45,
+          radius: 158, damage: 16,
+          tell: '위로 솟구친다 — 멀어져라',
+        },
+        volley: {
+          // 부채꼴을 넓혔다. 맵 절반 거리면 탄 사이로 걸어 나갈 공간이 생긴다.
+          kind: 'volley', windup: 0.95, active: 0.30, recover: 1.20,
+          shots: 5, spread: 1.70, damage: 10, shotSpeed: 290,
+          tell: '총구를 든다 — 탄 사이로 빠져라',
+        },
       },
     },
-  },
+    {
+      id: 'doc', name: 'DOC DUDE', title: '야전 군의관',
+      question: '보스를 때릴까, 부하를 정리할까',
+      r: 44, speed: 52, hpBase: 150, hpPerWave: 230, money: 55, bio: 18,
+      approachSec: 1.30,
+      cycle: ['summon', 'volley', 'slam', 'summon', 'charge', 'volley'],
+      patterns: {
+        summon: {
+          // 자동 조준이 약점이 되는 순간. 부하가 살아 있으면 보스에게 딜이 안 들어간다.
+          kind: 'summon', windup: 1.20, active: 0.20, recover: 1.80,
+          count: 3, damage: 0,
+          tell: '팔을 치켜든다 — 부하가 떨어진다',
+        },
+        volley: {
+          kind: 'volley', windup: 1.05, active: 0.30, recover: 1.35,
+          shots: 4, spread: 1.55, damage: 9, shotSpeed: 265,
+          tell: '총구를 든다 — 탄 사이로 빠져라',
+        },
+        slam: {
+          kind: 'slam', windup: 1.00, active: 0.26, recover: 1.55,
+          radius: 138, damage: 14,
+          tell: '위로 솟구친다 — 멀어져라',
+        },
+        charge: {
+          kind: 'charge', windup: 1.10, active: 0.50, recover: 1.95,
+          speed: 560, damage: 15,
+          tell: '몸을 뒤로 젖힌다 — 옆으로 피해라',
+        },
+      },
+    },
+    {
+      id: 'siren', name: 'SIREN DUDE', title: '포격 관제',
+      question: '어디에 서서 쏠까',
+      r: 42, speed: 66, hpBase: 140, hpPerWave: 220, money: 60, bio: 20,
+      approachSec: 1.00,
+      cycle: ['beam', 'spiral', 'charge', 'beam', 'spiral', 'slam'],
+      patterns: {
+        beam: {
+          // 예고선이 길게 깔린다. 보스는 움직이지 않으므로 선 밖으로 걸어 나가면 된다.
+          // 대신 예고가 길어서, 그 시간을 딜로 쓸지 회피로 쓸지 고민이 생긴다.
+          kind: 'beam', windup: 1.30, active: 0.35, recover: 1.90,
+          width: 34, length: 760, damage: 20,
+          tell: '조준선을 긋는다 — 선 밖으로',
+        },
+        spiral: {
+          // 회전 난사. 탄 사이 간격이 곧 안전 통로다. 서 있으면 반드시 맞는다.
+          kind: 'spiral', windup: 1.05, active: 0.90, recover: 1.55,
+          shots: 14, turn: 3.1, damage: 8, shotSpeed: 240,
+          tell: '팽이처럼 돈다 — 계속 움직여라',
+        },
+        charge: {
+          kind: 'charge', windup: 0.95, active: 0.55, recover: 1.80,
+          speed: 680, damage: 16,
+          tell: '몸을 뒤로 젖힌다 — 옆으로 피해라',
+        },
+        slam: {
+          kind: 'slam', windup: 0.85, active: 0.26, recover: 1.40,
+          radius: 150, damage: 15,
+          tell: '위로 솟구친다 — 멀어져라',
+        },
+      },
+    },
+  ],
 
   // --- 웨이브 편성 ---
   // 시간이 흘러서 적이 나오는 게 아니라, 정해진 수를 다 잡아야 다음 웨이브가 온다.
@@ -380,7 +438,18 @@ const B = {
   groupMaxLate: 4,            // 후반 자동 편성의 그룹 최대 크기
   maxAliveEnemies: 40,
   intermissionSec: 1.6,       // 웨이브 사이 숨 돌리는 시간
+  stageClearSec: 2.9,         // 보스 처치 → 수송선 → 상점. 보상 전에 한 박자 쉰다
+  deathCineSec: 2.0,          // 사망 슬로우모션. 왜 죽었는지 볼 시간을 준다
 };
+
+// 하위 호환 — 기존 코드가 참조하던 단수 boss 는 1번 보스를 가리킨다.
+B.boss = B.bosses[0];
+
+/** 스테이지 n 에 나오는 보스 정의. 스테이지가 돌면 보스도 돌아간다. */
+function bossForStage(stage, b = B) {
+  const i = (Math.max(1, Math.floor(stage)) - 1) % b.bosses.length;
+  return b.bosses[i];
+}
 
 /** 웨이브 n 의 적 1마리 기본 체력 (종족 배율 적용 전). */
 function enemyHp(wave, b = B) {
@@ -460,9 +529,11 @@ function waveInStage(n, b = B) {
   return ((Math.max(1, Math.floor(n)) - 1) % b.wavesPerStage) + 1;
 }
 
-/** 보스 체력 — 웨이브가 올라갈수록 두꺼워진다. */
+/** 보스 체력 — 스테이지가 올라갈수록 두꺼워진다. 보스마다 기본값이 다르다. */
 function bossHp(wave, b = B) {
-  return b.boss.hpBase + b.boss.hpPerWave * (stageOf(wave, b) - 1);
+  const stage = stageOf(wave, b);
+  const def = bossForStage(stage, b);
+  return def.hpBase + def.hpPerWave * (stage - 1);
 }
 
 /** 적 한 마리를 죽이는 데 필요한 탄 수 — "잘 안 죽는다" 를 확인하는 지표. */
@@ -941,6 +1012,13 @@ function rollShopOptions(stageIndex, world, rnd) {
  *  3. 그래서 매 순간의 질문은 하나다 — "지금 멈춰서 쏠까, 피할까."
  */
 
+/** 적 이름 — 사망 화면에 "무엇에 당했나" 를 적기 위한 표기. */
+const KIND_NAME = Object.freeze({
+  boyz: 'Boyz',
+  demonz: 'Demonz',
+  machinz: 'Machinz',
+});
+
 const ST = Object.freeze({
   DROP: 'drop',
   CHASE: 'chase',
@@ -985,6 +1063,8 @@ function createWorld(owned = [], b = B) {
     money: stats.startMoney,  // 금색 — 인게임 상점에서 쓴다. 런이 끝나면 사라진다
     bio: 0,                   // 파랑 — 생명에너지. 로비의 유전자 조작에 쓴다. 세이브에 쌓인다
     damageTaken: 0,
+    lastHurt: null,              // 마지막으로 맞은 원인
+    killedBy: null,              // 죽인 원인 — 사망 화면이 읽는다
     // --- 웨이브 ---
     // 시간이 아니라 처치로 넘어간다. 다 잡아야 다음이 온다.
     wave: 1,
@@ -999,6 +1079,9 @@ function createWorld(owned = [], b = B) {
     intermission: 0,             // >0 이면 다음 웨이브까지 숨 돌리는 중
     bossActive: false,
     shop: null,                  // 보스를 잡으면 열린다
+    pendingShop: null,           // 스테이지 클리어 연출이 끝나야 상점이 뜬다
+    cine: null,                  // 연출 진행 중 (연출 동안 게임은 멈춘다)
+    acquired: [],                // 이번 판에 상점에서 산 것 — 일시정지 화면이 읽는다
     stageIndex: 0,
   };
   w.groupAge = b.groupTimeout;
@@ -1077,16 +1160,26 @@ function makeEnemy(world, rnd) {
   };
 }
 
+/**
+ * 보스는 스테이지마다 다른 놈이 온다.
+ * 정의를 개체에 붙여 둔다 — 렌더·AI 가 전역 표를 다시 뒤지지 않게.
+ */
 function makeBoss(world, rnd) {
   const b = world.b;
+  const def = bossForStage(stageOf(world.wave, b), b);
   const pos = spawnPos(rnd, b, 0.55);
   const hp = bossHp(world.wave, b);
   return {
     id: world.nextId++, kind: 'boss', isBoss: true,
+    bossId: def.id, name: def.name, title: def.title,
+    patterns: def.patterns, cycle: def.cycle,
+    speed: def.speed, approachSec: def.approachSec,
+    money: def.money, bio: def.bio,
     x: pos.x, y: pos.y, vx: 0, vy: 0,
-    r: b.boss.r, hp, maxHp: hp,
+    r: def.r, hp, maxHp: hp,
     state: ST.DROP, stateT: 0,
     pattern: null, patternIdx: 0,
+    spin: 0, spinShots: 0,          // 회전 난사용
     aimX: 1, aimY: 0, walk: 0, moving: false, facing: 1,
     hitFlash: 0, hasHit: false,
     seed: (world.nextId * 2654435761) >>> 0,
@@ -1097,6 +1190,16 @@ function makeBoss(world, rnd) {
 
 function stepWorld(world, dt, input, rnd) {
   if (world.over || world.shop) { stepFx(world, dt); return world; }
+  // 연출 중에는 시뮬레이션을 멈춘다. 이펙트만 흐른다.
+  if (world.cine) {
+    world.cine.t += dt;
+    stepFx(world, dt);
+    if (world.cine.t >= world.cine.life) {
+      world.cine = null;
+      if (world.pendingShop) { world.shop = world.pendingShop; world.pendingShop = null; }
+    }
+    return world;
+  }
   const b = world.b;
   const p = world.player;
   const shot = world.shot;
@@ -1243,7 +1346,7 @@ function stepWorld(world, dt, input, rnd) {
     s.x += s.vx * dt; s.y += s.vy * dt; s.life -= dt;
     const rr = s.r + b.playerR;
     if (p.invuln <= 0 && d2(s.x, s.y, p.x, p.y) <= rr * rr) {
-      hurtPlayer(world, s.dmg);
+      hurtPlayer(world, s.dmg, s.src ?? '날아온 탄');
       world.hostileShots.splice(i, 1);
       continue;
     }
@@ -1371,6 +1474,7 @@ function stepEnemy(world, e, dt) {
           x: e.x + Math.cos(a) * e.r, y: e.y + Math.sin(a) * e.r,
           vx: Math.cos(a) * k.shotSpeed, vy: Math.sin(a) * k.shotSpeed,
           dmg: enemyDamage(world.wave, k.damage, b), r: 8, life: 2.4,
+          src: `${KIND_NAME.machinz} 의 미사일`,
         });
         world.fx.push({ type: 'muzzle', x: e.x, y: e.y, a, t: 0, life: 0.1, s: 0.8 });
       }
@@ -1382,7 +1486,10 @@ function stepEnemy(world, e, dt) {
     }
     if (!e.hasHit && k.attack !== 'shoot') {
       const rr = e.r + b.playerR + 6;
-      if (d2(e.x, e.y, p.x, p.y) <= rr * rr) { e.hasHit = true; hurtPlayer(world, enemyDamage(world.wave, k.damage, b)); }
+      if (d2(e.x, e.y, p.x, p.y) <= rr * rr) {
+        e.hasHit = true;
+        hurtPlayer(world, enemyDamage(world.wave, k.damage, b), KIND_NAME[e.kind] ?? '적');
+      }
     }
     if (e.stateT >= k.strike) setState(e, ST.RECOVER);
   } else if (e.state === ST.RECOVER) {
@@ -1398,16 +1505,15 @@ function stepEnemy(world, e, dt) {
 
 /* -------------------------------------------------------------- 보스 행동 */
 
-const BOSS_CYCLE = ['charge', 'volley', 'slam', 'charge', 'slam', 'volley'];
-
 /**
  * 보스 — 패턴을 읽고 피한 뒤 경직에 딜을 넣는 구조.
  * 모든 패턴은 경직이 예비동작보다 길다. 그 차이가 곧 공략 창이다.
+ *
+ * 패턴 표는 개체(e.patterns)에 붙어 있다. 스테이지마다 다른 보스가 오기 때문이다.
  */
 function stepBoss(world, e, dt, rnd) {
   const b = world.b;
   const p = world.player;
-  const BOSS = b.boss;
   if (e.state === ST.FALL) return;
   if (e.state === ST.DROP) {
     if (e.stateT >= b.spawnDropSec * 1.6) { setState(e, ST.CHASE); e.pattern = null; }
@@ -1422,61 +1528,66 @@ function stepBoss(world, e, dt, rnd) {
   let mx = 0, my = 0;
 
   if (e.state === ST.CHASE) {
-    mx = ux * BOSS.speed; my = uy * BOSS.speed;
-    if (e.stateT >= BOSS.approachSec) {
-      e.pattern = BOSS_CYCLE[e.patternIdx % BOSS_CYCLE.length];
+    mx = ux * e.speed; my = uy * e.speed;
+    if (e.stateT >= e.approachSec) {
+      e.pattern = e.cycle[e.patternIdx % e.cycle.length];
       e.patternIdx += 1;
       e.aimX = ux; e.aimY = uy;
       setState(e, ST.WINDUP);
     }
   } else if (e.state === ST.WINDUP) {
     // 예비동작 중 정지 — 어떤 패턴인지 보고 대응할 시간을 준다
-    const pat = BOSS.patterns[e.pattern];
-    if (e.pattern === 'charge' || e.pattern === 'volley') {
-      // 돌진·탄막은 마지막 순간까지 조준을 아주 느리게 따라간다
-      e.aimX += (ux - e.aimX) * Math.min(1, dt * 1.1);
-      e.aimY += (uy - e.aimY) * Math.min(1, dt * 1.1);
+    const pat = e.patterns[e.pattern];
+    if (pat.kind === 'charge' || pat.kind === 'volley' || pat.kind === 'beam') {
+      // 조준을 아주 느리게 따라간다. 마지막 순간에 움직이면 빠져나갈 수 있다.
+      const trail = pat.kind === 'beam' ? 0.8 : 1.1;
+      e.aimX += (ux - e.aimX) * Math.min(1, dt * trail);
+      e.aimY += (uy - e.aimY) * Math.min(1, dt * trail);
     }
     if (e.stateT >= pat.windup) {
       setState(e, ST.STRIKE);
-      if (e.pattern === 'volley') {
-        const a0 = Math.atan2(e.aimY, e.aimX);
-        for (let i = 0; i < pat.shots; i += 1) {
-          const f = (i / (pat.shots - 1)) * 2 - 1;
-          const a = a0 + f * pat.spread * 0.5;
-          world.hostileShots.push({
-            x: e.x + Math.cos(a) * e.r * 0.8, y: e.y + Math.sin(a) * e.r * 0.8,
-            vx: Math.cos(a) * pat.shotSpeed, vy: Math.sin(a) * pat.shotSpeed,
-            dmg: enemyDamage(world.wave, pat.damage, b), r: 10, life: 2.6,
-          });
-        }
-        world.shake = Math.max(world.shake, 5);
-      }
+      if (pat.kind === 'volley') fireVolley(world, e, pat);
+      else if (pat.kind === 'summon') summonMinions(world, e, pat, rnd);
+      else if (pat.kind === 'spiral') { e.spin = Math.atan2(e.aimY, e.aimX); e.spinShots = 0; }
     }
   } else if (e.state === ST.STRIKE) {
-    const pat = BOSS.patterns[e.pattern];
-    if (e.pattern === 'charge') {
+    const pat = e.patterns[e.pattern];
+    if (pat.kind === 'charge') {
       mx = e.aimX * pat.speed; my = e.aimY * pat.speed;
       if (!e.hasHit) {
         const rr = e.r + b.playerR;
-        if (d2(e.x, e.y, p.x, p.y) <= rr * rr) { e.hasHit = true; hurtPlayer(world, enemyDamage(world.wave, pat.damage, b)); }
+        if (d2(e.x, e.y, p.x, p.y) <= rr * rr) {
+          e.hasHit = true;
+          hurtPlayer(world, enemyDamage(world.wave, pat.damage, b), `${e.name} 의 돌진`);
+        }
       }
-    } else if (e.pattern === 'slam' && !e.hasHit && e.stateT >= pat.active * 0.5) {
+    } else if (pat.kind === 'slam' && !e.hasHit && e.stateT >= pat.active * 0.5) {
       e.hasHit = true;
       world.fx.push({ type: 'slam', x: e.x, y: e.y, t: 0, life: 0.45, r: pat.radius });
       world.shake = Math.max(world.shake, 12);
-      if (d <= pat.radius + b.playerR) hurtPlayer(world, enemyDamage(world.wave, pat.damage, b));
+      if (d <= pat.radius + b.playerR) hurtPlayer(world, enemyDamage(world.wave, pat.damage, b), `${e.name} 의 내려찍기`);
+    } else if (pat.kind === 'beam' && !e.hasHit) {
+      e.hasHit = true;
+      fireBeam(world, e, pat);
+    } else if (pat.kind === 'spiral') {
+      // 회전하며 일정 간격으로 뿌린다. 탄 사이 간격이 안전 통로다.
+      const gap = pat.active / pat.shots;
+      while (e.spinShots < pat.shots && e.stateT >= gap * (e.spinShots + 1)) {
+        const a = e.spin + pat.turn * ((e.spinShots + 1) / pat.shots);
+        pushHostileShot(world, e, a, pat.shotSpeed, pat.damage, 9, 2.8);
+        e.spinShots += 1;
+      }
     }
     if (e.stateT >= pat.active) setState(e, ST.RECOVER);
   } else if (e.state === ST.RECOVER) {
-    const pat = BOSS.patterns[e.pattern];
+    const pat = e.patterns[e.pattern];
     if (e.stateT >= pat.recover) setState(e, ST.CHASE);
   }
 
   const ndx = mx * dt, ndy = my * dt;
   const np = clampToArena(e.x + ndx, e.y + ndy, e.r * 0.6, b);
   // 돌진 중 벽에 부딪히면 즉시 경직으로 — 다크소울식 "빗나간 큰 기술" 의 대가
-  if (e.state === ST.STRIKE && e.pattern === 'charge'
+  if (e.state === ST.STRIKE && e.patterns[e.pattern]?.kind === 'charge'
       && Math.hypot(np.x - (e.x + ndx), np.y - (e.y + ndy)) > 0.5) {
     setState(e, ST.RECOVER);
     world.shake = Math.max(world.shake, 10);
@@ -1486,6 +1597,62 @@ function stepBoss(world, e, dt, rnd) {
   advanceWalk(e, e.x - (np.x - ndx), e.y - (np.y - ndy), e.r * 1.5);
 }
 
+function pushHostileShot(world, e, a, speed, dmg, r, life) {
+  world.hostileShots.push({
+    x: e.x + Math.cos(a) * e.r * 0.8, y: e.y + Math.sin(a) * e.r * 0.8,
+    vx: Math.cos(a) * speed, vy: Math.sin(a) * speed,
+    dmg: enemyDamage(world.wave, dmg, world.b), r, life,
+    src: `${e.name} 의 탄막`,
+  });
+}
+
+function fireVolley(world, e, pat) {
+  const a0 = Math.atan2(e.aimY, e.aimX);
+  for (let i = 0; i < pat.shots; i += 1) {
+    const f = pat.shots === 1 ? 0 : (i / (pat.shots - 1)) * 2 - 1;
+    pushHostileShot(world, e, a0 + f * pat.spread * 0.5, pat.shotSpeed, pat.damage, 10, 2.6);
+  }
+  world.shake = Math.max(world.shake, 5);
+}
+
+/**
+ * 관통 광선 — 보스는 움직이지 않는다. 예고선 밖으로 걸어 나가면 안 맞는다.
+ * 탄이 아니라 즉발 판정이므로, 판정을 선분과 원의 거리로 한 번만 본다.
+ */
+function fireBeam(world, e, pat) {
+  const a = Math.atan2(e.aimY, e.aimX);
+  const p = world.player;
+  const ex = Math.cos(a), ey = Math.sin(a);
+  const rx = p.x - e.x, ry = p.y - e.y;
+  const proj = rx * ex + ry * ey;                     // 선 위로의 사영
+  const perp = Math.abs(rx * ey - ry * ex);           // 선까지의 수직 거리
+  world.fx.push({ type: 'beam', x: e.x, y: e.y, a, t: 0, life: 0.42, w: pat.width, len: pat.length });
+  world.shake = Math.max(world.shake, 11);
+  if (proj > 0 && proj < pat.length && perp <= pat.width * 0.5 + world.b.playerR) {
+    hurtPlayer(world, enemyDamage(world.wave, pat.damage, world.b), `${e.name} 의 관통 광선`);
+  }
+}
+
+/**
+ * 부하 소환 — 자동 조준이 약점이 되는 순간이다.
+ * 부하가 살아 있으면 내 탄이 그쪽으로 간다. 보스를 때리려면 먼저 정리해야 한다.
+ * 소환된 적은 웨이브 집계에 넣지 않는다 (보스 웨이브의 진행 바는 보스 체력이다).
+ */
+function summonMinions(world, e, pat, rnd) {
+  const b = world.b;
+  for (let i = 0; i < pat.count; i += 1) {
+    if (world.enemies.length >= b.maxAliveEnemies) break;
+    const m = makeEnemy(world, rnd);
+    const a = (i / pat.count) * Math.PI * 2 + rnd() * 0.9;
+    const dist = e.r + 70 + rnd() * 40;
+    const np = clampToArena(e.x + Math.cos(a) * dist, e.y + Math.sin(a) * dist, m.r + 8, b);
+    m.x = np.x; m.y = np.y;
+    m.summoned = true;
+    world.enemies.push(m);
+  }
+  world.shake = Math.max(world.shake, 6);
+}
+
 /** 보스가 지금 맞아도 되는 상태인가 — UI 가 "지금이야" 를 표시하는 근거 */
 function bossVulnerable(e) {
   return e?.isBoss && e.state === ST.RECOVER;
@@ -1493,9 +1660,14 @@ function bossVulnerable(e) {
 
 /* -------------------------------------------------------------- 공통 */
 
-function hurtPlayer(world, dmg) {
+/**
+ * 피격. src 는 "무엇에 맞았나" 다.
+ * 사망 연출이 이걸 읽어 화면에 띄운다 — 예고 없는 죽음을 만들지 않기 위한 기록이다.
+ */
+function hurtPlayer(world, dmg, src = '적') {
   const p = world.player;
   if (p.invuln > 0) return;
+  world.lastHurt = src;
   const actual = dmg * (1 - (world.stats.damageReduction ?? 0));
   p.hp -= actual;
   world.damageTaken += actual;
@@ -1503,12 +1675,12 @@ function hurtPlayer(world, dmg) {
   p.hurtFlash = 0.3;
   world.shake = Math.max(world.shake, 8);
   world.fx.push({ type: 'playerHit', x: p.x, y: p.y, t: 0, life: 0.32 });
-  if (p.hp <= 0) { p.hp = 0; world.over = true; }
+  if (p.hp <= 0) { p.hp = 0; world.over = true; world.killedBy = src; }
 }
 
 function awardKill(world, e, how, rnd) {
   world.kills += 1;
-  const src = e.isBoss ? world.b.boss : world.b.kinds[e.kind];
+  const src = e.isBoss ? { money: e.money, bio: e.bio } : world.b.kinds[e.kind];
   const gm = Math.max(1, Math.round(src.money * world.stats.moneyMul));
   const gb = Math.max(1, Math.round(src.bio * world.stats.bioMul));
   world.money += gm;
@@ -1522,7 +1694,7 @@ function awardKill(world, e, how, rnd) {
     advanceWave(world, rnd ?? (() => 0.5));
     return;
   }
-  if (!world.bossActive) world.waveKilled += 1;
+  if (!world.bossActive && !e.summoned) world.waveKilled += 1;
 }
 
 /** 상점을 닫고 다음 스테이지의 첫 웨이브로. main 이 부른다. */
@@ -1536,6 +1708,7 @@ function beginNextWave(world) {
 /** 상점 효과 적용 — 순수하지 않은 진입점. */
 function applyShopOption(world, opt) {
   const p = world.player;
+  world.acquired.push({ type: opt.type, name: opt.name, desc: opt.desc });
   if (opt.type === 'weapon') equipWeapon(world, opt.id);
   else if (opt.type === 'heal') p.hp = Math.min(p.maxHp, p.hp + Math.ceil(p.maxHp * opt.amount));
   else if (opt.type === 'maxhp') {
@@ -1617,10 +1790,15 @@ function stepWave(world, dt, rnd) {
 function advanceWave(world, rnd) {
   const b = world.b;
   if (isBossWave(world.wave, b)) {
-    world.shop = {
+    // 보스가 남긴 부하는 절벽 아래로 쓸어낸다. 클리어 연출은 깨끗해야 한다.
+    for (const e of world.enemies) if (e.state !== ST.FALL) { e.state = ST.FALL; e.stateT = 0; }
+    world.hostileShots.length = 0;
+    world.pendingShop = {
       stage: stageOf(world.wave, b),
       options: rollShopOptions(world.stageIndex, world, rnd),
     };
+    // 수송선이 내려오고 스테이지 돌파가 찍히는 시간. 보상 전에 한 박자 쉰다.
+    world.cine = { type: 'stageClear', t: 0, life: b.stageClearSec, stage: stageOf(world.wave, b) };
     world.stageIndex += 1;
     return;
   }
@@ -1969,13 +2147,101 @@ function drawGun(ctx, x, y, len, dir, seed, lw, kind = 'rifle') {
   ctx.restore();
 }
 
+/**
+ * 보스 표식.
+ *
+ * 이전에는 붉은 사선 하나를 그어 뒀는데, 그게 뭘 뜻하는지 화면에서 읽히지 않았다.
+ * 표식은 장식이 아니라 **그 보스가 무엇인지** 를 말해야 한다. 셋을 이렇게 나눈다:
+ *   sergent — 계급장 셰브런 3줄. 저놈이 우두머리라는 뜻이다.
+ *   doc     — 의무 십자. 붉은 십자는 제네바 협약 보호 표장이라 쓰지 않고 초록으로 그린다.
+ *   siren   — 삼각 경고 표식 + 안테나. 포격을 부르는 관제라는 뜻이다.
+ */
+function bossMark(ctx, id, cx, cy, w, h, lw) {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (id === 'doc') {
+    const s = w * 0.17;
+    ctx.fillStyle = '#3E9E5B';
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = lw * 0.9;
+    ctx.beginPath();
+    ctx.roundRect(cx - s * 0.30, cy - s, s * 0.60, s * 2, s * 0.16);
+    ctx.roundRect(cx - s, cy - s * 0.30, s * 2, s * 0.60, s * 0.16);
+    ctx.fill(); ctx.stroke();
+  } else if (id === 'siren') {
+    // 가슴의 삼각 경고
+    const s = w * 0.20;
+    ctx.fillStyle = PALETTE.xpAmber;
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = lw;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - s);
+    ctx.lineTo(cx + s * 0.92, cy + s * 0.66);
+    ctx.lineTo(cx - s * 0.92, cy + s * 0.66);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillRect(cx - s * 0.10, cy - s * 0.42, s * 0.20, s * 0.62);
+    ctx.beginPath(); ctx.arc(cx, cy + s * 0.40, s * 0.13, 0, Math.PI * 2); ctx.fill();
+  } else {
+    // 계급장 셰브런 — 세 줄이 겹쳐 올라간다
+    ctx.strokeStyle = PALETTE.goldDark;
+    ctx.lineWidth = lw * 1.5;
+    for (let i = 0; i < 3; i += 1) {
+      const y = cy - h * 0.02 + i * h * 0.055;
+      const half = w * 0.20;
+      ctx.beginPath();
+      ctx.moveTo(cx - half, y + half * 0.55);
+      ctx.lineTo(cx, y - half * 0.30);
+      ctx.lineTo(cx + half, y + half * 0.55);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = lw * 0.5;
+    for (let i = 0; i < 3; i += 1) {
+      const y = cy - h * 0.02 + i * h * 0.055;
+      const half = w * 0.20;
+      ctx.beginPath();
+      ctx.moveTo(cx - half, y + half * 0.55);
+      ctx.lineTo(cx, y - half * 0.30);
+      ctx.lineTo(cx + half, y + half * 0.55);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+/** 관제 보스의 안테나 — 실루엣만으로 다른 놈임을 알린다. */
+function antenna(ctx, cx, topY, w, lw) {
+  ctx.save();
+  ctx.strokeStyle = PALETTE.slate;
+  ctx.lineWidth = lw * 1.1;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx + w * 0.24, topY);
+  ctx.lineTo(cx + w * 0.34, topY - w * 0.42);
+  ctx.stroke();
+  ctx.fillStyle = PALETTE.hpRed;
+  ctx.strokeStyle = PALETTE.ink;
+  ctx.lineWidth = lw * 0.7;
+  ctx.beginPath();
+  ctx.arc(cx + w * 0.34, topY - w * 0.46, w * 0.055, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
 const PRESET = {
   boyz:    { color: PALETTE.boyz,    eyes: 'dot',   band: false, teeth: 3, gun: null },
   demonz:  { color: PALETTE.demonz,  eyes: 'cross', band: false, teeth: 3, gun: null },
   machinz: { color: PALETTE.machinz, eyes: 'dot',   band: true,  teeth: 0, gun: 'rifle' },   // 잡몹은 소총 고정
   dude:    { color: PALETTE.dude,    eyes: 'dot',   band: false, teeth: 3, gun: 'rifle' },   // spec.gunShape 로 덮어쓴다
-  boss:    { color: PALETTE.dude,    eyes: 'cross', band: true,  teeth: 4, gun: null, sash: true },
+  // 보스 3종 — 색·눈·무기·표식이 전부 다르다. 실루엣만 보고 누군지 알아야 한다.
+  boss_sergent: { color: PALETTE.dude,    eyes: 'cross', band: false, teeth: 4, gun: 'lmg',   mark: 'sergent' },
+  boss_doc:     { color: '#DDEFE2',       eyes: 'dot',   band: false, teeth: 2, gun: 'pistol', mark: 'doc' },
+  boss_siren:   { color: PALETTE.machinz, eyes: 'cross', band: true,  teeth: 0, gun: 'amr',    mark: 'siren' },
 };
+PRESET.boss = PRESET.boss_sergent;
 
 /**
  * 공격 상태에 따른 자세 변형.
@@ -2051,17 +2317,7 @@ function drawCharacter(ctx, spec) {
   if (preset.band) bodyBand(ctx, 0, cy + h * 0.06, w, seed, lw * 0.8);
   else if (preset.teeth > 0) mouthFrown(ctx, 0, cy + h * 0.06, w * 0.70, seed, preset.teeth, preset.color);
 
-  if (preset.sash) {
-    // 보스 표식 — 붉은 띠. 한눈에 잡몹과 구분되어야 한다.
-    ctx.save();
-    ctx.strokeStyle = PALETTE.hpRed;
-    ctx.lineWidth = lw * 1.6;
-    ctx.beginPath();
-    ctx.moveTo(-w * 0.46, cy - h * 0.02);
-    ctx.lineTo(w * 0.46, cy + h * 0.16);
-    ctx.stroke();
-    ctx.restore();
-  }
+  if (preset.mark === 'siren') antenna(ctx, 0, cy - h * 0.5, w, lw);
 
   const gunKind = spec.gunShape ?? preset.gun;
   if (gunKind) {
@@ -2073,12 +2329,19 @@ function drawCharacter(ctx, spec) {
     ctx.translate(0, pivotY);
     if (spec.aimA !== undefined && spec.aimA !== null) {
       ctx.rotate(spec.aimA);
+      // 왼쪽을 겨누면 회전각이 ±90° 를 넘어 총이 뒤집힌 채로 그려졌다.
+      // 총구는 조준 방향을 그대로 향하되, 총 자체는 위아래를 되돌려 항상 제대로 든다.
+      // (조준축 기준 거울상 — 실제 사수가 총을 반대편으로 겨눌 때 하는 것과 같다)
+      if (Math.cos(spec.aimA) < 0) ctx.scale(1, -1);
       drawGun(ctx, w * 0.30, 0, w * 1.20, 1, seed, lw * 0.75, gunKind);
     } else {
       drawGun(ctx, facing * w * 0.30, 0, w * 1.20, facing, seed, lw * 0.75, gunKind);
     }
     ctx.restore();
   }
+
+  // 보스 표식은 총보다 위에 그린다. 총이 가슴을 가려 표식이 안 보였다.
+  if (preset.mark) bossMark(ctx, preset.mark, 0, cy + h * 0.26, w, h, lw);
 
   ctx.restore();
 
@@ -2124,7 +2387,7 @@ function threatOf(world, memory) {
     if (e.state === ST.FALL || e.state === ST.DROP) continue;
     const dx = p.x - e.x, dy = p.y - e.y;
     const d = Math.hypot(dx, dy) || 1;
-    const k = e.isBoss ? (b.boss.patterns[e.pattern] ?? {}) : b.kinds[e.kind];
+    const k = e.isBoss ? (e.patterns?.[e.pattern] ?? {}) : b.kinds[e.kind];
 
     // 이 적이 지금 나를 때릴 수 있는 거리인가
     const reach = e.r + b.playerR + (k.lunge ?? 0) + (e.isBoss ? 90 : 24);
@@ -2813,7 +3076,18 @@ function loadImages(paths) {
 }
 
 function layoutFor(b = B) {
-  return { stickR: 88, skillX: b.designW - 108, skillY: b.designH - 138, skillR: 62 };
+  return {
+    stickR: 88,
+    skillX: b.designW - 108, skillY: b.designH - 138, skillR: 62,
+    // 일시정지 — 전투 동사가 아니라 화면 도구다. 조작 예산(스틱1+버튼1)에 들어가지 않는다.
+    // 그래서 엄지가 닿지 않는 상단 구석에 둔다. 실수로 눌리면 안 되기 때문이다.
+    pause: { x: b.designW - 74, y: 34, w: 52, h: 52 },
+  };
+}
+
+function pauseHitTest(x, y, b = B) {
+  const r = layoutFor(b).pause;
+  return x >= r.x - 8 && x <= r.x + r.w + 8 && y >= r.y - 8 && y <= r.y + r.h + 8;
 }
 
 /** 탄약 칸 게이지 — 체력바 바로 아래. 재장전 중에는 전부 비어 보인다. */
@@ -2914,6 +3188,13 @@ function poseOf(e, k) {
   return { walk: e.walk, moving: e.moving, lean: 0, state: e.state, prog: dur ? Math.min(1, e.stateT / dur) : 0 };
 }
 
+/** 아레나 타원 안으로 자른다. 절벽 밖까지 뻗는 연출은 화면만 어지럽힌다. */
+function clipArena(ctx) {
+  ctx.beginPath();
+  ctx.ellipse(B.arenaX, B.arenaY, B.arenaRx, B.arenaRy, 0, 0, Math.PI * 2);
+  ctx.clip();
+}
+
 function drawTelegraph(ctx, e, k, isBoss) {
   if (e.state === ST.WINDUP) {
     const p = Math.min(1, e.stateT / k.windup);
@@ -2926,10 +3207,71 @@ function drawTelegraph(ctx, e, k, isBoss) {
     ctx.arc(e.x, e.y, e.r * (2.0 - p * 0.8), 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
-    // 돌진·박치기는 어디로 오는지 선으로 보여준다
-    if (k.lunge > 0 || e.pattern === 'charge') {
+    // 광선 — 예고선이 곧 안전선이다. 선 밖으로 걸어 나가면 안 맞는다.
+    if (k.kind === 'beam') {
       const a = Math.atan2(e.aimY, e.aimX);
-      const len = e.pattern === 'charge' ? 300 : k.lunge + e.r * 2;
+      ctx.save();
+      clipArena(ctx);       // 절벽 밖으로 새는 예고선은 읽기만 방해한다
+      ctx.translate(e.x, e.y);
+      ctx.rotate(a);
+      ctx.globalAlpha = 0.14 + p * 0.30;
+      ctx.fillStyle = PALETTE.hpRed;
+      ctx.fillRect(0, -k.width / 2, k.length, k.width);
+      ctx.globalAlpha = 0.5 + p * 0.5;
+      ctx.strokeStyle = PALETTE.hpRed;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([14, 10]);
+      ctx.beginPath();
+      ctx.moveTo(0, -k.width / 2); ctx.lineTo(k.length, -k.width / 2);
+      ctx.moveTo(0, k.width / 2); ctx.lineTo(k.length, k.width / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+    // 회전 난사 — 어느 쪽으로 도는지 화살표로 알린다
+    if (k.kind === 'spiral') {
+      const a0 = Math.atan2(e.aimY, e.aimX);
+      ctx.globalAlpha = 0.25 + p * 0.45;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r * 2.6, a0, a0 + k.turn);
+      ctx.stroke();
+    }
+    // 소환 — 부하가 어디 떨어지는지 미리 찍는다
+    if (k.kind === 'summon') {
+      ctx.globalAlpha = 0.25 + p * 0.4;
+      ctx.lineWidth = 4;
+      for (let i = 0; i < k.count; i += 1) {
+        const a = (i / k.count) * Math.PI * 2;
+        const d = e.r + 88;
+        ctx.beginPath();
+        ctx.arc(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, 20 * (0.5 + p * 0.5), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    // 원거리 잡몹 — 총구에서 조준선이 뻗는다. 미사일이 어디로 오는지 미리 보여야 한다.
+    if (k.attack === 'shoot') {
+      const a = Math.atan2(e.aimY, e.aimX);
+      ctx.globalAlpha = 0.20 + p * 0.55;
+      ctx.strokeStyle = PALETTE.hpRed;
+      ctx.lineWidth = 2 + p * 3;
+      ctx.setLineDash([12, 9]);
+      ctx.beginPath();
+      ctx.moveTo(e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r);
+      ctx.lineTo(e.x + Math.cos(a) * (k.range ?? 320), e.y + Math.sin(a) * (k.range ?? 320));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // 발사 직전 총구가 달아오른다
+      ctx.globalAlpha = p * p;
+      ctx.fillStyle = '#FFE08A';
+      ctx.beginPath();
+      ctx.arc(e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r, 4 + p * 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 돌진·박치기는 어디로 오는지 선으로 보여준다
+    if (k.lunge > 0 || k.kind === 'charge') {
+      const a = Math.atan2(e.aimY, e.aimX);
+      const len = k.kind === 'charge' ? 300 : k.lunge + e.r * 2;
       ctx.globalAlpha = 0.18 + p * 0.35;
       ctx.lineWidth = e.r * 0.9;
       ctx.beginPath();
@@ -2937,7 +3279,7 @@ function drawTelegraph(ctx, e, k, isBoss) {
       ctx.lineTo(e.x + Math.cos(a) * len, e.y + Math.sin(a) * len);
       ctx.stroke();
     }
-    if (e.pattern === 'slam') {
+    if (k.kind === 'slam') {
       ctx.globalAlpha = 0.15 + p * 0.35;
       ctx.lineWidth = 5;
       ctx.beginPath();
@@ -2961,7 +3303,7 @@ function drawTelegraph(ctx, e, k, isBoss) {
 
 function drawEnemy(ctx, world, e) {
   const b = world.b;
-  const k = e.isBoss ? (b.boss.patterns[e.pattern] ?? { windup: 1, recover: 1 }) : b.kinds[e.kind];
+  const k = e.isBoss ? (e.patterns?.[e.pattern] ?? { windup: 1, recover: 1 }) : b.kinds[e.kind];
   ctx.save();
 
   if (e.state === ST.FALL) {
@@ -3000,13 +3342,23 @@ function drawEnemy(ctx, world, e) {
   }
 
   drawCharacter(ctx, {
-    kind: e.isBoss ? 'boss' : e.kind,
+    kind: e.isBoss ? `boss_${e.bossId ?? 'sergent'}` : e.kind,
     x: e.x, y: e.y + e.r * 0.85,
     size: e.r * (e.isBoss ? 1.55 : 1.75),
     seed: e.seed, facing: e.facing,
     pose: (e.state === ST.DROP || e.state === ST.FALL) ? null : poseOf(e, k),
     flash: e.hitFlash,
   });
+
+  if (e.summoned && e.state !== ST.FALL) {
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = '#3E9E5B'; ctx.lineWidth = 3;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r * 1.35, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
 
   if (e.state !== ST.DROP && e.state !== ST.FALL && e.hp < e.maxHp && !e.isBoss) {
     headBar(ctx, e.x, e.y - e.r * 2.3, e.r * 2.0, e.hp, e.maxHp);
@@ -3165,6 +3517,18 @@ function drawFx(ctx, world) {
       ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, Math.PI * 2); ctx.stroke();
       ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4 * (1 - k) + 1;
       ctx.beginPath(); ctx.arc(f.x, f.y, r, 0, Math.PI * 2); ctx.stroke();
+    } else if (f.type === 'beam') {
+      ctx.globalAlpha = 1 - k;
+      clipArena(ctx);
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.a);
+      const wgrow = f.w * (1 + (1 - k) * 0.5);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, -wgrow / 2, f.len, wgrow);
+      ctx.fillStyle = PALETTE.hpRed;
+      ctx.fillRect(0, -wgrow * 0.28, f.len, wgrow * 0.56);
+      ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3;
+      ctx.strokeRect(0, -wgrow / 2, f.len, wgrow);
     } else if (f.type === 'slam') {
       ctx.globalAlpha = 0.9 * (1 - k);
       ctx.strokeStyle = PALETTE.hpRed; ctx.lineWidth = 18 * (1 - k) + 4;
@@ -3206,8 +3570,13 @@ function drawFx(ctx, world) {
       ctx.font = 'bold 68px system-ui, sans-serif';
       outlinedText(ctx, isBossWave(f.n) ? 'BOSS' : `WAVE ${f.n}`, B.designW / 2, B.designH * 0.34, 10);
     } else if (f.type === 'playerHit') {
-      ctx.globalAlpha = (1 - k) * 0.5;
-      ctx.fillStyle = PALETTE.hpRed;
+      // 화면 전체를 빨갛게 덮으면 정작 무엇에 맞았는지가 안 보인다.
+      // 가장자리만 물들여 "맞았다" 를 알리고 중앙은 열어 둔다.
+      const g2 = ctx.createRadialGradient(B.designW / 2, B.designH / 2, B.designH * 0.16,
+        B.designW / 2, B.designH / 2, B.designH * 0.58);
+      g2.addColorStop(0, 'rgba(221,49,49,0)');
+      g2.addColorStop(1, `rgba(221,49,49,${((1 - k) * 0.62).toFixed(3)})`);
+      ctx.fillStyle = g2;
       ctx.fillRect(0, 0, B.designW, B.designH);
     }
     ctx.restore();
@@ -3251,10 +3620,26 @@ function drawTopBar(ctx, world) {
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 20px system-ui, sans-serif';
   const label = boss
-    ? 'SERGENT DUDE'
+    ? (boss.name ?? 'BOSS')
     : `스테이지 ${stageOf(world.wave, b)} — ${waveInStage(world.wave, b)}/${b.wavesPerStage}` +
       `   ${world.waveKilled} / ${world.waveTotal}`;
   outlinedText(ctx, label, b.designW / 2, y + h / 2 + 1, 6);
+
+  // 보스가 예비동작에 들어가면 무엇을 하려는지 글로 알린다.
+  // "예고 없는 죽음 금지" 는 그림만으로는 부족할 때가 있다.
+  if (boss && boss.state === ST.WINDUP) {
+    const pat = boss.patterns?.[boss.pattern];
+    if (pat?.tell) {
+      ctx.font = 'bold 19px system-ui, sans-serif';
+      outlinedText(ctx, pat.tell, b.designW / 2, y + h + 20, 6);
+    }
+  } else if (boss) {
+    ctx.font = 'bold 16px system-ui, sans-serif';
+    ctx.fillStyle = '#F0C0C0';
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 5; ctx.lineJoin = 'round';
+    const sub = boss.title ?? '';
+    if (sub) { ctx.strokeText(sub, b.designW / 2, y + h + 18); ctx.fillText(sub, b.designW / 2, y + h + 18); }
+  }
 
   if (!boss && isBossWave(world.wave + 1, b)) {
     ctx.font = 'bold 16px system-ui, sans-serif';
@@ -3356,11 +3741,114 @@ function drawHud(ctx, world, images) {
     ctx.beginPath(); ctx.arc(L.skillX, L.skillY, L.skillR * 1.14, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
+
+  // 일시정지 버튼
+  const pb = L.pause;
+  ctx.save();
+  ctx.globalAlpha = 0.82;
+  ctx.fillStyle = PALETTE.parchment;
+  ctx.beginPath(); ctx.roundRect(pb.x, pb.y, pb.w, pb.h, 14); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(pb.x, pb.y, pb.w, pb.h, 14); ctx.stroke();
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillRect(pb.x + pb.w * 0.30, pb.y + pb.h * 0.26, pb.w * 0.12, pb.h * 0.48);
+  ctx.fillRect(pb.x + pb.w * 0.58, pb.y + pb.h * 0.26, pb.w * 0.12, pb.h * 0.48);
+  ctx.restore();
+}
+
+/**
+ * 사망 연출 — 죽은 자리로 화면이 파고들고, 무엇에 당했는지 글로 남는다.
+ *
+ * 설계 기둥 2번("죽음에는 읽을 수 있는 이유가 있어야 한다")은 그 순간에 지켜져야 한다.
+ * 다음 화면으로 곧장 넘겨 버리면 플레이어는 자기가 왜 죽었는지 모른 채 로비에 앉는다.
+ */
+function drawDeathCine(ctx, world, k) {
+  const b = world.b;
+  ctx.save();
+  // 가장자리부터 어두워진다 — 시선이 죽은 자리에 모인다
+  const g = ctx.createRadialGradient(b.designW / 2, b.designH / 2, b.designH * 0.10,
+    b.designW / 2, b.designH / 2, b.designH * 0.62);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, `rgba(6,12,18,${(0.30 + k * 0.55).toFixed(3)})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, b.designW, b.designH);
+
+  const fade = Math.min(1, Math.max(0, (k - 0.25) / 0.35));
+  ctx.globalAlpha = fade;
+  // 글자 뒤에 판을 깐다. 확대된 캐릭터와 겹치면 사인이 안 읽힌다.
+  const py = b.designH * 0.26, ph = 176;
+  ctx.fillStyle = 'rgba(8,14,20,0.62)';
+  ctx.beginPath(); ctx.roundRect(40, py, b.designW - 80, ph, 24); ctx.fill();
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 58px system-ui, sans-serif';
+  outlinedText(ctx, '쓰러졌다', b.designW / 2, py + 50, 11);
+  if (world.killedBy) {
+    // 조사를 붙이면 "스스로 물러났다에 당했다" 같은 문장이 나온다.
+    // 이미 문장으로 끝나는 사유는 그대로 쓴다.
+    const line = /다$/.test(world.killedBy) ? world.killedBy : `${world.killedBy}에 당했다`;
+    ctx.font = 'bold 23px system-ui, sans-serif';
+    outlinedText(ctx, line, b.designW / 2, py + 104, 7);
+  }
+  ctx.font = 'bold 20px system-ui, sans-serif';
+  outlinedText(ctx, `${formatTime(world.t)} 생존 · 웨이브 ${world.wave}`, b.designW / 2, py + 142, 6);
+  ctx.restore();
+}
+
+/**
+ * 스테이지 돌파 연출 — 보스를 잡고 상점이 열리기 전의 한 박자.
+ * 수송선이 내려와 보급을 떨군다. 보상 화면이 갑자기 튀어나오지 않게 하는 장치다.
+ */
+function drawStageClear(ctx, world, images, cine) {
+  const b = world.b;
+  const k = Math.min(1, cine.t / cine.life);
+  ctx.save();
+
+  // 화면이 서서히 가라앉는다
+  ctx.globalAlpha = Math.min(0.55, k * 1.4);
+  ctx.fillStyle = '#101E2A';
+  ctx.fillRect(0, 0, b.designW, b.designH);
+  ctx.restore();
+
+  // 수송선 — 위에서 내려와 잠시 머물고 다시 오른다
+  const drop = k < 0.55 ? (k / 0.55) : 1 - (k - 0.55) / 0.45 * 0.35;
+  const hy = -120 + drop * 430;
+  if (images.heli) {
+    const sc = 250 / images.heli.width;
+    ctx.save();
+    ctx.translate(b.designW / 2 + Math.sin(cine.t * 2.2) * 10, hy);
+    ctx.drawImage(images.heli, -images.heli.width * sc / 2, -images.heli.height * sc / 2,
+      images.heli.width * sc, images.heli.height * sc);
+    ctx.restore();
+    // 하강 기류
+    ctx.save();
+    ctx.globalAlpha = 0.18 * drop;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(b.designW / 2 - 60, hy + 30);
+    ctx.lineTo(b.designW / 2 + 60, hy + 30);
+    ctx.lineTo(b.designW / 2 + 150, b.arenaY + 80);
+    ctx.lineTo(b.designW / 2 - 150, b.arenaY + 80);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  const e = Math.min(1, k * 3.2) * Math.min(1, (1 - k) * 4.5);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, e);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 30px system-ui, sans-serif';
+  outlinedText(ctx, '보스 격파', b.designW / 2, b.designH * 0.52, 8);
+  ctx.font = 'bold 64px system-ui, sans-serif';
+  outlinedText(ctx, `스테이지 ${cine.stage} 돌파`, b.designW / 2, b.designH * 0.60, 11);
+  ctx.font = 'bold 22px system-ui, sans-serif';
+  outlinedText(ctx, '보급이 내려온다', b.designW / 2, b.designH * 0.66, 6);
+  ctx.restore();
 }
 
 /* ------------------------------------------------------------- 전체 */
 
-function renderWorld(ctx, world, images, t, stick) {
+function renderWorld(ctx, world, images, t, stick, cam = null) {
   const b = world.b;
   world.__stick = stick;
 
@@ -3368,6 +3856,12 @@ function renderWorld(ctx, world, images, t, stick) {
   ctx.fillRect(0, 0, b.designW, b.designH);
 
   ctx.save();
+  // 카메라 — 사망 연출에서 죽은 자리로 파고든다
+  if (cam && cam.zoom !== 1) {
+    ctx.translate(b.designW / 2, b.designH / 2);
+    ctx.scale(cam.zoom, cam.zoom);
+    ctx.translate(-cam.x, -cam.y);
+  }
   if (world.shake > 0.2) {
     const s = world.shake;
     ctx.translate((hash01(Math.floor(t * 90), 1) - 0.5) * s, (hash01(Math.floor(t * 90), 2) - 0.5) * s);
@@ -3376,7 +3870,8 @@ function renderWorld(ctx, world, images, t, stick) {
   drawArena(ctx, world, images.arena);
   drawEdgeWarning(ctx, world);
 
-  if (images.heli) {
+  // 배경 헬기는 연출 중에는 숨긴다 — 수송선이 두 대로 보인다.
+  if (images.heli && !world.cine) {
     const hx = ((t * 34) % (b.designW + 420)) - 210;
     const s = 168 / images.heli.width;
     ctx.drawImage(images.heli, hx - images.heli.width * s / 2,
@@ -3397,11 +3892,14 @@ function renderWorld(ctx, world, images, t, stick) {
   drawFx(ctx, world);
   ctx.restore();
 
+  if (world.cine?.type === 'stageClear') { drawStageClear(ctx, world, images, world.cine); return; }
+  if (cam?.hideHud) return;
   drawHud(ctx, world, images);
 }
 
 
 /* ===== src/game/screens.js ===== */
+
 
 
 
@@ -3659,15 +4157,15 @@ function renderLobby(ctx, state, t, b = B) {
 
 /* ============================================================ 상점 (보스 후) */
 
-const CARD_H = 176;
-const CARD_TOP = 236;
+const CARD_H = 150;
+const CARD_TOP = 250;
 
 function shopLayout(options, b = B) {
   return {
     cards: options.map((o, i) => ({
-      i, x: 36, y: CARD_TOP + i * (CARD_H + 12), w: b.designW - 72, h: CARD_H,
+      i, x: 30, y: CARD_TOP + i * (CARD_H + 14), w: b.designW - 60, h: CARD_H,
     })),
-    skip: { x: 36, y: b.designH - 122, w: b.designW - 72, h: 86 },
+    skip: { x: 30, y: b.designH - 118, w: b.designW - 60, h: 86 },
   };
 }
 
@@ -3680,94 +4178,348 @@ function shopHitTest(x, y, options, b = B) {
 
 const OPT_TINT = {
   weapon: '#4E8FBF',
-  heal: '#5FA36A',
-  maxhp: '#C4713D',
-  power: '#B0453F',
+  heal:   '#4FA96B',
+  maxhp:  '#E08A3C',
+  power:  '#D9534F',
 };
+
+/** 상품 그림 — 글자보다 그림이 먼저 읽힌다. 무기는 실루엣 그대로 보여준다. */
+function optionIcon(ctx, o, cx, cy, r) {
+  ctx.save();
+  // 둥근 받침
+  ctx.fillStyle = '#FFF6E3';
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.stroke();
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r - 2, 0, Math.PI * 2); ctx.clip();
+
+  if (o.type === 'weapon') {
+    drawGun(ctx, cx - r * 0.42, cy + r * 0.06, r * 1.75, 1, 7, 3.2, weaponById(o.id).shape);
+  } else if (o.type === 'heal') {
+    const s2 = r * 0.52;
+    ctx.fillStyle = '#4FA96B'; ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3.4;
+    ctx.beginPath();
+    ctx.roundRect(cx - s2 * 0.32, cy - s2, s2 * 0.64, s2 * 2, 5);
+    ctx.roundRect(cx - s2, cy - s2 * 0.32, s2 * 2, s2 * 0.64, 5);
+    ctx.fill(); ctx.stroke();
+  } else if (o.type === 'maxhp') {
+    // 하트 — 최대 체력이 늘어난다
+    const s2 = r * 0.62;
+    ctx.fillStyle = '#E0604F'; ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3.4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + s2 * 0.85);
+    ctx.bezierCurveTo(cx - s2 * 1.5, cy - s2 * 0.25, cx - s2 * 0.5, cy - s2 * 1.15, cx, cy - s2 * 0.35);
+    ctx.bezierCurveTo(cx + s2 * 0.5, cy - s2 * 1.15, cx + s2 * 1.5, cy - s2 * 0.25, cx, cy + s2 * 0.85);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `bold ${Math.round(r * 0.5)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('+', cx, cy - s2 * 0.05);
+  } else {
+    // 탄약 — 피해가 오른다
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3.2;
+    for (const off of [-r * 0.36, 0, r * 0.36]) {
+      ctx.fillStyle = PALETTE.goldDark;
+      ctx.beginPath();
+      ctx.roundRect(cx + off - r * 0.13, cy - r * 0.10, r * 0.26, r * 0.62, 3);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#C46B3A';
+      ctx.beginPath();
+      ctx.moveTo(cx + off - r * 0.13, cy - r * 0.10);
+      ctx.lineTo(cx + off, cy - r * 0.62);
+      ctx.lineTo(cx + off + r * 0.13, cy - r * 0.10);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+  ctx.restore();
+  ctx.restore();
+}
+
+/** 가격표 — 캐주얼 게임의 말뚝 가격표처럼 카드 밖으로 살짝 걸친다. */
+function priceTag(ctx, x, y, price, afford, sold) {
+  const digits = String(price).length;
+  const w = sold ? 92 : 66 + digits * 15, h = 40;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-0.05);
+  ctx.fillStyle = sold ? '#B7ADA0' : (afford ? '#2E9E52' : '#C2554E');
+  ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 12); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 12); ctx.stroke();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (sold) {
+    ctx.font = 'bold 20px system-ui, sans-serif';
+    outlinedText(ctx, '구매함', 0, 1, 5);
+  } else {
+    ctx.font = 'bold 24px system-ui, sans-serif';
+    outlinedText(ctx, `${price}`, w / 2 - 10 - ctx.measureText(`${price}`).width / 2, 1, 5);
+    drawGold(ctx, -w / 2 + 20, 0, 22, 3);
+  }
+  ctx.restore();
+}
 
 /**
  * 보스를 잡아야 열리는 상점. 돈(금색)으로 산다.
- * 무기는 스타일을 바꾸고, 지원 옵션은 지금의 위기를 넘긴다.
+ *
+ * 한 번 사면 닫히던 것을 고쳤다. 돈이 남았는데 화면이 닫히면
+ * "무엇을 살까" 가 아니라 "무엇을 포기할까" 가 되어 선택이 즐겁지 않다.
+ * 이제 살 수 있는 만큼 사고, 직접 나가기를 눌러 진행한다.
  */
 function renderShop(ctx, state, t, b = B) {
   const { options, money, stage, currentWeapon, hp, maxHp } = state;
   const L = shopLayout(options, b);
   const cur = weaponById(currentWeapon);
+  const boughtAny = options.some((o) => o.bought);
 
-  ctx.fillStyle = 'rgba(16,30,42,0.94)';
+  ctx.fillStyle = 'rgba(16,30,42,0.975)';
+  ctx.fillRect(0, 0, b.designW, b.designH);
+
+  // 천막 — 캐주얼 상점의 신호
+  ctx.save();
+  const tw = b.designW / 9;
+  for (let i = 0; i < 9; i += 1) {
+    ctx.fillStyle = i % 2 ? '#E0604F' : '#F4EFE2';
+    ctx.beginPath();
+    ctx.moveTo(i * tw, 0);
+    ctx.lineTo((i + 1) * tw, 0);
+    ctx.lineTo((i + 1) * tw, 22);
+    ctx.quadraticCurveTo(i * tw + tw / 2, 44, i * tw, 22);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 38px system-ui, sans-serif';
+  outlinedText(ctx, `스테이지 ${stage} 보급소`, b.designW / 2, 78, 8);
+
+  panel(ctx, 30, 112, b.designW - 60, 116, PALETTE.parchment, 5, 22);
+  optionIcon(ctx, { type: 'weapon', id: currentWeapon }, 82, 170, 40);
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 16px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText('지금 든 총', 134, 146);
+  ctx.font = 'bold 26px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(cur.name, 134, 174);
+  ctx.font = '15px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText(`체력  ${Math.ceil(hp)} / ${maxHp}`, 134, 200);
+
+  ctx.textAlign = 'right';
+  ctx.font = 'bold 38px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(`${money}`, b.designW - 56, 160);
+  drawGold(ctx, b.designW - 76 - ctx.measureText(`${money}`).width, 158, 28, 3);
+  ctx.font = 'bold 14px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText('보유 자금', b.designW - 56, 188);
+
+  for (const c of L.cards) {
+    const o = options[c.i];
+    const sold = !!o.bought;
+    const afford = !sold && money >= o.price;
+
+    // 그림자 — 카드가 떠 있는 느낌
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.roundRect(c.x + 5, c.y + 7, c.w, c.h, 22); ctx.fill();
+    ctx.restore();
+
+    panel(ctx, c.x, c.y, c.w, c.h, sold ? '#D8D2C6' : '#FFFDF6', 6, 22);
+    if (afford) {
+      ctx.save();
+      ctx.globalAlpha = 0.26 + Math.sin(t * 4 + c.i) * 0.14;
+      ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 9;
+      ctx.beginPath(); ctx.roundRect(c.x - 4, c.y - 4, c.w + 8, c.h + 8, 26); ctx.stroke();
+      ctx.restore();
+    }
+
+    optionIcon(ctx, o, c.x + 62, c.y + c.h / 2, 44);
+
+    // 종류 뱃지
+    ctx.fillStyle = sold ? '#A79C8C' : OPT_TINT[o.type];
+    ctx.beginPath(); ctx.roundRect(c.x + 118, c.y + 16, 74, 24, 12); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.roundRect(c.x + 118, c.y + 16, 74, 24, 12); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 14px system-ui, sans-serif';
+    outlinedText(ctx, o.type === 'weapon' ? '무기' : '지원', c.x + 155, c.y + 29, 4);
+
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 28px system-ui, sans-serif';
+    ctx.fillStyle = sold ? '#8E8577' : PALETTE.woodDark;
+    ctx.fillText(o.name, c.x + 118, c.y + 66);
+
+    ctx.font = 'bold 17px system-ui, sans-serif';
+    ctx.fillStyle = sold ? '#A79C8C' : '#5C6E7A';
+    ctx.fillText(o.style, c.x + 118, c.y + 94);
+
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.fillStyle = sold ? '#A79C8C' : '#9C8B6E';
+    ctx.fillText(o.desc, c.x + 118, c.y + 120);
+
+    priceTag(ctx, c.x + c.w - 62, c.y + 30, o.price, afford, sold);
+  }
+
+  const sk = L.skip;
+  const pulse = boughtAny ? 1 + Math.sin(t * 3.4) * 0.014 : 1;
+  ctx.save();
+  ctx.translate(sk.x + sk.w / 2, sk.y + sk.h / 2);
+  ctx.scale(pulse, pulse);
+  ctx.translate(-(sk.x + sk.w / 2), -(sk.y + sk.h / 2));
+  panel(ctx, sk.x, sk.y, sk.w, sk.h, boughtAny ? PALETTE.hpRed : PALETTE.parchment, 6, 22);
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 32px system-ui, sans-serif';
+  if (boughtAny) outlinedText(ctx, '나가기', sk.x + sk.w / 2, sk.y + sk.h / 2 + 1, 7);
+  else {
+    ctx.fillStyle = PALETTE.woodDark;
+    ctx.fillText('그냥 나간다', sk.x + sk.w / 2, sk.y + sk.h / 2 + 1);
+  }
+  ctx.restore();
+}
+
+/* ============================================================ 일시정지 */
+
+function pauseLayout(b = B) {
+  return {
+    resume: { x: 40, y: b.designH - 210, w: b.designW - 80, h: 86 },
+    quit:   { x: 40, y: b.designH - 110, w: b.designW - 80, h: 68 },
+  };
+}
+
+function pauseScreenHitTest(x, y, b = B) {
+  const L = pauseLayout(b);
+  if (inside(L.resume, x, y)) return { type: 'resume' };
+  if (inside(L.quit, x, y)) return { type: 'quit' };
+  return { type: 'none' };
+}
+
+/**
+ * 일시정지 — "내가 지금 뭘 갖고 있지" 에 답하는 화면.
+ *
+ * 로그라이트에서 자기 빌드를 못 보면 다음 선택을 계획할 수 없다.
+ * 여기서 유전자·무기·이번 판 구매를 한 번에 보여주고, 세이브가 무엇을 남기는지도 밝힌다.
+ */
+function renderPause(ctx, state, t, b = B) {
+  const { world, owned } = state;
+  const L = pauseLayout(b);
+  const stats = deriveStats(normalizeOwned(owned), b);
+  const wep = weaponById(world.weapon);
+
+  ctx.fillStyle = 'rgba(12,24,34,0.93)';
   ctx.fillRect(0, 0, b.designW, b.designH);
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 40px system-ui, sans-serif';
-  outlinedText(ctx, `스테이지 ${stage} 돌파`, b.designW / 2, 60, 8);
+  outlinedText(ctx, '일시정지', b.designW / 2, 62, 8);
+  ctx.font = 'bold 20px system-ui, sans-serif';
+  ctx.fillStyle = '#9FB4C4';
+  ctx.fillText(`${formatTime(world.t)} 생존 중 · 웨이브 ${world.wave}`, b.designW / 2, 100);
 
-  panel(ctx, 36, 96, b.designW - 72, 116, PALETTE.parchment, 5);
+  // --- 무기 ---
+  let y = 130;
+  panel(ctx, 30, y, b.designW - 60, 104, PALETTE.parchment, 5, 20);
+  optionIcon(ctx, { type: 'weapon', id: world.weapon }, 80, y + 52, 36);
   ctx.textAlign = 'left';
-  ctx.font = 'bold 18px system-ui, sans-serif';
+  ctx.font = 'bold 15px system-ui, sans-serif';
   ctx.fillStyle = '#8A7355';
-  ctx.fillText('현재 무기', 58, 126);
-  ctx.font = 'bold 27px system-ui, sans-serif';
+  ctx.fillText('지금 든 총', 130, y + 28);
+  ctx.font = 'bold 25px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(cur.name, 58, 156);
-  ctx.font = '16px system-ui, sans-serif';
+  ctx.fillText(wep.name, 130, y + 55);
+  ctx.font = '15px system-ui, sans-serif';
   ctx.fillStyle = '#8A7355';
-  ctx.fillText(`체력  ${Math.ceil(hp)} / ${maxHp}`, 58, 186);
+  ctx.fillText(`${world.player.mag} / ${world.shot.mag}발 · 재장전 ${world.shot.reload.toFixed(1)}초`, 130, y + 82);
 
-  ctx.textAlign = 'right';
-  drawGold(ctx, b.designW - 132, 140, 30, 3);
-  ctx.font = 'bold 40px system-ui, sans-serif';
-  ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(`${money}`, b.designW - 58, 142);
-  ctx.font = 'bold 16px system-ui, sans-serif';
-  ctx.fillStyle = '#8A7355';
-  ctx.fillText('보유 자금', b.designW - 58, 172);
-
-  for (const c of L.cards) {
-    const o = options[c.i];
-    const afford = money >= o.price;
-    panel(ctx, c.x, c.y, c.w, c.h, afford ? '#FFFFFF' : '#EFEAE0', afford ? 6 : 4);
-    if (afford) {
-      ctx.save();
-      ctx.globalAlpha = 0.24 + Math.sin(t * 4 + c.i) * 0.13;
-      ctx.strokeStyle = PALETTE.gold; ctx.lineWidth = 8;
-      ctx.beginPath(); ctx.roundRect(c.x - 3, c.y - 3, c.w + 6, c.h + 6, 21); ctx.stroke();
-      ctx.restore();
-    }
-
-    // 좌측 색 띠 — 무기인지 지원인지 한눈에
-    ctx.fillStyle = afford ? OPT_TINT[o.type] : '#C4BCAA';
-    ctx.beginPath(); ctx.roundRect(c.x + 4, c.y + 14, 9, c.h - 28, 5); ctx.fill();
-
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.font = 'bold 30px system-ui, sans-serif';
-    ctx.fillStyle = afford ? PALETTE.woodDark : '#A6987E';
-    ctx.fillText(o.name, c.x + 28, c.y + 36);
-
-    ctx.font = '16px system-ui, sans-serif';
+  // --- 폭탄 4축 ---
+  y += 118;
+  panel(ctx, 30, y, b.designW - 60, 96, '#FFFDF6', 5, 20);
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = BRANCH.bomb.color;
+  ctx.fillText('폭탄', 52, y + 24);
+  const bombCells = [
+    ['대기', `${stats.skillCooldown.toFixed(0)}초`],
+    ['범위', `${stats.skillRadius.toFixed(0)}`],
+    ['피해', `×${stats.skillDamageMul.toFixed(2)}`],
+    ['밀치기', `${stats.skillKnockback.toFixed(0)}`],
+  ];
+  bombCells.forEach(([label, val], i) => {
+    const cx = 52 + i * ((b.designW - 104) / 4);
+    ctx.font = '14px system-ui, sans-serif';
     ctx.fillStyle = '#9C8B6E';
-    ctx.fillText(o.sub, c.x + 28, c.y + 62);
+    ctx.fillText(label, cx, y + 52);
+    ctx.font = 'bold 21px system-ui, sans-serif';
+    ctx.fillStyle = PALETTE.woodDark;
+    ctx.fillText(val, cx, y + 76);
+  });
 
-    ctx.font = 'bold 19px system-ui, sans-serif';
-    ctx.fillStyle = '#5C6E7A';
-    ctx.fillText(o.style, c.x + 28, c.y + 96);
+  // --- 유전자 ---
+  y += 110;
+  const learned = normalizeOwned(owned).filter((id) => id !== 'root');
+  panel(ctx, 30, y, b.designW - 60, 128, '#FFFDF6', 5, 20);
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText(`유전자  ${learned.length} / ${NODES.length - 1}`, 52, y + 24);
+  const byBranch = {};
+  for (const id of learned) {
+    const n = NODE_BY_ID[id];
+    if (!n?.branch) continue;
+    (byBranch[n.branch] ??= []).push(n);
+  }
+  Object.keys(BRANCH).forEach((key, i) => {
+    const list = byBranch[key] ?? [];
+    const cx = 52 + (i % 2) * ((b.designW - 104) / 2);
+    const cy = y + 56 + Math.floor(i / 2) * 36;
+    ctx.fillStyle = BRANCH[key].color;
+    ctx.beginPath(); ctx.arc(cx + 7, cy - 5, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.font = 'bold 16px system-ui, sans-serif';
+    ctx.fillStyle = list.length ? PALETTE.woodDark : '#B7ADA0';
+    ctx.fillText(`${BRANCH[key].name} ${list.length}`, cx + 22, cy - 4);
+  });
 
-    ctx.font = '17px system-ui, sans-serif';
-    ctx.fillStyle = '#8A7355';
-    o.desc.split(' · ').forEach((ln, i) => ctx.fillText(ln, c.x + 28, c.y + 124 + i * 22));
-
-    ctx.textAlign = 'right';
-    ctx.font = 'bold 38px system-ui, sans-serif';
-    ctx.fillStyle = afford ? '#1E7A3C' : '#B03A3A';
-    ctx.fillText(`${o.price}`, c.x + c.w - 52, c.y + 36);
-    drawGold(ctx, c.x + c.w - 32, c.y + 36, 28, 3);
+  // --- 이번 판 획득 ---
+  y += 142;
+  const got = world.acquired ?? [];
+  panel(ctx, 30, y, b.designW - 60, 132, '#FFFDF6', 5, 20);
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText('이번 판에 얻은 것', 52, y + 24);
+  if (got.length === 0) {
+    ctx.font = '15px system-ui, sans-serif';
+    ctx.fillStyle = '#B7ADA0';
+    ctx.fillText('아직 없다 — 보스를 잡으면 보급소가 열린다', 52, y + 56);
+  } else {
+    got.slice(-4).forEach((g, i) => {
+      ctx.fillStyle = OPT_TINT[g.type] ?? '#8A7355';
+      ctx.beginPath(); ctx.arc(59, y + 52 + i * 24, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.font = 'bold 16px system-ui, sans-serif';
+      ctx.fillStyle = PALETTE.woodDark;
+      ctx.fillText(g.name, 74, y + 53 + i * 24);
+      ctx.font = '14px system-ui, sans-serif';
+      ctx.fillStyle = '#9C8B6E';
+      ctx.fillText(g.desc, 74 + ctx.measureText(g.name).width + 40, y + 53 + i * 24);
+    });
   }
 
-  const sk = L.skip;
-  panel(ctx, sk.x, sk.y, sk.w, sk.h, PALETTE.parchment, 5, 20);
+  // --- 세이브가 무엇을 남기는가 ---
+  y += 144;
+  ctx.font = '14px system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.font = 'bold 32px system-ui, sans-serif';
+  ctx.fillStyle = '#8FA6B6';
+  ctx.fillText('저장되는 것 — 생명에너지 · 유전자 · 최고 기록 (자동, 5초마다)', b.designW / 2, y);
+  ctx.fillText('사라지는 것 — 이번 판의 돈 · 무기 · 상점 강화', b.designW / 2, y + 22);
+
+  panel(ctx, L.resume.x, L.resume.y, L.resume.w, L.resume.h, PALETTE.hpRed, 6, 22);
+  ctx.font = 'bold 34px system-ui, sans-serif';
+  outlinedText(ctx, '계속하기', L.resume.x + L.resume.w / 2, L.resume.y + L.resume.h / 2 + 1, 7);
+
+  panel(ctx, L.quit.x, L.quit.y, L.quit.w, L.quit.h, PALETTE.parchment, 5, 18);
+  ctx.font = 'bold 22px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText('그대로 간다', sk.x + sk.w / 2, sk.y + sk.h / 2 + 1);
+  ctx.fillText('포기하고 로비로', L.quit.x + L.quit.w / 2, L.quit.y + L.quit.h / 2 + 1);
 }
 
 
@@ -3977,6 +4729,7 @@ async function boot() {
   let elapsed = 0;
   let lastRun = 0, lastBio = 0, lastWave = 1, lastStage = 1;
   let autoPlay = false;
+  let deathCine = null;   // 사망 슬로우모션 — 끝나야 로비로 넘어간다
   const aiMemory = {};
 
   const input = createInput(canvas, () => viewport, () => layoutFor(B), onTap);
@@ -3985,11 +4738,13 @@ async function boot() {
   function startRun() {
     rng = makeRng((Date.now() ^ (save.totalRuns * 2654435761)) & 0x7fffffff);
     world = createWorld(save.owned, B);
+    deathCine = null;
     mode = 'run';
     input.setEnabled(true);
   }
 
   function endRun() {
+    deathCine = null;
     lastRun = Math.floor(world.t);
     lastBio = world.bio;
     lastWave = world.wave;
@@ -4037,13 +4792,28 @@ async function boot() {
       const hit = shopHitTest(x, y, world.shop.options, B);
       if (hit.type === 'skip') closeShop();
       else if (hit.type === 'buy') {
+        // 한 번 사고 화면이 닫히면 "무엇을 살까" 가 "무엇을 포기할까" 가 된다.
+        // 돈이 되는 만큼 사고, 나가기는 직접 누른다.
         const opt = world.shop.options[hit.index];
-        if (opt && world.money >= opt.price) {
+        if (opt && !opt.bought && world.money >= opt.price) {
           world.money -= opt.price;
+          opt.bought = true;
           applyShopOption(world, opt);
-          closeShop();
         }
       }
+      return true;
+    }
+    if (mode === 'pause') {
+      const hit = pauseScreenHitTest(x, y, B);
+      if (hit.type === 'resume') { mode = 'run'; input.setEnabled(true); }
+      else if (hit.type === 'quit') { world.over = true; world.killedBy = '스스로 물러났다'; endRun(); }
+      return true;
+    }
+    // 런 중 — 일시정지 버튼만 탭을 가로챈다. 나머지는 스틱이 가져간다.
+    if (mode === 'run' && world && !world.over && pauseHitTest(x, y, B)) {
+      mode = 'pause';
+      input.setEnabled(false);
+      persist();
       return true;
     }
     return false;
@@ -4052,11 +4822,27 @@ async function boot() {
   function update(dt) {
     elapsed += dt;
     if (mode !== 'run' || !world) return;
+
+    // 사망 연출 — 시간이 늘어지며 죽은 자리로 화면이 파고든다.
+    // 이 시간이 없으면 "왜 죽었는지" 를 볼 새도 없이 로비로 튕긴다.
+    if (deathCine) {
+      deathCine.t += dt;
+      const k = Math.min(1, deathCine.t / deathCine.life);
+      stepWorld(world, dt * (1 - 0.86 * k), { mx: 0, my: 0, skill: false }, rng);
+      if (deathCine.t >= deathCine.life) endRun();
+      return;
+    }
+
     const inp = autoPlay ? decide(world, aiMemory) : input.read();
     if (autoPlay) input.read();
     const wasOver = world.over;
     stepWorld(world, dt, inp, rng);
-    if (world.over && !wasOver) { endRun(); return; }
+    if (world.over && !wasOver) {
+      if (autoPlay) { endRun(); return; }
+      deathCine = { t: 0, life: B.deathCineSec };
+      input.setEnabled(false);
+      return;
+    }
     if (world.shop) openShop();
   }
 
@@ -4067,9 +4853,20 @@ async function boot() {
     ctx.setTransform(s, 0, 0, s, 0, 0);
 
     if (mode === 'run' && world) {
-      renderWorld(ctx, world, images, elapsed, input.state.stick);
+      if (deathCine) {
+        const k = Math.min(1, deathCine.t / deathCine.life);
+        const ease = 1 - (1 - k) ** 3;
+        renderWorld(ctx, world, images, elapsed, null,
+          { x: world.player.x, y: world.player.y, zoom: 1 + 0.85 * ease, hideHud: true });
+        drawDeathCine(ctx, world, k);
+      } else {
+        renderWorld(ctx, world, images, elapsed, input.state.stick);
+      }
+    } else if (mode === 'pause' && world) {
+      renderWorld(ctx, world, images, elapsed, null, { zoom: 1, hideHud: true });
+      renderPause(ctx, { world, owned: save.owned }, elapsed, B);
     } else if (mode === 'shop' && world) {
-      renderWorld(ctx, world, images, elapsed, null);
+      renderWorld(ctx, world, images, elapsed, null, { zoom: 1, hideHud: true });
       renderShop(ctx, {
         options: world.shop.options, money: world.money, stage: world.shop.stage,
         currentWeapon: world.weapon, hp: world.player.hp, maxHp: world.player.maxHp,
@@ -4119,6 +4916,17 @@ async function boot() {
       grantAll: () => { save.owned = normalizeOwned(NODES.map((n) => n.id)); persist(); return save.owned.length; },
       bio: (n) => { save.bio += n; return save.bio; },
       give: (id) => { if (world) equipWeapon(world, id); return world?.weapon; },
+      /** 특정 웨이브로 건너뛴다 (보스 검수용) */
+      warp: (n) => {
+        if (mode !== 'run') startRun();
+        world.enemies.length = 0; world.hostileShots.length = 0;
+        world.groups = []; world.groupLeft = 0; world.waveLeft = 0;
+        world.wave = Math.max(1, Math.floor(n)) - 1;
+        world.bossActive = false; world.cine = null; world.pendingShop = null;
+        beginNextWave(world);
+        return world.wave;
+      },
+      pauseScreen: () => { mode = 'pause'; input.setEnabled(false); renderFrame(); return 'pause'; },
       /** rAF 없이 n 초 진행하고 한 프레임 그린다 (백그라운드 탭 검증용) */
       fast: (sec, autoShop = true) => {
         if (mode === 'title' || mode === 'lobby') startRun();
@@ -4155,6 +4963,3 @@ boot().catch((err) => {
 });
 
 </script>
-
-</body>
-</html>
