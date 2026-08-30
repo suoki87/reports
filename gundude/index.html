@@ -32,33 +32,13 @@
     text-transform: uppercase; color: #5B6B76;
   }
   /* 조작 안내 — 몇 초 뒤 조용히 사라진다. 첫 10초를 잡는 장치다. */
-  #hint {
-    position: fixed; left: 50%; transform: translateX(-50%);
-    bottom: 14px; z-index: 5; pointer-events: none;
-    display: flex; gap: 10px; align-items: center;
-    padding: 7px 15px; border-radius: 999px;
-    background: var(--paper); border: 3px solid var(--ink);
-    font-size: 13px; font-weight: 600; white-space: nowrap;
-    box-shadow: 0 3px 0 var(--ink);
-    animation: hintOut .6s ease 11s forwards;
-  }
-  #hint b { color: #7A5A00; }
-  #hint .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
-  @keyframes hintOut { to { opacity: 0; transform: translateX(-50%) translateY(10px); } }
-  @media (prefers-reduced-motion: reduce) {
-    #hint { animation: none; opacity: .55; }
   }
 </style>
 
 <div id="stage"><canvas id="game"></canvas></div>
 <div id="loading">loading</div>
-<div id="hint">
-  <span><b>멈추면</b> 쏜다 · <b>움직이면</b> 안 쏜다</span>
-  <span class="dot"></span>
-  <span>적의 <b>공격 모션</b>에 피해라</span>
-  <span class="dot"></span>
-  <span>죽으면 <b>강화</b>하고 다시</span>
-</div>
+<!-- 조작법은 게임 안의 명시적인 버튼으로 옮겼다 (타이틀·홈의 "조작법").
+     11초 뒤 사라지는 띠는 읽을 새도 없고 다시 볼 방법도 없었다. -->
 
 <script type="module">
 
@@ -2981,11 +2961,24 @@ function computeViewport(designW, designH, screenW, screenH, dpr = 1, maxDpr = 2
   };
 }
 
-/** 화면 좌표(포인터 이벤트) → 게임 좌표. 터치/마우스 입력을 설계 해상도로 되돌린다. */
+/**
+ * 화면 좌표(포인터 이벤트) → 게임 좌표.
+ *
+ * 【주의 — 실제로 났던 버그】
+ * `applyViewport` 가 캔버스를 margin 으로 offset 만큼 **이미 밀어 놓는다.**
+ * 그래서 `getBoundingClientRect()` 의 left/top 에 offset 이 들어 있다.
+ * 여기서 offset 을 또 빼면 **이중 차감**이 되어 탭이 그만큼 어긋난다.
+ *
+ * 데스크톱 창은 화면비가 설계(720×1280)에 가까워 offset 이 0에 수렴하므로 안 드러났고,
+ * **폰처럼 레터박스가 크게 생기는 비율에서만** 탭이 140px 씩 빗나갔다.
+ * 그래서 "UI 가 망가졌다" 로 보였다 — 그림이 아니라 판정이 어긋난 것이다.
+ *
+ * rectLeft/rectTop 은 **캔버스의 실제 화면 위치**다. 그것만 빼면 된다.
+ */
 function screenToGame(vp, clientX, clientY, rectLeft = 0, rectTop = 0) {
   return {
-    x: (clientX - rectLeft - vp.offsetX) / vp.scale,
-    y: (clientY - rectTop - vp.offsetY) / vp.scale,
+    x: (clientX - rectLeft) / vp.scale,
+    y: (clientY - rectTop) / vp.scale,
   };
 }
 
@@ -4539,15 +4532,19 @@ const inside = (r, x, y) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y +
 
 function titleLayout(b = B) {
   return {
-    start: { x: 84, y: 800, w: b.designW - 168, h: 118 },
-    lobby: { x: 84, y: 946, w: b.designW - 168, h: 92 },
+    start:  { x: 84, y: 790, w: b.designW - 168, h: 118 },
+    lobby:  { x: 84, y: 928, w: b.designW - 168, h: 88 },
+    // 조작법은 명시적인 버튼이어야 한다. 하단에 흐르는 띠는 읽을 새도 없이 사라진다.
+    how:    { x: 84, y: 1030, w: (b.designW - 180) / 2, h: 74 },
+    options: { x: b.designW / 2 + 6, y: 1030, w: (b.designW - 180) / 2, h: 74 },
   };
 }
 
 function titleHitTest(x, y, b = B) {
   const L = titleLayout(b);
-  if (inside(L.start, x, y)) return { type: 'start' };
-  if (inside(L.lobby, x, y)) return { type: 'lobby' };
+  for (const k of ['start', 'lobby', 'how', 'options']) {
+    if (inside(L[k], x, y)) return { type: k };
+  }
   return { type: 'none' };
 }
 
@@ -4582,7 +4579,7 @@ function renderTitle(ctx, state, t, b = B) {
   // 부제는 제목 아래로 충분히 띄운다. 104px 글자의 아랫단이 여기까지 내려온다.
   ctx.font = 'bold 24px system-ui, sans-serif';
   ctx.fillStyle = '#9FB4C4';
-  ctx.fillText('절벽 위에서 얼마나 버티나', b.designW / 2, 430);
+  ctx.fillText('절벽에서 살아남기', b.designW / 2, 430);
 
   // 총을 수평으로 들면 얼굴을 가로지른다. 타이틀에서는 총구를 살짝 내린다.
   drawCharacter(ctx, {
@@ -4631,6 +4628,110 @@ function renderTitle(ctx, state, t, b = B) {
   ctx.fillStyle = '#3F6B86';
   ctx.fillText(amount, x0 + lw + GAP + ICON + 8, cy);
   ctx.textAlign = 'center';
+
+  // 조작법 · 설정
+  for (const [key, label] of [['how', '조작법'], ['options', '설정']]) {
+    const r = L[key];
+    panel(ctx, r.x, r.y, r.w, r.h, 'rgba(238,228,205,0.16)', 4, 18);
+    ctx.font = 'bold 22px system-ui, sans-serif';
+    ctx.fillStyle = '#C9D8E4';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, r.x + r.w / 2, r.y + r.h / 2 + 1);
+  }
+}
+
+/* ============================================================ 조작법 */
+
+function howLayout(b = B) {
+  return { close: { x: b.designW - 88, y: 24, w: 64, h: 64 } };
+}
+
+function howHitTest(x, y, b = B) {
+  return inside(howLayout(b).close, x, y) ? { type: 'back' } : { type: 'none' };
+}
+
+/**
+ * 조작법 — 예전에는 화면 하단에 띠로 흘렀다.
+ * 11초 뒤 사라지는 띠는 읽을 새가 없고, 다시 볼 방법도 없었다.
+ * 눌러서 열고, 원할 때 다시 보는 것이 맞다.
+ */
+const HOW_ROWS = [
+  ['멈추면 쏜다', '손을 떼면 가장 가까운 놈을 자동으로 쏜다. 움직이는 동안은 못 쏜다.'],
+  ['공격 모션을 보고 피해라', '놈들은 때리기 전에 멈춰서 붉은 표시를 띄운다. 그때 움직이면 안 맞는다.'],
+  ['장전은 뛰면서도 돈다', '탄을 다 쓰면 알아서 갈아 끼운다. 도망치는 동안 채우고, 멈추는 순간 쏜다.'],
+  ['조각은 걸어가서 줍는다', '쓰러진 것에서 뜯어낸 조직이다. 9초 뒤 사라진다 — 갈지 말지 그때 정해라.'],
+  ['보스는 경직에 때린다', '큰 기술을 헛치면 금빛으로 굳는다. 그 순간이 유일한 기회다.'],
+  ['죽으면 강해져서 다시', '조각으로 유전자를 조작한다. 판을 거듭할수록 더 멀리 간다.'],
+];
+
+function renderHow(ctx, state, t, b = B) {
+  const L = howLayout(b);
+  ctx.fillStyle = 'rgba(12,24,34,0.97)';
+  ctx.fillRect(0, 0, b.designW, b.designH);
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold 36px system-ui, sans-serif';
+  outlinedText(ctx, '조작법', b.designW / 2, 56, 8);
+  ctx.font = 'bold 17px system-ui, sans-serif';
+  ctx.fillStyle = '#9FB4C4';
+  ctx.fillText('스틱 하나와 버튼 하나. 그게 전부다.', b.designW / 2, 90);
+
+  // 닫기
+  ctx.save();
+  ctx.fillStyle = PALETTE.parchment;
+  ctx.beginPath(); ctx.roundRect(L.close.x, L.close.y, L.close.w, L.close.h, 18); ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.roundRect(L.close.x, L.close.y, L.close.w, L.close.h, 18); ctx.stroke();
+  ctx.strokeStyle = PALETTE.woodDark; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  const cx = L.close.x + L.close.w / 2, cy = L.close.y + L.close.h / 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - 13, cy - 13); ctx.lineTo(cx + 13, cy + 13);
+  ctx.moveTo(cx + 13, cy - 13); ctx.lineTo(cx - 13, cy + 13);
+  ctx.stroke();
+  ctx.restore();
+
+  // 스틱·버튼 그림
+  panel(ctx, 28, 118, b.designW - 56, 132, '#FFFDF6', 5, 20);
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  inkShapeRing(ctx, 108, 184, 46);
+  inkShapeRing(ctx, 108, 184, 20, PALETTE.slate);
+  ctx.restore();
+  ctx.textAlign = 'left';
+  ctx.font = 'bold 19px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.fillText('왼쪽 아무 데나 — 이동', 172, 166);
+  ctx.font = '15px system-ui, sans-serif';
+  ctx.fillStyle = '#8A7355';
+  ctx.fillText('손가락이 닿은 자리에 스틱이 생긴다', 172, 194);
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  inkShapeRing(ctx, b.designW - 78, 184, 34, PALETTE.gold);
+  ctx.restore();
+  ctx.font = 'bold 15px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.woodDark;
+  ctx.textAlign = 'center';
+  ctx.fillText('충격파', b.designW - 78, 236);
+
+  // 규칙들
+  let y = 274;
+  ctx.textAlign = 'left';
+  for (const [head, body] of HOW_ROWS) {
+    panel(ctx, 28, y, b.designW - 56, 92, '#FFFDF6', 4, 16);
+    ctx.font = 'bold 23px system-ui, sans-serif';
+    ctx.fillStyle = PALETTE.woodDark;
+    ctx.fillText(head, 52, y + 30);
+    ctx.font = '16px system-ui, sans-serif';
+    ctx.fillStyle = '#8A7355';
+    wrapText(ctx, body, 52, y + 62, b.designW - 108, 22, 2);
+    y += 102;
+  }
+}
+
+function inkShapeRing(ctx, x, y, r, fill = '#FFFFFF') {
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = fill; ctx.fill();
+  ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4; ctx.stroke();
 }
 
 /* ============================================================ 로비 — 유전자 트리 */
@@ -4699,14 +4800,15 @@ function homeLayout(b = B) {
     purse:  { x: 22, y: 206, w: b.designW - 44, h: 66 },
     gene:   { x: 40, y: 300, w: b.designW - 80, h: 118 },
     start:  { x: 40, y: 434, w: b.designW - 80, h: 130 },
-    totals: { x: 40, y: b.designH - 118, w: (b.designW - 100) / 2, h: 78 },
-    options: { x: b.designW / 2 + 10, y: b.designH - 118, w: (b.designW - 100) / 2, h: 78 },
+    totals:  { x: 40, y: b.designH - 118, w: (b.designW - 116) / 3, h: 78 },
+    how:     { x: 40 + (b.designW - 116) / 3 + 18, y: b.designH - 118, w: (b.designW - 116) / 3, h: 78 },
+    options: { x: 40 + ((b.designW - 116) / 3 + 18) * 2, y: b.designH - 118, w: (b.designW - 116) / 3, h: 78 },
   };
 }
 
 function homeHitTest(x, y, b = B) {
   const L = homeLayout(b);
-  for (const k of ['gene', 'start', 'totals', 'options']) {
+  for (const k of ['gene', 'start', 'totals', 'how', 'options']) {
     if (inside(L[k], x, y)) return { type: k };
   }
   return { type: 'none' };
@@ -5206,11 +5308,17 @@ function renderHome(ctx, state, t, b = B) {
   ctx.fillStyle = '#7C8B96';
   ctx.fillText('섬을 벗어날 때까지, 몇 번이든', b.designW / 2, 886);
 
-  smallButton(ctx, L.totals, '얻은 능력', (c, gx, gy) => {
+  smallButton(ctx, L.totals, '능력', (c, gx, gy) => {
     c.fillStyle = PALETTE.woodDark;
     for (let i = 0; i < 3; i += 1) {
       c.beginPath(); c.roundRect(gx - 14, gy - 11 + i * 10, 28 - i * 7, 6, 3); c.fill();
     }
+  });
+  smallButton(ctx, L.how, '조작법', (c, gx, gy) => {
+    c.fillStyle = PALETTE.woodDark;
+    c.font = 'bold 26px system-ui, sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('?', gx, gy + 1);
   });
   smallButton(ctx, L.options, '설정', (c, gx, gy) => {
     c.save();
@@ -5234,11 +5342,11 @@ function smallButton(ctx, r, label, drawGlyph) {
   ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18); ctx.fill();
   ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
   ctx.beginPath(); ctx.roundRect(r.x, r.y, r.w, r.h, 18); ctx.stroke();
-  drawGlyph(ctx, r.x + 36, r.y + r.h / 2);
+  drawGlyph(ctx, r.x + 30, r.y + r.h / 2);
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.font = 'bold 20px system-ui, sans-serif';
+  ctx.font = 'bold 18px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText(label, r.x + 60, r.y + r.h / 2 + 1);
+  ctx.fillText(label, r.x + 50, r.y + r.h / 2 + 1);
   ctx.restore();
 }
 
@@ -5309,10 +5417,14 @@ function renderLobby(ctx, state, t, b = B) {
   }
   ctx.restore();
 
+  // 힌트는 종이 **안쪽** 아래에 얹는다. 창 밖에 두면 정보 패널과 겹친다.
+  ctx.save();
+  ctx.globalAlpha = 0.5;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '14px system-ui, sans-serif';
-  ctx.fillStyle = '#7C8B96';
-  ctx.fillText('끌어서 움직이고, 노드를 눌러 살펴본다', b.designW / 2, V.y + V.h + 16);
+  ctx.fillStyle = '#7A6A52';
+  ctx.fillText('끌어서 움직이고, 노드를 눌러 살펴본다', b.designW / 2, V.y + V.h - 16);
+  ctx.restore();
 
   /* --- 정보창 --- */
   const n = selected ? NODE_BY_ID[selected] : null;
@@ -6097,6 +6209,8 @@ async function boot() {
   let lobbySel = null;
   let lobbyPan = { x: 0, y: 0 };
   let askingReset = false;
+  // 오버레이에서 '뒤로' 를 누르면 왔던 곳으로 돌아간다.
+  let cameFrom = 'home';
   let autoPlay = false;
   let deathCine = null;   // 사망 슬로우모션 — 끝나야 로비로 넘어간다
   const aiMemory = {};
@@ -6112,6 +6226,7 @@ async function boot() {
   /** 홈 — 죽고 나서 도착하는 곳. 여기서 어디로 갈지 고른다. */
   function enterHome() {
     mode = 'home';
+    cameFrom = 'home';
     askingReset = false;
     input.setEnabled(false);
     input.setPanMode(false);
@@ -6170,21 +6285,25 @@ async function boot() {
     if (mode === 'title') {
       const hit = titleHitTest(x, y, B);
       if (hit.type === 'start') startRun();
-      else if (hit.type === 'lobby') enterHome();
+      // 라벨이 "유전자 조작" 이면 유전자 조작으로 간다. 홈을 거치면 라벨과 목적지가 어긋난다.
+      else if (hit.type === 'lobby') { cameFrom = 'title'; enterGene(); }
+      else if (hit.type === 'how') { cameFrom = 'title'; mode = 'how'; }
+      else if (hit.type === 'options') { cameFrom = 'title'; mode = 'options'; askingReset = false; }
       return true;
     }
     if (mode === 'home') {
       const hit = homeHitTest(x, y, B);
       if (hit.type === 'start') startRun();
       else if (hit.type === 'gene') enterGene();
-      else if (hit.type === 'totals') mode = 'totals';
-      else if (hit.type === 'options') { mode = 'options'; askingReset = false; }
+      else if (hit.type === 'totals') { cameFrom = 'home'; mode = 'totals'; }
+      else if (hit.type === 'options') { cameFrom = 'home'; mode = 'options'; askingReset = false; }
+      else if (hit.type === 'how') { cameFrom = 'home'; mode = 'how'; }
       return true;
     }
     if (mode === 'gene') {
       const hit = lobbyHitTest(x, y, save.owned, lobbySel, lobbyPan, B);
       if (hit.type === 'start') startRun();
-      else if (hit.type === 'back') enterHome();
+      else if (hit.type === 'back') { if (cameFrom === 'title') mode = 'title'; else enterHome(); }
       else if (hit.type === 'select') lobbySel = hit.id;
       else if (hit.type === 'deselect') lobbySel = null;
       else if (hit.type === 'learn') {
@@ -6194,9 +6313,13 @@ async function boot() {
       }
       return true;
     }
+    if (mode === 'how') {
+      if (howHitTest(x, y, B).type === 'back') mode = cameFrom === 'title' ? 'title' : 'home';
+      return true;
+    }
     if (mode === 'totals' || mode === 'options') {
       const hit = overlayHitTest(x, y, mode, B);
-      if (hit.type === 'back') enterHome();
+      if (hit.type === 'back') { if (cameFrom === 'title') mode = 'title'; else enterHome(); }
       else if (hit.type === 'resetAsk') askingReset = true;
       else if (hit.type === 'resetDo') {
         // 되돌릴 수 없는 동작이라 두 번 눌러야 여기 온다.
@@ -6300,6 +6423,8 @@ async function boot() {
       renderLobby(ctx, {
         bio: save.bio, owned: save.owned, selected: lobbySel, pan: lobbyPan,
       }, elapsed, B);
+    } else if (mode === 'how') {
+      renderHow(ctx, {}, elapsed, B);
     } else if (mode === 'totals') {
       renderTotals(ctx, { owned: save.owned, bio: save.bio }, elapsed, B);
     } else if (mode === 'options') {
