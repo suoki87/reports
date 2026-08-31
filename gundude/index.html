@@ -41,7 +41,7 @@
      11초 뒤 사라지는 띠는 읽을 새도 없고 다시 볼 방법도 없었다. -->
 
 <script type="module">
-globalThis.__LAYOUT__ = {"home":{"gene":{"x":22,"y":706},"start":{"x":32,"y":924},"hero":{"x":238,"y":398,"w":234,"h":230},"purse":{"x":166,"w":386,"h":106}},"hud":{"pause":{"x":634,"y":198,"w":84,"h":74}}};
+globalThis.__LAYOUT__ = {"home":{"gene":{"y":698},"start":{"y":930},"hero":{"x":254,"y":404,"w":213,"h":210},"purse":{"x":166,"w":386,"h":106}},"hud":{"pause":{"x":634,"y":198,"w":84,"h":74}}};
 
 /* ===== src/game/art/palette.js ===== */
 /**
@@ -3060,7 +3060,10 @@ function drawGun(ctx, x, y, len, dir, seed, lw, kind = 'rifle') {
   if (kind === 'pistol') {
     const h = L * 0.115;
     box(-L * 0.18, -h, L * 0.30, h);                       // 슬라이드
-    box(L * 0.26, -h * 0.55, L * 0.40, h * 0.55);          // 짧은 총열
+    // 총열은 슬라이드보다 확실히 가늘어야 한다. 0.55 였을 때 반두께가 0.0633L 로
+    // 카빈(0.0483L)·경기관총(0.0551L) 보다 굵어서 권총이 기관총처럼 읽혔다.
+    // 0.38 → 0.0437L. 카빈보다 가늘고, 가장 가는 장총(지정사수 0.0420L) 보다는 굵다.
+    box(L * 0.26, -h * 0.38, L * 0.40, h * 0.38);          // 짧은 총열
     poly([[-L * 0.15, h * 0.7], [L * 0.02, h * 0.7],
           [-L * 0.04, h * 3.1], [-L * 0.24, h * 3.1]]);    // 손잡이
   } else if (kind === 'smg') {
@@ -5544,12 +5547,14 @@ function renderHow(ctx, state, t, b = B) {
   ctx.fillStyle = 'rgba(12,24,34,0.97)';
   ctx.fillRect(0, 0, b.designW, b.designH);
 
+  // 제목 묶음. 자리는 L.header 가 정한다 — 숫자를 박으면 보드에서 안 움직인다.
+  const HD = L.header;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = 'bold 36px system-ui, sans-serif';
-  outlinedText(ctx, '조작법', b.designW / 2, 56, 8);
+  outlinedText(ctx, '조작법', HD.x + HD.w / 2, HD.y + 26, 8);
   ctx.font = 'bold 17px system-ui, sans-serif';
   ctx.fillStyle = '#9FB4C4';
-  ctx.fillText('스틱 하나와 버튼 하나. 그게 전부다.', b.designW / 2, 90);
+  ctx.fillText('스틱 하나와 버튼 하나. 그게 전부다.', HD.x + HD.w / 2, HD.y + 60);
 
   // 닫기
   ctx.save();
@@ -5566,40 +5571,45 @@ function renderHow(ctx, state, t, b = B) {
   ctx.restore();
 
   // 스틱·버튼 그림
-  panel(ctx, 28, 118, b.designW - 56, 132, '#FFFDF6', 5, 20);
+  // 안쪽 그림들은 사각형에 **상대 좌표**로 그린다. 그래야 통째로 따라 움직인다.
+  const PD = L.pad;
+  panel(ctx, PD.x, PD.y, PD.w, PD.h, '#FFFDF6', 5, 20);
+  const stickX = PD.x + 80, ringY = PD.y + 66;
   ctx.save();
   ctx.globalAlpha = 0.9;
-  inkShapeRing(ctx, 108, 184, 46);
-  inkShapeRing(ctx, 108, 184, 20, PALETTE.slate);
+  inkShapeRing(ctx, stickX, ringY, 46);
+  inkShapeRing(ctx, stickX, ringY, 20, PALETTE.slate);
   ctx.restore();
   ctx.textAlign = 'left';
   ctx.font = 'bold 19px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
-  ctx.fillText('왼쪽 아무 데나 — 이동', 172, 166);
+  ctx.fillText('왼쪽 아무 데나 — 이동', PD.x + 144, PD.y + 48);
   ctx.font = '15px system-ui, sans-serif';
   ctx.fillStyle = '#8A7355';
-  ctx.fillText('손가락이 닿은 자리에 스틱이 생긴다', 172, 194);
+  ctx.fillText('손가락이 닿은 자리에 스틱이 생긴다', PD.x + 144, PD.y + 76);
+  const skillX = PD.x + PD.w - 50;
   ctx.save();
   ctx.globalAlpha = 0.9;
-  inkShapeRing(ctx, b.designW - 78, 184, 34, PALETTE.gold);
+  inkShapeRing(ctx, skillX, ringY, 34, PALETTE.gold);
   ctx.restore();
   ctx.font = 'bold 15px system-ui, sans-serif';
   ctx.fillStyle = PALETTE.woodDark;
   ctx.textAlign = 'center';
-  ctx.fillText('충격파', b.designW - 78, 236);
+  ctx.fillText('충격파', skillX, PD.y + 118);
 
-  // 규칙들
-  let y = 274;
+  // 규칙들. L.rules 가 **첫 장**의 자리와 크기를 정하고, 아래로 10px 씩 띄워 쌓는다.
+  const RU = L.rules;
+  let y = RU.y;
   ctx.textAlign = 'left';
   for (const [head, body] of HOW_ROWS) {
-    panel(ctx, 28, y, b.designW - 56, 92, '#FFFDF6', 4, 16);
+    panel(ctx, RU.x, y, RU.w, RU.h, '#FFFDF6', 4, 16);
     ctx.font = 'bold 23px system-ui, sans-serif';
     ctx.fillStyle = PALETTE.woodDark;
-    ctx.fillText(head, 52, y + 30);
+    ctx.fillText(head, RU.x + 24, y + 30);
     ctx.font = '16px system-ui, sans-serif';
     ctx.fillStyle = '#8A7355';
-    wrapText(ctx, body, 52, y + 62, b.designW - 108, 22, 2);
-    y += 102;
+    wrapText(ctx, body, RU.x + 24, y + 62, RU.w - 52, 22, 2);
+    y += RU.h + 10;
   }
 }
 
@@ -6177,16 +6187,29 @@ function renderHome(ctx, state, t, b = B) {
   outlinedText(ctx, '다시 도전', S.x + S.w / 2, S.y + S.h / 2 + 2, 8);
   ctx.restore();
 
-  // 주인공. 홈이 비어 보이지 않게, 그리고 이 사람이 누구인지 계속 보이게.
+  /*
+    주인공. 홈이 비어 보이지 않게, 그리고 이 사람이 누구인지 계속 보이게.
+
+    **반드시 L.hero 에서 자리를 읽는다.** 여기 숫자를 박아 두면 보드에서는
+    박스가 움직이는데 캐릭터는 제자리인 상태가 된다 — 되는 것처럼 보이는데
+    안 되는 것이라 디렉터가 몇 번을 옮겨 보고 나서야 알게 된다.
+    (2026-08-31 에 실제로 그랬다. test/layout-wired.test.js 가 지금 이걸 지킨다)
+
+    기준점은 **발밑**이다. drawCharacter 의 y 는 바닥선이므로 사각형 아래변을 준다.
+  */
+  const HERO = L.hero;
   drawCharacter(ctx, {
-    kind: 'dude', x: b.designW / 2, y: 820, size: 138, seed: 1337, facing: 1,
+    kind: 'dude', x: HERO.x + HERO.w / 2, y: HERO.y + HERO.h,
+    size: HERO.w, seed: 1337, facing: 1,
     aimA: 0.30,
     pose: { walk: 0, moving: false, lean: 0, state: null, prog: 0 },
   });
+
+  const TG = L.tagline;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '15px system-ui, sans-serif';
   ctx.fillStyle = '#7C8B96';
-  ctx.fillText('섬을 벗어날 때까지, 몇 번이든', b.designW / 2, 886);
+  ctx.fillText('섬을 벗어날 때까지, 몇 번이든', TG.x + TG.w / 2, TG.y + TG.h / 2);
 
   smallButton(ctx, L.totals, '능력', (c, gx, gy) => {
     c.fillStyle = PALETTE.woodDark;
