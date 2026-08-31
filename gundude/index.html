@@ -4273,6 +4273,7 @@ function createBridge() {
 
 
 
+
 /**
  * 렌더 계층 — 시뮬레이션 상태를 그림으로 바꾼다. 상태를 절대 수정하지 않는다.
  *
@@ -5116,11 +5117,12 @@ function drawHud(ctx, world, images) {
     ctx.save();
     ctx.globalAlpha = 0.42;
     inkShape(ctx, wobbleCircle(st.ox, st.oy, L.stickR, 21, 3, 18), '#FFFFFF', 5);
-    const dx = st.x - st.ox, dy = st.y - st.oy;
-    const d = Math.hypot(dx, dy) || 1;
-    const kk = Math.min(1, d / L.stickR);
+    // 노브는 입력과 같은 말을 해야 한다. 스틱에는 강약이 없으므로 (input.js 참고)
+    // 노브도 두 상태뿐이다 — 데드존 안이면 중앙, 밖이면 링 끝. 방향만 손가락을 따른다.
+    // 거리에 비례해 반쯤 나가 있으면 "살살 가는 중" 이라고 화면이 거짓말을 하게 된다.
+    const v = stickVector(st.x - st.ox, st.y - st.oy, L.stickR);
     ctx.globalAlpha = 0.78;
-    inkShape(ctx, wobbleCircle(st.ox + (dx / d) * L.stickR * kk, st.oy + (dy / d) * L.stickR * kk,
+    inkShape(ctx, wobbleCircle(st.ox + v.mx * L.stickR, st.oy + v.my * L.stickR,
       L.stickR * 0.4, 22, 2, 14), PALETTE.slate, 5);
     ctx.restore();
   }
@@ -7186,6 +7188,35 @@ function renderPause(ctx, state, t, b = B) {
 
 const TAP_SLOP = 8;   // 이만큼 안 움직이면 탭, 넘으면 드래그
 
+/**
+ * 스틱 데드존 — 링 반지름(`L.stickR`) 대비 비율.
+ *
+ * 스틱에는 이제 강약이 없다. 데드존 안이면 완전 정지, 밖이면 **항상 최고속도**다.
+ * 살살 이동은 지배당하는 선택지였다 — 이동·사격 배타 판정(`sim.js` 의 `mlen > 0.03`)이
+ * 이진이라 천천히 가도 사격 이득은 0 이고 도착만 늦었다.
+ * 게다가 밸런스를 재는 봇(`ai.js`)은 처음부터 단위벡터를 내보내 늘 최고속도였다 —
+ * 사람만 약한 컨트롤러를 쥐고 있었던 셈이다.
+ *
+ * 대신 데드존을 키운다. 이 스틱은 손가락이 닿은 자리에 생기므로,
+ * 접지 순간의 2~3px 흔들림이 곧바로 전속 이동 + 사격 취소가 되면 안 된다.
+ */
+const STICK_DEADZONE = 0.14;
+
+/**
+ * 스틱 변위 → 이동 벡터. 순수 함수다 (입력이 같으면 결과가 같다).
+ *
+ * 화면(노브)과 입력이 **같은 말을 하도록** 렌더도 이 함수를 쓴다.
+ * 입력은 전속인데 노브가 반쯤 나가 있으면 화면이 거짓말을 한다.
+ *
+ *  - 데드존 이하 → `{0, 0}` (완전 정지, 노브는 중앙)
+ *  - 데드존 초과 → 크기 정확히 1 (노브는 링 끝). 방향은 연속으로 보존된다 — 8방향 스냅 없음
+ */
+function stickVector(dx, dy, stickR) {
+  const d = Math.hypot(dx, dy);
+  if (!(d > stickR * STICK_DEADZONE)) return { mx: 0, my: 0, live: false };
+  return { mx: dx / d, my: dy / d, live: true };
+}
+
 function createInput(canvas, getViewport, layout, onTap = null, onPan = null) {
   let enabled = true;
   // 패닝 모드 — 로비 트리처럼 화면을 끌어 움직이는 곳에서 켠다.
@@ -7303,13 +7334,9 @@ function createInput(canvas, getViewport, layout, onTap = null, onPan = null) {
       let mx = 0, my = 0;
       if (state.stick) {
         const L = layout();
-        const dx = state.stick.x - state.stick.ox;
-        const dy = state.stick.y - state.stick.oy;
-        const d = Math.hypot(dx, dy);
-        if (d > 1) {
-          const k = Math.min(1, d / L.stickR) / d;
-          mx = dx * k; my = dy * k;
-        }
+        const v = stickVector(state.stick.x - state.stick.ox,
+                              state.stick.y - state.stick.oy, L.stickR);
+        mx = v.mx; my = v.my;
       } else {
         if (keys.has('a') || keys.has('arrowleft')) mx -= 1;
         if (keys.has('d') || keys.has('arrowright')) mx += 1;
