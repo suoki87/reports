@@ -750,22 +750,11 @@ const B = {
 
   // --- 플레이어 ---
   playerR: 15,
-  /**
-   * 시작 이동 속도.
-   *
-   * 172 → 148 (이슈 #5). 이유는 **카이팅을 공짜로 두지 않기 위해서다.**
-   * 172 는 가장 빠른 적(Demonz 88)의 1.95배였다. 그 배율에서는 마음먹고 돌기만 해도
-   * 아무에게도 안 잡히므로 "멈춰서 쏠까, 피할까" 가 질문이 아니라 정답이 된다.
-   * 148 이면 1.68배 — 도망칠 수는 있지만 돌기만 해서는 거리가 안 벌어진다.
-   *
-   * 더 내리지 않은 것은 아래쪽에 울타리가 있기 때문이다.
-   *   · 94 아래 — 예비동작을 보고 달려도 Boyz 의 돌진에 맞는다. 그건 "내가 늦었다" 가
-   *     아니라 "피할 수가 없었다" 라서 나쁜 죽음이다 (설계 기둥 2번).
-   *     test/balance.test.js 가 이 선을 지킨다.
-   *   · 138 아래 — 첫 판 조각 중앙값이 최저 노드 값(4) 밑으로 내려간다.
-   *     그러면 한 판을 해도 아무것도 못 산다 (설계 기둥 4번). 시드 200회 측정.
-   */
-  playerSpeed: 148,
+  // 도망만 다니면 안 죽는 판을 줄이려고 낮췄다 (172 → 145).
+  // 하한은 취향이 아니라 계산에서 나온다: **밀착 상태에서 보스 내려찍기 예비동작을
+  // 보고 걸어 나갈 수 있어야 한다.** 가장 빡빡한 Siren(반경 150 · 예비 0.85초)이
+  // 최소 ≈127px/s 를 요구한다 → `escapeMargin()` 과 test/balance.test.js 가 지킨다.
+  playerSpeed: 145,
   playerMaxHp: 24,
   invulnSec: 0.75,
   strideLen: 26,
@@ -1077,6 +1066,25 @@ function stageOf(n, b = B) {
 /** 스테이지 안에서 몇 번째 웨이브인가 (1..wavesPerStage). */
 function waveInStage(n, b = B) {
   return ((Math.max(1, Math.floor(n)) - 1) % b.wavesPerStage) + 1;
+}
+
+/**
+ * 밀착 상태에서 반경형 패턴(내려찍기 등)을 걸어서 벗어날 때 남는 여유 거리(px).
+ *
+ * 규칙 2("죽음에는 읽을 수 있는 이유가 있어야 한다")를 거리로 옮긴 것이다.
+ * 텔레그래프가 보여도 걸어 나갈 수 없으면 그건 예고가 아니라 통보다.
+ *
+ *  - 출발: 보스와 원이 맞닿은 자리 → 중심 거리 `bossR + playerR`
+ *  - 도착: 판정 밖 → sim.js 는 `d <= radius + playerR` 을 피격으로 본다
+ *  - 쓸 수 있는 시간: 예비동작(windup). 그동안 보스는 제자리에 선다
+ *
+ * 반환값 ≥ 0 이면 예비동작 안에 반경 밖으로 나갈 수 있다. playerR 은 양쪽에서
+ * 상쇄되지만, 판정 규칙이 바뀌면 여기서 갈리므로 인자로 남겨 둔다.
+ */
+function escapeMargin(patternRadius, bossR, playerR, windup, speed) {
+  const startDist = bossR + playerR;
+  const safeDist = patternRadius + playerR;
+  return speed * windup - (safeDist - startDist);
 }
 
 /** 보스 체력 — 스테이지가 올라갈수록 두꺼워진다. 보스마다 기본값이 다르다. */
