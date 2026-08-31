@@ -750,7 +750,22 @@ const B = {
 
   // --- 플레이어 ---
   playerR: 15,
-  playerSpeed: 172,
+  /**
+   * 시작 이동 속도.
+   *
+   * 172 → 148 (이슈 #5). 이유는 **카이팅을 공짜로 두지 않기 위해서다.**
+   * 172 는 가장 빠른 적(Demonz 88)의 1.95배였다. 그 배율에서는 마음먹고 돌기만 해도
+   * 아무에게도 안 잡히므로 "멈춰서 쏠까, 피할까" 가 질문이 아니라 정답이 된다.
+   * 148 이면 1.68배 — 도망칠 수는 있지만 돌기만 해서는 거리가 안 벌어진다.
+   *
+   * 더 내리지 않은 것은 아래쪽에 울타리가 있기 때문이다.
+   *   · 94 아래 — 예비동작을 보고 달려도 Boyz 의 돌진에 맞는다. 그건 "내가 늦었다" 가
+   *     아니라 "피할 수가 없었다" 라서 나쁜 죽음이다 (설계 기둥 2번).
+   *     test/balance.test.js 가 이 선을 지킨다.
+   *   · 138 아래 — 첫 판 조각 중앙값이 최저 노드 값(4) 밑으로 내려간다.
+   *     그러면 한 판을 해도 아무것도 못 산다 (설계 기둥 4번). 시드 200회 측정.
+   */
+  playerSpeed: 148,
   playerMaxHp: 24,
   invulnSec: 0.75,
   strideLen: 26,
@@ -789,10 +804,10 @@ const B = {
   shardR: 9,
   // 획득 반경을 키웠으니 흩어지는 거리도 같이 늘린다.
   // 안 그러면 코앞에서 죽인 적의 조각이 전부 발밑에 떨어져 "걸어가서 줍는다" 가 사라진다.
-  shardScatter: 84,           // 죽은 자리에서 튀는 거리
+  shardScatter: 50,           // 죽은 자리에서 튀는 거리
   // 닿았는데도 안 먹히는 느낌이 있었다. 조각이 끌려오는 속도가 빨라
   // 한 프레임 사이에 판정 반경을 지나쳐 버리는 경우가 생긴다.
-  pickupR: 30,                // 획득 판정 반경 (+ playerR 이 실제 반경)
+  pickupR: 22,                // 획득 판정 반경 (+ playerR 이 실제 반경)
   magnetBaseR: 42,            // 기본 흡인 — 거의 밟아야 한다
   magnetUnlockedR: 165,       // '촉수 감각' 해금 시
   magnetPull: 460,            // 끌려오는 가속
@@ -819,10 +834,10 @@ const B = {
   supplyMinDist: 230,         // 플레이어로부터 최소 이 거리 밖에 놓는다
   supplyR: 17,
   supplyHeartFrac: 0.35,      // 하트 회복량 = 최대 체력의 35%
-  supplyPouchBase: 16,
-  supplyPouchPerWave: 4,
-  supplyClusterBase: 5,
-  supplyClusterPerWave: 1.4,
+  supplyPouchBase: 9,
+  supplyPouchPerWave: 2.2,
+  supplyClusterBase: 3,
+  supplyClusterPerWave: 0.7,
 
   // --- 적 공통 ---
   enemyBaseHp: 20,
@@ -1228,7 +1243,7 @@ const NODES = [
     name: '포식자', eff: { money: 1.15, bio: 1.15 }, unit: '돈·조각 +15%',
     long: '쓰러진 것에서 남길 게 없을 때까지 가져간다. 죄책감은 실험대에 두고 왔다.' },
   { id: 'lt7', branch: 'loot', g: [-5, 1], req: 'lt5', max: 3, base: 12, kind: 'stat',
-    name: '손끝 감각', eff: { pickR: 8 }, unit: '줍는 반경 +8',
+    name: '손끝 감각', eff: { pickR: 5 }, unit: '줍는 반경 +5',
     long: '스치기만 해도 뜯긴다. 발을 정확히 얹지 않아도 되니 그만큼 덜 멈춘다.' },
   { id: 'lt8', branch: 'loot', g: [-5, -1], req: 'lt6', max: 3, base: 16, kind: 'stat',
     name: '조직 보존', eff: { shardLife: 2.5 }, unit: '조각이 남아 있는 시간 +2.5초',
@@ -4889,10 +4904,26 @@ function drawFx(ctx, world) {
       const y = f.y - k * 44;
       ctx.font = 'bold 23px system-ui, sans-serif';
       ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-      drawGold(ctx, f.x - 28, y, 15, 3);
-      outlinedText(ctx, `+${f.m}`, f.x - 18, y, 6);
-      bioIcon(ctx, f.x + 14, y, 13);
-      outlinedText(ctx, `+${f.bio}`, f.x + 26, y, 6);
+      /*
+        조각을 주워서 얻게 바꾼 뒤로 처치 시 bio 가 0 이다.
+        그런데 예전 그대로 두 칸을 항상 그려서 **`+0` 이 떴다.**
+        0 은 정보가 아니라 소음이다 — 얻은 것만 그린다.
+        한쪽만 있으면 가운데로 모아, 있던 자리가 비어 보이지 않게 한다.
+      */
+      const showM = f.m > 0;
+      const showB = f.bio > 0;
+      if (showM && showB) {
+        drawGold(ctx, f.x - 28, y, 15, 3);
+        outlinedText(ctx, `+${f.m}`, f.x - 18, y, 6);
+        bioIcon(ctx, f.x + 14, y, 13);
+        outlinedText(ctx, `+${f.bio}`, f.x + 26, y, 6);
+      } else if (showM) {
+        drawGold(ctx, f.x - 14, y, 15, 3);
+        outlinedText(ctx, `+${f.m}`, f.x - 4, y, 6);
+      } else if (showB) {
+        bioIcon(ctx, f.x - 14, y, 13);
+        outlinedText(ctx, `+${f.bio}`, f.x - 2, y, 6);
+      }
     } else if (f.type === 'heal') {
       ctx.globalAlpha = 1 - k;
       ctx.font = 'bold 20px system-ui, sans-serif';
