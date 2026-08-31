@@ -379,6 +379,12 @@ const TABS = [
   조용히 잃어버리는 것만은 절대 안 된다.
 */
 const LS_FB = 'gundude.board.feedback.v1';
+/*
+  중계소 주소와 열쇠.
+  이 둘을 아는 사람만 클로드를 깨울 수 있다. 그래서 코드에 박지 않고
+  이 브라우저에만 둔다 — 폰을 바꾸면 한 번 더 넣으면 된다.
+*/
+const LS_RELAY = 'gundude.board.relay.v1';
 const FB_AREAS = ['밸런스', '조작', 'UI', '연출', '버그', '기타'];
 const FB_STATES = ['열림', '작업중', '완료', '보류'];
 const FB_SEVS = ['낮음', '보통', '높음'];
@@ -1094,8 +1100,22 @@ function viewBosses(d) {
 const fbOpenCount = () => FB.filter((c) => FB_OPEN_STATES.indexOf(c.state) >= 0).length;
 const fbUnsavedCount = () => FB.filter((c) => FB_UNSAVED[c.id]).length;
 
+/*
+  같은 밀리초에 만든 카드는 Date.now() 가 같아, 겹치지 않게 막아 주던 것은
+  뒤의 무작위 4글자뿐이었다. 200장이면 1~2% 확률로 겹친다 —
+  실제로 테스트가 20회에 한 번꼴로 잡아냈다.
+
+  **겹치면 카드 하나가 조용히 사라진다.** 합칠 때 id 로 묶기 때문이다.
+  적은 것을 잃는 것이 이 도구에서 제일 나쁜 일이라, 확률을 낮추는 대신
+  같은 브라우저 안에서는 **겹칠 수 없게** 만든다 — 세는 수를 붙인다.
+*/
+let FB_SEQ = 0;
 function fbNewId() {
-  return 'fb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  FB_SEQ += 1;
+  const rand = (globalThis.crypto && crypto.randomUUID)
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10).padEnd(8, 'x');
+  return 'fb' + Date.now().toString(36) + '-' + FB_SEQ.toString(36) + '-' + rand;
 }
 
 /** 심각도 → 상태 → 분야 → 오래된 순. 급한 것이 위로, 같으면 묵은 것이 위로. */
@@ -1137,10 +1157,17 @@ function chips(kind, id, values, cur) {
 
 function viewFeedback(d) {
   const unsaved = fbUnsavedCount();
+  const pend = relayPending().length;
   let out = '<div class="tabact">'
     + '<button class="gold big" data-fbadd="1">＋ 피드백 추가</button>'
-    + '<span class="note">플레이 직후 그 자리에서 적어라. 나중에 '
-    + '<b>node tools/board/feedback-report.js</b> 로 읽는다.</span></div>';
+    + '<button class="' + (pend ? 'gold big' : 'ghost') + '" data-fbsend="1"'
+    + (pend ? '' : ' disabled') + '>⚡ 클로드에게 보내기'
+    + (pend ? ' (' + pend + ')' : '') + '</button>'
+    + (FB.length ? '<button class="ghost" data-fbexport="1">⤴︎ 카드 꺼내기 ('
+        + FB.length + ')</button>' : '')
+    + '<span class="note">플레이 직후 그 자리에서 적고 <b>보내기</b>를 눌러라. '
+    + '클로드가 고치면 폰으로 알림이 온다. '
+    + '<b>꺼내기</b>는 이 브라우저 밖으로 카드를 빼낸다.</span></div>';
 
   if (unsaved) {
     out += '<div class="hint" style="background:var(--hpRed);color:#fff">'
@@ -1167,7 +1194,7 @@ function viewFeedback(d) {
   out += list.map((c) => {
     const key = 'fb/' + c.id;
     const chip = '<div class="chip" style="background:var(--parchDark);font-size:17px">'
-      + (mark[c.severity] || '·') + '</div>';
+      + (c.sentAt ? '⚡' : (mark[c.severity] || '·')) + '</div>';
     const when = String(c.createdAt).slice(0, 16).replace('T', ' ');
     const linkLabel = c.link ? (' · → ' + c.link) : '';
     const head = esc(String(c.text).split('\n')[0].slice(0, 60) || '(빈 카드)');
@@ -1189,6 +1216,130 @@ function viewFeedback(d) {
       FB_UNSAVED[c.id] ? ' gone' : (c.state === '완료' ? ' done' : ''));
   }).join('');
   return out;
+}
+
+/* ------------------------------------------------- 카드 꺼내기 */
+/*
+  【왜 필요한가】
+  카드는 이 브라우저 안에만 있다. 그리고 브라우저의 저장고는 **주소마다 따로**다.
+  깃허브 주소에서 적은 카드는 맥 주소로 들어가면 안 보인다 — 다른 상자다.
+
+  서버가 없는 주소에서 적었다면 꺼낼 길이 이것뿐이다.
+  **적은 것을 잃는 것보다 나쁜 일은 없다.**
+*/
+function fbExportText() {
+  return JSON.stringify({
+    schema: 1,
+    updatedAt: new Date().toISOString(),
+    cards: FB,
+  }, null, 2);
+}
+
+async function fbExport() {
+  if (!FB.length) { toast('꺼낼 카드가 없다'); return; }
+  const text = fbExportText();
+
+  // 폰에서는 공유 시트가 제일 확실하다 — 메모·카톡 어디로든 보낼 수 있다.
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'GUN DUDE 피드백 ' + FB.length + '장', text: text });
+      toast('내보냈다 · ' + FB.length + '장');
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return;   // 사용자가 닫은 것 — 실패가 아니다
+    }
+  }
+  const ok = await copyText(text);
+  openCopySheet(text,
+    (ok ? '<b>복사됐다.</b> ' : '<b>손으로 복사해라.</b> ')
+    + '카드 ' + FB.length + '장. 이걸 클로드에게 붙여 넣으면 맥에 저장된다.');
+}
+
+/* --------------------------------------------- 클로드에게 보내기 */
+/*
+  【이게 하는 일】
+  아직 안 보낸 열린 카드를 중계소로 던진다. 중계소가 깃허브 이슈로 옮기고,
+  거기서 클로드가 깨어난다. 디렉터가 하는 일은 이 버튼 한 번이다.
+
+  【두 번 눌러도 두 번 안 간다】
+  보낸 카드에는 sentAt 이 박힌다. 이게 없으면 같은 피드백으로 이슈가 두 개 생기고
+  클로드가 같은 일을 두 번 한다 — 돈이 두 배로 든다.
+*/
+function relayCfg() {
+  try { return JSON.parse(localStorage.getItem(LS_RELAY) || 'null'); } catch { return null; }
+}
+function relaySetCfg(url, key) {
+  localStorage.setItem(LS_RELAY, JSON.stringify({ url: url, key: key }));
+}
+/** 아직 안 보낸, 열려 있는 카드. */
+function relayPending() {
+  return FB.filter((c) => FB_OPEN_STATES.indexOf(c.state) >= 0 && !c.sentAt);
+}
+
+async function relaySend() {
+  const pending = relayPending();
+  if (!pending.length) { toast('보낼 새 카드가 없다'); return; }
+
+  const body = JSON.stringify({ cards: pending });
+  toast('보내는 중… ' + pending.length + '장');
+
+  /*
+    길이 둘이다.
+      ① 맥 서버로 열었으면 /api/send 가 있다 — 설정이 필요 없다
+      ② 정적 호스팅이면 없다 — 중계소 주소를 쓴다 (맥이 꺼져 있어도 간다)
+    ①을 먼저 두드리는 이유는 **설정 없이 되는 길을 우선**하기 위해서다.
+  */
+  let res = null;
+  try {
+    res = await fetch('/api/send', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body,
+    });
+  } catch { res = null; }
+
+  if (!res || res.status === 404 || res.status === 405) {
+    let cfg = relayCfg();
+    if (!cfg || !cfg.url || !cfg.key) {
+      if (!confirm('맥 서버가 안 보인다.\n\n중계소(Cloudflare)를 쓰면 맥이 꺼져 있어도 보낼 수 있다.\n주소와 열쇠를 넣겠나?')) return;
+      const url = prompt('중계소 주소 (예: https://gundude-relay.<이름>.workers.dev)');
+      if (!url) return;
+      const key = prompt('중계소 열쇠');
+      if (!key) return;
+      relaySetCfg(url.trim().replace(/\/+$/, ''), key.trim());
+      cfg = relayCfg();
+    }
+    try {
+      res = await fetch(cfg.url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-board-key': cfg.key },
+        body,
+      });
+    } catch { res = null; }
+  }
+
+  if (!res) { alert('아무 데도 닿지 못했다.\n\n맥 서버 주소로 열었는지, 아니면 중계소 주소가 맞는지 봐라.\n카드는 그대로 남아 있으니 잃은 것은 없다.'); return; }
+  if (res.status === 401) {
+    if (confirm('열쇠가 맞지 않는다. 다시 넣겠나?')) localStorage.removeItem(LS_RELAY);
+    return;
+  }
+  let out = null;
+  try { out = await res.json(); } catch { out = null; }
+  if (!res.ok || !out || !out.ok) {
+    alert('보내지 못했다 (' + res.status + ')\n\n'
+      + ((out && (out.error || (out.failed && out.failed[0] && out.failed[0].error))) || '이유를 못 받았다'));
+    return;
+  }
+
+  // 성공한 만큼만 표시한다. 실패한 카드는 다음에 다시 보낸다.
+  const n = (out.created || []).length;
+  for (let i = 0; i < n && i < pending.length; i += 1) {
+    const c = fbFind(pending[i].id);
+    if (!c) continue;
+    c.sentAt = new Date().toISOString();
+    c.state = '작업중';
+    FB_UNSAVED[c.id] = true;
+  }
+  fbTouch(true);
+  toast('클로드에게 넘겼다 · ' + n + '장. 폰으로 알림이 온다');
 }
 
 /* ------------------------------------------------- 피드백 저장 · 조작 */
@@ -1389,6 +1540,8 @@ document.addEventListener('click', (ev) => {
   const flt = t.closest('[data-fbfilter]');
   if (flt) { FB_ALL = flt.getAttribute('data-fbfilter') === 'all'; render(); return; }
   if (t.closest('[data-fbsync]')) { fbTouch(false); return; }
+  if (t.closest('[data-fbsend]')) { relaySend(); return; }
+  if (t.closest('[data-fbexport]')) { fbExport(); return; }
 
   const fset = t.closest('[data-fbset]');
   if (fset) {
