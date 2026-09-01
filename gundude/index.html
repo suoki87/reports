@@ -1087,6 +1087,23 @@ function escapeMargin(patternRadius, bossR, playerR, windup, speed) {
   return speed * windup - (safeDist - startDist);
 }
 
+/**
+ * 보스 돌진(charge) 예고선의 치수 — 그리는 값과 맞는 값이 갈리지 않게 한 곳에서 만든다.
+ *
+ * 규칙 2("죽음에는 읽을 수 있는 이유가 있어야 한다")를 그림으로 옮긴 것이다.
+ * 돌진의 공략은 "예고선 밖으로 걸어 나가기" 하나뿐이라, 예고선이 실제 판정보다
+ * 가늘면 선 밖에 서 있었는데 맞는다 — 그러면 왜 죽었는지 말할 수 없다.
+ *
+ *  - sim.js 는 돌진 중 매 프레임 중심거리 <= bossR + playerR 을 피격으로 본다
+ *  - 보스는 speed 로 active 초 동안 직선으로 민다
+ *  → 실제 위험 영역은 반경 (bossR + playerR) · 길이 (speed * active) 의 스윕 캡슐
+ *
+ * 반환값은 렌더가 그대로 쓴다. 판정식이 바뀌면 여기와 sim.js 를 같이 고쳐야 한다.
+ */
+function chargeTelegraph(bossR, playerR, speed, active) {
+  return { halfWidth: bossR + playerR, length: speed * active };
+}
+
 /** 보스 체력 — 스테이지가 올라갈수록 두꺼워진다. 보스마다 기본값이 다르다. */
 function bossHp(wave, b = B) {
   const stage = stageOf(wave, b);
@@ -4511,16 +4528,47 @@ function drawTelegraph(ctx, e, k, isBoss) {
       ctx.arc(e.x + Math.cos(a) * e.r, e.y + Math.sin(a) * e.r, 4 + p * 7, 0, Math.PI * 2);
       ctx.fill();
     }
-    // 돌진·박치기는 어디로 오는지 선으로 보여준다
-    if (k.lunge > 0 || k.kind === 'charge') {
+    // 박치기(잡몹) — 어디로 오는지 선으로 보여준다
+    if (k.lunge > 0) {
       const a = Math.atan2(e.aimY, e.aimX);
-      const len = k.kind === 'charge' ? 300 : k.lunge + e.r * 2;
+      const len = k.lunge + e.r * 2;
       ctx.globalAlpha = 0.18 + p * 0.35;
       ctx.lineWidth = e.r * 0.9;
       ctx.beginPath();
       ctx.moveTo(e.x, e.y);
       ctx.lineTo(e.x + Math.cos(a) * len, e.y + Math.sin(a) * len);
       ctx.stroke();
+    }
+    // 보스 돌진 — 예고선이 곧 판정이다.
+    // 돌진은 "선 밖으로 걸어 나가기" 가 공략의 전부라, 그림이 판정보다 가늘면
+    // 선 밖에 서 있었는데 맞는다. 그래서 폭·길이를 판정식에서 그대로 가져온다.
+    //   폭 = 2 * (bossR + playerR) · 길이 = speed * active  (chargeTelegraph)
+    // 표현은 광선(beam)과 같은 문법 — 옅은 채움 + 진한 점선 테두리.
+    // 이 크기를 진하게 칠하면 아레나가 빨간 벽이 되어 오히려 못 읽는다.
+    if (k.kind === 'charge') {
+      const a = Math.atan2(e.aimY, e.aimX);
+      const { halfWidth: rr, length: len } = chargeTelegraph(e.r, B.playerR, k.speed, k.active);
+      ctx.save();
+      clipArena(ctx);       // 벽에 부딪히면 즉시 경직 — 절벽 밖은 일어나지 않을 일이다
+      ctx.translate(e.x, e.y);
+      ctx.rotate(a);
+      ctx.beginPath();      // 스윕 캡슐. 양 끝 반원이 판정의 끝단 반경과 같다
+      ctx.moveTo(0, -rr);
+      ctx.lineTo(len, -rr);
+      ctx.arc(len, 0, rr, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(0, rr);
+      ctx.arc(0, 0, rr, Math.PI / 2, -Math.PI / 2);
+      ctx.closePath();
+      ctx.globalAlpha = 0.14 + p * 0.30;
+      ctx.fillStyle = PALETTE.hpRed;
+      ctx.fill();
+      ctx.globalAlpha = 0.5 + p * 0.5;
+      ctx.strokeStyle = PALETTE.hpRed;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([14, 10]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
     }
     if (k.kind === 'slam') {
       ctx.globalAlpha = 0.15 + p * 0.35;
