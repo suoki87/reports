@@ -1715,7 +1715,9 @@ function falloffMul(shot, travelled) {
 function sustainedDps(weaponId, stats) {
   const s = weaponStats(weaponId, stats);
   const shotsPerMag = Math.floor(s.mag / Math.max(1, s.burst));
-  const cycle = shotsPerMag * s.interval + s.reload;
+  // 마지막 발의 쿨다운은 재장전과 **나란히** 돈다 (sim.js 참고).
+  // 그래서 탄창 하나를 비우는 주기 = 앞선 발들의 간격 + max(재장전, 마지막 발 간격).
+  const cycle = (shotsPerMag - 1) * s.interval + Math.max(s.interval, s.reload);
   const dmgPerMag = shotsPerMag * s.burst * s.count * s.damage;
   return dmgPerMag / cycle;
 }
@@ -2062,10 +2064,15 @@ function stepWorld(world, dt, input, rnd) {
 
   // 재장전도, 다음 발 준비도 이동 중에 진행된다.
   // 그래서 "움직이며 채우고 → 멈추는 순간 탕" 의 리듬이 나온다.
+  // 둘은 **나란히 돈다**. 재장전 중에 다음 발 준비를 멈추면 마지막 탄을 쏜 대가를
+  // 재장전이 끝난 뒤에 한 번 더 치르게 되고(대기 = reload + interval),
+  // 그러면 탄창을 비운 플레이어만 두 번 벌받는다.
+  // 불변식: 탄창을 비운 뒤 다시 쏠 수 있게 되기까지 = max(reload, interval).
   if (p.reloading > 0) {
     p.reloading -= dt;
     if (p.reloading <= 0) { p.reloading = 0; p.mag = shot.mag; p.bloom = 0; }
-  } else if (p.fireCd > 0) {
+  }
+  if (p.fireCd > 0) {
     p.fireCd -= dt;
   }
 
