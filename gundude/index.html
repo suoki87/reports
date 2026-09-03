@@ -41,6 +41,7 @@
      11초 뒤 사라지는 띠는 읽을 새도 없고 다시 볼 방법도 없었다. -->
 
 <script type="module">
+globalThis.__NO_TUNING__ = true;
 globalThis.__LAYOUT__ = {"hud":{"pause":{"x":634,"y":198,"w":84,"h":74}}};
 
 /* ===== src/game/art/palette.js ===== */
@@ -724,6 +725,185 @@ const EDITABLE_SCREENS = [
 ];
 
 
+/* ===== src/core/tuning.js ===== */
+/**
+ * 수치 덮어쓰기 층 — **보드에서 바꾼 숫자를 게임이 바로 쓴다.**
+ *
+ * 【왜 있나】
+ * 디렉터가 기획 보드에서 웨이브 편성을 바꿔도 게임은 꿈쩍도 안 했다.
+ * `data/design.json` 은 코드에서 **생성한 사본**이라 게임이 안 읽기 때문이다.
+ * 그래서 숫자 하나를 시험해 보려면 매번 사람이 코드로 옮겨야 했고,
+ * "바꿔 보고 바로 해 본다" 가 성립하지 않았다.
+ *
+ * 배치는 이미 이 문제를 푼 적이 있다 — `layout.js` 가 같은 구조다.
+ * 여기서는 그걸 **수치**에 붙인다.
+ *
+ * 【규칙】
+ *  1. **덮어쓰기가 없으면 코드가 진실이다.** tuning.json 이 없어도 게임은 그대로 돈다
+ *  2. **아는 경로만** 받는다. 모르는 경로는 조용히 무시한다 —
+ *     보드에 새 칸이 생기거나 코드에서 항목이 사라져도 게임이 죽으면 안 된다
+ *  3. **되돌릴 수 있다.** 원래 값을 들고 있다가 `clearTuning()` 이면 되돌린다.
+ *     안 그러면 테스트끼리 오염되고, 한 번 만진 값이 그 세션 내내 따라다닌다
+ *  4. 어떤 입력에도 **throw 하지 않는다.** 여기서 던지면 게임이 아예 안 뜬다
+ *
+ * 【배포본에는 안 들어간다 — 일부러다】
+ * 이 층은 **맥에서 도는 판에만** 얹힌다. 자동 배포가 밤에도 돌기 때문에,
+ * 만지다 만 숫자가 그대로 공개본에 나가면 디렉터가 자고 일어나 모르는 게임을 만난다.
+ * 값이 마음에 들면 보드의 **[배포에 적용하기]** 로 이슈를 내고, 그때 코드로 옮긴다.
+ * 반복은 AI 없이, 확정만 AI가 한다.
+ */
+
+/**
+ * 보드가 쓰는 경로 → 코드의 자리.
+ *
+ * 보드 경로는 **id 로 찾는다** (`waves/1/groups` 의 1 은 배열 순번이 아니라 웨이브 번호).
+ * 여기 없는 경로는 안 받는다. 화이트리스트인 이유는 하나다 —
+ * 아무 경로나 받으면 오타 하나가 조용히 무시되는데, 디렉터는 값이 안 먹는 이유를 모른다.
+ */
+const GLOBAL_MAP = {
+  'globals/player/r': 'playerR',
+  'globals/player/speed': 'playerSpeed',
+  'globals/player/maxHp': 'playerMaxHp',
+  'globals/player/invulnSec': 'invulnSec',
+  'globals/player/strideLen': 'strideLen',
+  'globals/combat/fireIntervalBase': 'fireIntervalBase',
+  'globals/combat/baseDamage': 'baseDamage',
+  'globals/combat/bulletR': 'bulletR',
+  'globals/skill/cooldown': 'skillCooldown',
+  'globals/skill/radius': 'skillRadius',
+  'globals/skill/expandSec': 'skillExpandSec',
+  'globals/skill/damageMul': 'skillDamageMul',
+  'globals/skill/knockback': 'skillKnockback',
+  'globals/skill/drag': 'knockbackDrag',
+  'globals/enemyCommon/baseHp': 'enemyBaseHp',
+  'globals/enemyCommon/hpGrowthPerWave': 'enemyHpGrowthPerWave',
+  'globals/enemyCommon/damageGrowthPerWave': 'enemyDamageGrowthPerWave',
+  'globals/enemyCommon/separation': 'enemySeparation',
+  'globals/enemyCommon/spawnDropSec': 'spawnDropSec',
+  'globals/enemyCommon/fallSec': 'fallSec',
+  'globals/wavePacing/wavesPerStage': 'wavesPerStage',
+  'globals/wavePacing/baseCount': 'waveBaseCount',
+  'globals/wavePacing/growth': 'waveGrowth',
+  'globals/wavePacing/groupClearAt': 'groupClearAt',
+  'globals/wavePacing/groupTimeout': 'groupTimeout',
+  'globals/wavePacing/groupGap': 'groupGap',
+  'globals/wavePacing/groupSpawnGap': 'groupSpawnGap',
+  'globals/wavePacing/groupMaxLate': 'groupMaxLate',
+  'globals/wavePacing/maxAliveEnemies': 'maxAliveEnemies',
+  'globals/wavePacing/intermissionSec': 'intermissionSec',
+};
+
+/** 되돌리기 위해 원래 값을 들고 있는다. [{ obj, key, had, prev }] */
+let APPLIED = [];
+/** 실제로 받아들인 경로들. 보드가 "몇 개 걸려 있나" 를 이걸로 센다. */
+let PATHS = [];
+
+function tuneNum(v) {
+  const n = typeof v === 'string' ? Number(v) : v;
+  return Number.isFinite(n) ? n : null;
+}
+
+/** 웨이브 편성으로 받아들일 수 있는 값인가. 1 이상 정수의 배열이어야 한다. */
+function tuneGroups(v) {
+  if (!Array.isArray(v) || v.length === 0 || v.length > 64) return null;
+  const out = [];
+  for (const g of v) {
+    const n = tuneNum(g);
+    if (n === null || !Number.isInteger(n) || n < 1 || n > 999) return null;
+    out.push(n);
+  }
+  return out;
+}
+
+function put(obj, key, value) {
+  if (!obj || typeof obj !== 'object') return false;
+  APPLIED.push({
+    obj, key, had: Object.prototype.hasOwnProperty.call(obj, key), prev: obj[key],
+  });
+  obj[key] = value;
+  return true;
+}
+
+/**
+ * 덮어쓰기를 얹는다. **먼저 걸려 있던 것은 되돌리고** 새로 얹는다 —
+ * 겹쳐 얹으면 "원래 값" 이 덮어쓴 값이 돼서 되돌리기가 영영 깨진다.
+ *
+ * @param raw { "경로": 값 } 꼴. 아니면 아무것도 안 한다
+ * @param target { B, WEAPONS } — 건드릴 대상. 안 주면 아무것도 안 한다
+ * @returns {string[]} 실제로 받아들인 경로들
+ */
+function setTuning(raw, target) {
+  clearTuning();
+  const B = target && target.B;
+  const WEAPONS = target && target.WEAPONS;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !B) return [];
+
+  const took = [];
+  for (const [path, value] of Object.entries(raw)) {
+    const seg = String(path).split('/');
+
+    // globals/<묶음>/<이름>
+    if (seg[0] === 'globals') {
+      const key = GLOBAL_MAP[path];
+      const n = tuneNum(value);
+      if (!key || n === null) continue;
+      if (put(B, key, n)) took.push(path);
+      continue;
+    }
+
+    // enemies/<종류>/stats/<이름>
+    if (seg[0] === 'enemies' && seg[2] === 'stats' && seg.length === 4) {
+      const kind = B.kinds && B.kinds[seg[1]];
+      const n = tuneNum(value);
+      if (!kind || n === null) continue;
+      if (put(kind, seg[3], n)) took.push(path);
+      continue;
+    }
+
+    // weapons/<총>/stats/<이름> — 숫자만. shape 같은 문자열은 그림이라 여기서 안 만진다
+    if (seg[0] === 'weapons' && seg[2] === 'stats' && seg.length === 4) {
+      const w = WEAPONS && WEAPONS[seg[1]];
+      const n = tuneNum(value);
+      if (!w || n === null) continue;
+      if (put(w, seg[3], n)) took.push(path);
+      continue;
+    }
+
+    /*
+      waves/<번호>/groups
+      웨이브 편성은 함수(`waveGroups`)가 만든다. 그래서 값을 직접 못 덮어쓰고
+      **함수가 먼저 들여다볼 표**에 넣는다. 표가 비면 함수는 원래대로 동작한다.
+    */
+    if (seg[0] === 'waves' && seg[2] === 'groups' && seg.length === 3) {
+      const n = tuneNum(seg[1]);
+      const g = tuneGroups(value);
+      if (n === null || !Number.isInteger(n) || n < 1 || !g) continue;
+      if (!B.waveTuning) put(B, 'waveTuning', {});
+      if (put(B.waveTuning, String(n), g)) took.push(path);
+      continue;
+    }
+  }
+  PATHS = took;
+  return took;
+}
+
+/** 얹은 것을 전부 되돌린다. 얹은 역순으로 풀어야 겹친 자리도 원래대로 돌아간다. */
+function clearTuning() {
+  for (let i = APPLIED.length - 1; i >= 0; i -= 1) {
+    const { obj, key, had, prev } = APPLIED[i];
+    if (had) obj[key] = prev;
+    else delete obj[key];
+  }
+  APPLIED = [];
+  PATHS = [];
+}
+
+/** 지금 걸려 있는 덮어쓰기 경로들. 보드·검사기가 "몇 개 걸렸나" 를 이걸로 센다. */
+function tuningPaths() {
+  return [...PATHS];
+}
+
+
 /* ===== src/core/balance.js ===== */
 /**
  * 밸런스 수식 — 단일 진실 공급원.
@@ -856,6 +1036,30 @@ const B = {
       r: 19, speed: 44, hpMul: 2.1, money: 7, bio: 2, unlockWave: 6, weight: 0.5,
       attack: 'shoot', range: 320, windup: 0.85, strike: 0.10, recover: 1.6,
       damage: 10, lunge: 0, shotSpeed: 300, keepDist: 235,
+    },
+    /**
+     * Shieldz — **정면만 막는 방패**를 들고 느리게 다가온다.
+     *
+     * 던지는 물음: *정면에 탄창을 부을까, 돌아가는 동안 맞을 각오를 할까.*
+     * 이 게임은 멈춰야 쏘므로 **도는 시간이 곧 못 쏘는 시간**이다. 그 교환이 전부다.
+     *
+     * 【숫자가 어디서 나왔나 — 전부 test/shield.test.js 가 지킨다】
+     *  · `shieldTurn 0.8` → 우회 가능 거리 145/0.8 = **181px**. 사거리 61px 의 세 배라
+     *    "맞을 각오" 없이도 돌 수는 있다. 다만 붙을수록 쉬워진다
+     *  · `shieldArc 1.05` (정면 120°) + 0.8 → 등 뒤 창 **2.6초 ≈ 권총 세 발**.
+     *    두 발도 못 쏘면 우회가 성립 안 하고, 탄창을 다 비울 만큼 길면 한 번 돌고 끝난다
+     *  · `shieldMul 1.0` → 방패만 깨는 데 **정확히 권총 한 탄창(6발)**.
+     *    정면 11발 vs 우회 5발 — 두 배 넘게 차이 나야 돌 이유가 생긴다
+     *  · `speed 46` → 플레이어(145)의 3분의 1 아래. 안 그러면 도는 동안 따라붙는다
+     */
+    shieldz: {
+      r: 18, speed: 46, hpMul: 0.9, money: 6, bio: 2, unlockWave: 5, weight: 0.7,
+      attack: 'body', range: 28, windup: 0.62, strike: 0.16, recover: 0.70,
+      damage: 14, lunge: 40,
+      shieldMul: 1.0,      // 방패 체력 = 기본 체력 × 이것
+      shieldArc: 1.05,     // 반각. 좌우 60° 씩 정면 120° 를 막는다
+      shieldTurn: 0.8,     // 초당 라디안. 이 상한이 곧 우회의 가능성이다
+      speedBroken: 68,     // 깨지면 빨라진다 — 정면으로 부순 대가가 즉시 돌아온다
     },
   },
 
@@ -1019,18 +1223,47 @@ function availableKinds(wave, b = B) {
  *   W3 [1,2,3] — 빠른 적(Demonz)이 섞인다. 셋을 처음 만난다.
  * 그 뒤로는 총량을 자동으로 쪼갠다.
  */
+/*
+  손으로 짠 편성. 규칙을 하나씩 가르치는 자리라 자동 편성에 안 맡긴다.
+
+  【지키는 두 가지】
+   ① **스테이지 안에서는 반드시 올라간다.** 마리수든 최대 덩어리든.
+      뒤 웨이브가 앞보다 쉬우면 "점점 세진다" 가 그 스테이지에서 사라진다
+   ② **웨이브마다 가르치는 것이 다르다.** 같은 것을 두 번 가르치면 하나는 낭비다
+
+  2026-09-02: W1 을 [1,1,2] → [1,2,3] 으로 굳히면서 스테이지 1 이 6·6·6 으로
+  평평해졌고, W2 는 최대 덩어리가 2 라 W1(3) 보다 **오히려 쉬웠다.**
+  W3 는 W1 과 편성이 글자 그대로 같아졌다. 셋을 같이 고쳤다.
+*/
 const HAND_AUTHORED = {
-  1: [1, 1, 2],
-  2: [2, 2, 2],
-  3: [1, 2, 3],
-  5: [2, 3, 3],
-  6: [3, 3, 3, 2],
+  // 규칙 + 탄창. 한 마리는 배우는 자리, 셋은 시험하는 자리다 (디렉터 결정)
+  1: [1, 2, 3],
+  // **덩어리가 커진다.** 한 번에 넷이 오면 탄창 하나로 못 막는다 → 도망치며 재장전
+  2: [3, 4],
+  // Demonz 합류. 덩어리 크기는 그대로인데 **빠른 놈이 섞인다** — 조준이 끌려간다
+  3: [2, 3, 4],
+  /*
+    Shieldz 첫 등장. 방패는 한 마리가 두 배로 무거우니 마리수를 낮추고 싶었지만
+    **편성은 줄지 않는다** 는 불변식이 먼저다 (test/balance.test.js) —
+    뒤 웨이브가 앞보다 가벼우면 생존 시간이 점수인 게임에서 진행감이 꺾인다.
+    그래서 W3(9) 보다 하나 위로 두되, 첫 덩어리를 작게 시작해 배울 틈을 준다.
+  */
+  5: [3, 3, 4],
+  // Machinz 합류. 꼬리 2 를 없애 외톨이가 안 남게 했다
+  6: [4, 4, 3],
+  // 보스 직전. 이 스테이지의 최대 압박
   7: [3, 4, 4, 3],
 };
 
 function waveGroups(n, b = B) {
   const w = Math.max(1, Math.floor(n));
   if (isBossWave(w, b)) return [];
+  /*
+    보드에서 끌어 고친 편성이 있으면 그게 먼저다 (src/core/tuning.js).
+    이 표는 **맥에서 도는 판에만** 얹힌다 — 배포본에는 안 들어간다.
+    표가 비어 있으면 아래 손 편성과 자동 편성이 그대로 돈다.
+  */
+  if (b.waveTuning && Array.isArray(b.waveTuning[w])) return [...b.waveTuning[w]];
   if (HAND_AUTHORED[w]) return [...HAND_AUTHORED[w]];
 
   // 자동 편성: 총량을 3~4 크기의 그룹으로 쪼갠다. 한 번에 다 쏟지 않는다.
@@ -1044,6 +1277,19 @@ function waveGroups(n, b = B) {
     groups.push(g);
     left -= g;
     size = Math.min(b.groupMaxLate, size + (groups.length % 2 === 0 ? 1 : 0));
+  }
+  /*
+    **꼬리에 한 마리를 남기지 않는다.**
+    나누다 보면 마지막에 1 이 떨어질 때가 있다 (W9 가 [3,3,4,4,1] 이었다).
+    한 마리가 터덜터덜 걸어오는 시간은 긴장이 아니라 **기다림**이다 —
+    이 게임의 점수가 생존 시간이라 그 기다림이 곧 공짜 점수가 된다.
+    가장 작은 덩어리에 얹어 상한을 안 넘게 한다.
+  */
+  if (groups.length > 1 && groups[groups.length - 1] === 1) {
+    groups.pop();
+    let min = 0;
+    for (let i = 1; i < groups.length; i += 1) if (groups[i] < groups[min]) min = i;
+    groups[min] += 1;
   }
   return groups;
 }
@@ -1821,7 +2067,142 @@ function rollShopOptions(stageIndex, world, rnd) {
 }
 
 
+/* ===== src/core/shield.js ===== */
+/**
+ * 방패 — **정면만 막는다.**
+ *
+ * 【왜 정면만인가 — 설계 기둥 6번】
+ * 방향을 안 가리는 방패는 그냥 체력이 많은 적이다. Machinz 가 이미 체력 ×2.1 이라
+ * 새 고민이 하나도 안 생긴다. "숫자만 늘리면 기각" 에 그대로 걸린다.
+ *
+ * 정면만 막으면 이 게임의 근본 규칙과 부딪힌다 — **멈춰야 쏜다.**
+ * 옆으로 돌아가는 시간이 곧 못 쏘는 시간이다. 그래서 물음이 생긴다:
+ *
+ *   "정면에서 탄창을 부을까, 돌아가는 동안 맞을 각오를 할까"
+ *
+ * 지금 어떤 적도 안 던지는 물음이다.
+ *
+ * 【방패는 천천히 돈다 — 이게 전부다】
+ * 방패가 늘 플레이어를 향하면 우회가 **원리적으로 불가능**하고, 그러면 위 물음이
+ * 사라져서 그냥 단단한 적으로 돌아간다. 그래서 회전 속도에 상한을 둔다.
+ * 플레이어가 가까이 붙을수록 각속도가 커지므로 — 거리 d 에서 초당 (speed / d) 라디안 —
+ * **위험을 감수하고 붙는 쪽이 우회에 성공한다.** 그 교환이 이 적의 전부다.
+ *
+ * 여기 있는 것은 전부 순수 함수다. 캔버스도 시간도 난수도 모른다.
+ */
+
+/**
+ * 각을 (-π, π] 로 접는다. 안 접으면 359° 와 1° 가 358° 차이로 읽힌다.
+ *
+ * 끝을 **+π 로 몰아 둔다.** 정확히 등 뒤(180°)는 좌우가 완전히 같은 거리라
+ * 어느 쪽으로 돌지가 안 정해지는데, 그러면 방패가 프레임마다 좌우로 떤다.
+ * +π 로 고정하면 늘 같은 쪽으로 돌기 시작한다 — 떨림이 원리적으로 안 생긴다.
+ */
+function wrapAngle(a) {
+  const n = Number(a);
+  if (!Number.isFinite(n)) return 0;
+  let x = (n + Math.PI) % (Math.PI * 2);
+  if (x < 0) x += Math.PI * 2;
+  const r = x - Math.PI;
+  return r === -Math.PI ? Math.PI : r;
+}
+
+/**
+ * `cur` 를 `want` 쪽으로 **최대 `maxStep` 만큼만** 돌린다.
+ *
+ * 상한이 없으면 방패가 순간이동해서 늘 플레이어를 본다. 그러면 우회가 불가능하다 —
+ * 이 함수의 상한이 곧 이 적이 던지는 물음의 크기다.
+ */
+function turnToward(cur, want, maxStep) {
+  const c = wrapAngle(cur);
+  const diff = wrapAngle(wrapAngle(want) - c);
+  const step = Number.isFinite(maxStep) ? Math.abs(maxStep) : 0;
+  if (step <= 0) return c;
+  if (Math.abs(diff) <= step) return wrapAngle(want);
+  return wrapAngle(c + Math.sign(diff) * step);
+}
+
+/**
+ * 이 각도에서 날아온 것을 방패가 막나.
+ *
+ * @param shieldA 방패가 보는 방향 (라디안)
+ * @param fromA   **적에서 공격자 쪽을 본 방향.** 탄이 날아온 쪽이지 탄이 가는 쪽이 아니다
+ * @param arc     반각 (라디안). 1.05 면 좌우 60° 씩, 정면 120° 를 막는다
+ */
+function isBlocked(shieldA, fromA, arc) {
+  const half = Number(arc);
+  if (!Number.isFinite(half) || half <= 0) return false;
+  if (half >= Math.PI) return true;                    // 360° 방패 — 설계상 안 쓰지만 안 터진다
+  return Math.abs(wrapAngle(wrapAngle(fromA) - wrapAngle(shieldA))) <= half;
+}
+
+/**
+ * 피해 한 번을 적용한다.
+ *
+ * 【지키는 것 — 이 넷이 방패의 정의다】
+ *  ① 방패가 남아 있고 정면이면 **체력은 1도 안 깎인다**
+ *  ② 방패 밖에서 온 피해는 **방패를 안 깎는다** — 돌아간 보상이 사라지면 우회가 무의미해진다
+ *  ③ 체력도 방패도 **음수로 안 간다** — 금 표시와 체력 바가 깨진다
+ *  ④ 방패를 깬 그 발은 **방패까지만** 한다. 넘친 피해는 버린다
+ *
+ * ④는 고른 규칙이지 물리가 아니다. 넘김을 허용하면 유탄 한 방이 방패와 몸을 같이
+ * 뚫는데, 화면에서는 "깨졌다" 와 "아팠다" 가 한 프레임에 겹쳐 **왜 죽었는지 안 읽힌다**
+ * (기둥 2). 대신 강한 총 한 방이 손해가 되므로 우회의 값이 올라간다 — 의도한 쪽이다.
+ *
+ * @returns {{hp, shield, absorbed, toHp, broke}} 새 값과 무슨 일이 있었나
+ */
+function applyDamage(unit, dmg, blocked) {
+  const hp0 = Number(unit && unit.hp);
+  const sh0 = Number(unit && unit.shield);
+  const hp = Number.isFinite(hp0) ? hp0 : 0;
+  const shield = Number.isFinite(sh0) && sh0 > 0 ? sh0 : 0;
+  const raw = Number(dmg);
+  const d = Number.isFinite(raw) && raw > 0 ? raw : 0;
+
+  if (blocked && shield > 0) {
+    const absorbed = Math.min(shield, d);
+    const left = shield - absorbed;
+    return { hp, shield: left, absorbed, toHp: 0, broke: left <= 0 };
+  }
+  return {
+    hp: Math.max(0, hp - d), shield, absorbed: 0, toHp: Math.min(d, hp), broke: false,
+  };
+}
+
+/**
+ * 이 방패를 **얼마나 가까이서 돌아야** 벗어날 수 있나 (설계 좌표 px).
+ *
+ * 플레이어가 거리 d 에서 옆으로 달리면 각속도는 speed / d 다.
+ * 그게 방패 회전 속도보다 커야 등 뒤를 잡는다 → d < speed / turn.
+ *
+ * 이 값이 적의 사거리보다 **작으면** 우회하려면 반드시 맞는 거리까지 들어가야 한다는 뜻이고,
+ * 그러면 우회는 선택지가 아니라 벌칙이 된다. 밸런스를 만질 때 이 수를 먼저 본다.
+ */
+function flankRadius(playerSpeed, shieldTurn) {
+  const s = Number(playerSpeed);
+  const t = Number(shieldTurn);
+  if (!Number.isFinite(s) || !Number.isFinite(t) || t <= 0) return Infinity;
+  return Math.max(0, s) / t;
+}
+
+/**
+ * 등 뒤를 잡고 **멈춰서 쏠 수 있는 시간** (초).
+ *
+ * 플레이어가 방패 뒤 `behind` 라디안 지점에 섰다. 거기 서서 쏘는 동안 방패가 돌아온다.
+ * 방패 가장자리가 나를 덮을 때까지가 창이다. 이 창이 한 발보다 짧으면
+ * "돌아가서 쏜다" 가 성립하지 않는다 — 그때 이 적은 그냥 짜증이 된다.
+ */
+function flankWindow(behind, arc, shieldTurn) {
+  const b = Math.abs(wrapAngle(behind));
+  const half = Number(arc);
+  const t = Number(shieldTurn);
+  if (!Number.isFinite(half) || !Number.isFinite(t) || t <= 0) return 0;
+  return Math.max(0, (b - half) / t);
+}
+
+
 /* ===== src/game/sim.js ===== */
+
 
 
 
@@ -1841,6 +2222,7 @@ const KIND_NAME = Object.freeze({
   boyz: 'Boyz',
   demonz: 'Demonz',
   machinz: 'Machinz',
+  shieldz: 'Shieldz',
 });
 
 const ST = Object.freeze({
@@ -1979,10 +2361,18 @@ function makeEnemy(world, rnd) {
   const k = b.kinds[kind];
   const pos = spawnPos(rnd, b);
   const hp = enemyHp(world.wave, b) * k.hpMul;
+  /*
+    방패는 **떨어질 때 이미 플레이어를 보고 있다.**
+    등을 보이며 등장하면 첫 탄창이 공짜로 들어가는데, 그건 이 적이 던지려는
+    물음("돌까 부을까")을 첫 만남에서 통째로 건너뛰게 만든다.
+  */
+  const shield = k.shieldMul ? enemyHp(world.wave, b) * k.shieldMul : 0;
+  const toPlayer = Math.atan2(world.player.y - pos.y, world.player.x - pos.x);
   return {
     id: world.nextId++, kind, isBoss: false,
     x: pos.x, y: pos.y, vx: 0, vy: 0,
     r: k.r, hp, maxHp: hp,
+    shield, maxShield: shield, shieldA: toPlayer, shieldFlash: 0,
     state: ST.DROP, stateT: 0,
     aimX: 0, aimY: 0, walk: 0, moving: false, facing: 1,
     hitFlash: 0, hasHit: false,
@@ -2133,7 +2523,8 @@ function stepWorld(world, dt, input, rnd) {
       const d = Math.hypot(e.x - s.x, e.y - s.y);
       if (d > s.r) continue;
       s.hit.add(e.id);
-      damageEnemy(world, e, shot.damage * world.stats.skillDamageMul);
+      damageEnemy(world, e, shot.damage * world.stats.skillDamageMul,
+        Math.atan2(s.y - e.y, s.x - e.x));
       if (!e.isBoss) {
         setState(e, ST.CHASE);
         const a = d < 0.001 ? rnd() * Math.PI * 2 : Math.atan2(e.y - s.y, e.x - s.x);
@@ -2158,7 +2549,7 @@ function stepWorld(world, dt, input, rnd) {
         if (d2(bu.x, bu.y, e.x, e.y) <= rr * rr) {
           bu.hit.add(e.id);
           const mul = falloffMul(bu, bu.travel);
-          damageEnemy(world, e, bu.dmg * mul);
+          damageEnemy(world, e, bu.dmg * mul, Math.atan2(-bu.vy, -bu.vx));
           const kn = 0.045 * (world.shot.knock ?? 1);
           if (!e.isBoss) { e.vx += bu.vx * kn; e.vy += bu.vy * kn; }
           world.fx.push({ type: 'hit', x: bu.x, y: bu.y, t: 0, life: 0.2 });
@@ -2176,6 +2567,7 @@ function stepWorld(world, dt, input, rnd) {
   /* --- 5. 적 --- */
   for (const e of world.enemies) {
     if (e.hitFlash > 0) e.hitFlash -= dt;
+    if (e.shieldFlash > 0) e.shieldFlash -= dt;
     e.stateT += dt;
     if (e.isBoss) stepBoss(world, e, dt, rnd);
     else stepEnemy(world, e, dt);
@@ -2270,12 +2662,39 @@ function explode(world, x, y, radius, dmg, skipId) {
   world.shake = Math.max(world.shake, 4);
   for (const e of world.enemies) {
     if (e.id === skipId || e.state === ST.FALL || e.state === ST.DROP) continue;
-    if (Math.hypot(e.x - x, e.y - y) <= radius + e.r) damageEnemy(world, e, dmg);
+    if (Math.hypot(e.x - x, e.y - y) <= radius + e.r) {
+      damageEnemy(world, e, dmg, Math.atan2(y - e.y, x - e.x));
+    }
   }
 }
 
-function damageEnemy(world, e, dmg) {
-  e.hp -= dmg;
+/**
+ * 피해 한 번.
+ *
+ * @param fromA **적에서 공격자 쪽을 본 각.** 방패가 이걸로 막을지 정한다.
+ *              null 이면 방향이 없는 피해라 방패를 그냥 지나간다.
+ */
+function damageEnemy(world, e, dmg, fromA) {
+  const k = world.b.kinds[e.kind];
+  if (e.shield > 0 && k && k.shieldArc && fromA != null
+      && isBlocked(e.shieldA, fromA, k.shieldArc)) {
+    const out = shieldHit(e, dmg, true);
+    e.shield = out.shield;
+    e.shieldFlash = 0.12;
+    if (out.broke) {
+      /*
+        **깨지는 순간 빨라진다.** 디렉터가 적은 "방패가 깨지면 일반 몬스터처럼 행동한다" 다.
+        그래서 정면으로 부순 대가가 즉시 돌아온다 — 탄창 하나를 쓰고 나면
+        코앞에 빠른 적이 선다. 돌아가서 죽였으면 이 순간이 아예 안 온다.
+        예고 없는 죽음이 아닌 이유는 **방패가 부서지는 게 보이기 때문**이다 (기둥 2).
+      */
+      world.fx.push({ type: 'shieldBreak', x: e.x, y: e.y, a: e.shieldA, t: 0, life: 0.45, r: e.r });
+      world.shake = Math.max(world.shake, 3);
+    }
+    return;
+  }
+  const out = shieldHit(e, dmg, false);
+  e.hp = out.hp;
   e.hitFlash = 0.12;
 }
 
@@ -2299,6 +2718,23 @@ function stepEnemy(world, e, dt) {
   const ux = dx / d, uy = dy / d;
   if (Math.abs(ux) > 0.2) e.facing = ux > 0 ? 1 : -1;
 
+  /*
+    【방패는 천천히 돈다 — 이 적의 전부】
+    늘 플레이어를 보면 우회가 **원리적으로 불가능**해서, 정면만 막는 의미가 사라진다.
+    상한을 두면 플레이어가 옆으로 달려 등 뒤를 잡을 수 있다 —
+    거리 d 에서 각속도가 (속도 / d) 라서 **붙을수록 쉬워진다.** 그 교환이 물음이 된다.
+    예비동작 중에도 돈다: 방패는 공격 동작이 아니라 자세다.
+  */
+  if (e.shield > 0 && k.shieldTurn) {
+    e.shieldA = turnToward(e.shieldA, Math.atan2(dy, dx), k.shieldTurn * dt);
+  }
+
+  /*
+    방패가 깨지면 **빨라진다.** 디렉터가 적은 "깨지면 일반 몬스터처럼 행동한다" 다.
+    정면으로 부순 대가가 즉시 돌아온다 — 탄창을 쓰고 나면 코앞에 빠른 적이 선다.
+  */
+  const speed = (k.speedBroken && e.maxShield > 0 && e.shield <= 0) ? k.speedBroken : k.speed;
+
   let mx = 0, my = 0;
 
   if (e.state === ST.CHASE) {
@@ -2307,8 +2743,8 @@ function stepEnemy(world, e, dt) {
     else {
       const away = k.keepDist && d < k.keepDist ? -1 : 1;
       const chase = kb > 70 ? 0.2 : 1;
-      mx = ux * k.speed * chase * away;
-      my = uy * k.speed * chase * away;
+      mx = ux * speed * chase * away;
+      my = uy * speed * chase * away;
     }
   } else if (e.state === ST.WINDUP) {
     // 예비동작 중에는 제자리에 선다. 이 순간 움직인 플레이어는 확실히 피한다.
@@ -3267,10 +3703,237 @@ function antenna(ctx, cx, topY, w, lw) {
   ctx.restore();
 }
 
+
+/* ══════════════════════════════════════════════ 체형과 부착물 (docs/ART_CHARACTERS.md)
+
+  【왜 조합인가】
+  적을 하나씩 새로 그리면 종류가 늘수록 그림이 선형으로 는다. 시안이 보여 준 방식은
+  다르다 — **체형 셋에 부착물 몇 개를 갈아 끼워** 다양성을 만든다.
+  그리는 값은 한 번만 치르고, 새 적은 조합으로 나온다.
+
+  【그런데 조합만으로는 기각이다】
+  보기만 다른 적은 "숫자만 늘린 것" 이다 (설계 기둥 6번). 부착물이 값을 가지려면
+  **저마다 다른 답을 강요해야** 한다 — 방패는 돌게 하고, 모자는 탄창 계산을 틀어 놓고,
+  가시는 정면 접근 자체를 손해로 만든다. 답이 겹치는 부착물은 하나로 합친다.
+
+  【부착물은 맞으면 벗겨진다】
+  그래서 여기 그리기 함수들은 전부 `wear`(0=온전 … 1=다 닳음) 를 받는다.
+  닳는 게 안 보이면 "몇 대 더 때리면 되나" 를 못 세고, 그러면 죽어도 이유를 못 읽는다.
+*/
+
+/** 체형 셋. 실루엣만 보고 구별돼야 한다 — 폰에서는 색보다 윤곽이 먼저 읽힌다. */
+const BUILD = {
+  // 세로로 긴 사각. 팔이 안 보인다 — 부착물이 곧 팔이다
+  grunt: { wMul: 1.00, hMul: 1.15, legMul: 1.00, arms: false, face: 'calm' },
+  // 가로로 넓고 낮다. 얼굴은 원래 비율을 지킨다 — 같이 늘이면 "다른 적" 이 아니라 "찌그러진 적" 이 된다
+  fat: { wMul: 1.28, hMul: 0.90, legMul: 0.80, arms: 'nub', face: 'calm' },
+  // 유일하게 팔이 드러난다. 흰자 눈 + 벌린 입이 두 번째 식별자다
+  brute: { wMul: 1.55, hMul: 1.30, legMul: 1.15, arms: 'thick', face: 'rage' },
+};
+
+/** 장비는 예외 없이 이 색. 몸(살색)과의 대비가 "뭘 달고 있나" 를 한눈에 읽게 한다. */
+const GEAR = PALETTE.slate;
+const GEAR_DARK = '#6E74A4';
+
+/**
+ * 방패 — **가로로 긴 검은 관측창**이 있는 사각판.
+ *
+ * 창은 장식이 아니다. 없으면 그냥 회색 판이라 **어느 쪽이 앞인지** 안 읽히는데,
+ * 이 게임에서 방패의 방향은 "어디로 돌아야 하나" 를 정하는 핵심 정보다.
+ *
+ * 로컬 좌표에서 **+x 가 정면**이다. 부르는 쪽이 회전을 준다.
+ */
+function drawShieldPanel(ctx, w, lw, wear = 0, spikes = false) {
+  const t = Math.max(0, Math.min(1, wear));
+  /*
+    시안의 방패는 **거의 정사각형**이다. 처음에 세로로 두 배 길게 그렸더니
+    방패가 아니라 문짝처럼 보였고, 몸을 가리는 느낌이 안 났다.
+  */
+  const hw = w * 0.36 * (1 - t * 0.28);         // 닳으면 작아진다
+  const hh = w * 0.42 * (1 - t * 0.20);
+  const x0 = -w * 0.20;                          // 몸 중심을 물고 앞으로 나간다
+  const q = (a, b, c, d) => [[a, b], [c, b], [c, d], [a, d]];
+
+  if (spikes) {
+    // 가시는 판보다 먼저(뒤에) 그린다. 뿌리가 판에 묻혀야 박힌 것으로 보인다
+    for (let i = 0; i < 4; i += 1) {
+      const y = -hh + (hh * 2) * ((i + 0.5) / 4);
+      const len = w * 0.30 * (1 - t * 0.6);
+      if (len <= 0) break;
+      inkPoly(ctx, [
+        [x0 + hw * 2, y - hh * 0.16], [x0 + hw * 2 + len, y], [x0 + hw * 2, y + hh * 0.16],
+      ], GEAR, lw * 0.8);
+    }
+  }
+
+  inkPoly(ctx, q(x0, -hh, x0 + hw * 2, hh), GEAR, lw);
+  // 관측창 — 위쪽 3분의 1
+  inkPoly(ctx, q(x0 + hw * 0.30, -hh * 0.60, x0 + hw * 1.72, -hh * 0.20), '#141414', lw * 0.55);
+
+  // 금 — 닳을수록 늘어난다. 면적 축소와 **둘 다** 써야 작은 화면에서 안 놓친다
+  const cracks = Math.round(t * 3.4);
+  if (cracks > 0) {
+    ctx.save();
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = lw * 0.6;
+    for (let i = 0; i < cracks; i += 1) {
+      const y = -hh * 0.5 + (hh * 1.4) * ((i + 0.5) / cracks);
+      ctx.beginPath();
+      ctx.moveTo(x0 + hw * 2, y);
+      ctx.lineTo(x0 + hw * 0.9, y + hh * 0.16);
+      ctx.lineTo(x0 + hw * 0.2, y - hh * 0.10);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+/** 벗겨진 뒤 남는 손잡이. 이게 없으면 맨몸 적과 똑같아 보이는데 다르게 움직인다. */
+function drawShieldStub(ctx, w, lw) {
+  const q = (a, b, c, d) => [[a, b], [c, b], [c, d], [a, d]];
+  inkPoly(ctx, q(w * 0.10, -w * 0.30, w * 0.24, -w * 0.16), GEAR, lw * 0.8);
+  inkPoly(ctx, q(w * 0.10, w * 0.14, w * 0.24, w * 0.30), GEAR, lw * 0.8);
+}
+
+/**
+ * 모자(투구) — 챙이 몸보다 넓은 양동이형.
+ * 방향과 무관하게 막으므로 **우회로는 못 피한다.** 대신 탄창 계산을 틀어 놓는다.
+ */
+function drawHelmet(ctx, cx, topY, w, lw, wear = 0) {
+  const t = Math.max(0, Math.min(1, wear));
+  const q = (a, b, c, d) => [[a, b], [c, b], [c, d], [a, d]];
+  /*
+    시안의 모자는 **몸보다 넓다.** 작게 그렸더니 머리에 얹힌 조각으로 보여서
+    "벗겨질 물건" 으로 안 읽혔다. 챙이 몸 밖으로 나가야 실루엣이 바뀐다.
+  */
+  const crown = w * 0.86 * (1 - t * 0.14);
+  const brim = w * 1.06;
+  // 높으면 실크햇으로 읽힌다. 시안은 **낮고 넓은 양동이**다
+  const hgt = w * 0.34 * (1 - t * 0.30);
+  inkPoly(ctx, q(cx - crown / 2, topY - hgt, cx + crown / 2, topY), GEAR, lw);
+  inkPoly(ctx, q(cx - brim / 2, topY - lw * 0.6, cx + brim / 2, topY + w * 0.10), GEAR_DARK, lw);
+  if (t > 0.45) {                       // 찌그러진 자국
+    ctx.save();
+    ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = lw * 0.6;
+    ctx.beginPath();
+    ctx.moveTo(cx - crown * 0.28, topY - hgt * 0.75);
+    ctx.lineTo(cx - crown * 0.05, topY - hgt * 0.35);
+    ctx.lineTo(cx + crown * 0.22, topY - hgt * 0.70);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/** 나팔총 — 짧은 몸통에 **활짝 벌어진 나팔 총구.** 그 실루엣이 전부다. */
+function drawBlunder(ctx, x, y, len, dir, seed, lw) {
+  const s = dir >= 0 ? 1 : -1;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, 1);
+  const L = len;
+  const h = L * 0.14;
+  inkPoly(ctx, [[-L * 0.34, -h], [L * 0.24, -h], [L * 0.24, h], [-L * 0.34, h]], GEAR, lw);
+  // 나팔 — 총구로 갈수록 벌어진다. 이게 없으면 그냥 몽둥이다
+  inkPoly(ctx, [
+    [L * 0.20, -h * 0.95], [L * 0.62, -h * 2.5],
+    [L * 0.62, h * 2.5], [L * 0.20, h * 0.95],
+  ], GEAR, lw);
+  inkPoly(ctx, [
+    [L * 0.55, -h * 2.1], [L * 0.62, -h * 2.5],
+    [L * 0.62, h * 2.5], [L * 0.55, h * 2.1],
+  ], '#141414', lw * 0.5);
+  inkPoly(ctx, [[-L * 0.20, h * 0.9], [-L * 0.04, h * 0.9],
+    [-L * 0.10, h * 3.0], [-L * 0.30, h * 3.0]], GEAR_DARK, lw * 0.8);
+  ctx.restore();
+}
+
+/** 로케트 — 이빨 달린 어뢰 + 푸른 분사. 몸이 이 위에 얹힌다. */
+function drawRocketMount(ctx, cx, cy, w, lw, seed) {
+  /*
+    로케트가 몸보다 크면 몸을 통째로 가린다 — 그러면 "누가 탔는지" 가 안 읽힌다.
+    몸이 위에 얹힌 것으로 보이려면 로케트가 몸보다 **낮고 옆으로 긴** 물건이어야 한다.
+  */
+  const L = w * 1.32;
+  const h = w * 0.22;
+  ctx.save();
+  ctx.translate(cx, cy);
+  inkShape(ctx, wobbleCircle(0, 0, 1, seed, 0, 3), null, 0);   // 시드 소비 — 개체마다 미세하게 다르게
+  inkPoly(ctx, [
+    [-L * 0.52, 0], [-L * 0.34, -h], [L * 0.30, -h * 0.92],
+    [L * 0.50, 0], [L * 0.30, h * 0.92], [-L * 0.34, h],
+  ], GEAR, lw);
+  // 이빨 — 앞쪽 아래
+  for (let i = 0; i < 5; i += 1) {
+    const tx = L * (0.06 + i * 0.075);
+    inkPoly(ctx, [[tx, h * 0.35], [tx + L * 0.05, h * 0.35], [tx + L * 0.025, h * 0.80]],
+      '#FFFFFF', lw * 0.45);
+  }
+  // 꼬리날개
+  inkPoly(ctx, [[-L * 0.52, 0], [-L * 0.66, -h * 1.15], [-L * 0.40, -h * 0.85]], GEAR_DARK, lw * 0.8);
+  // 분사 — 푸른 빛
+  ctx.globalAlpha = 0.85;
+  inkShape(ctx, wobbleCircle(-L * 0.66, 0, h * 0.62, seed + 3, h * 0.10, 8), '#BFE9FF', lw * 0.5);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/** 굵은 팔 — 거구 전용. 벌어진 두 팔이 거구의 정체다. */
+function bruteArms(ctx, cy, w, h, color, lw) {
+  /*
+    처음엔 팔을 w*0.80 까지 뻗었더니 **화면 밖으로 나가 띠처럼** 보였고,
+    팔 끝에 붙는 쌍 무기까지 같이 잘렸다. 시안의 팔은 옆으로 뻗는 게 아니라
+    **몸에 붙어 아래로 처진다** — 어깨가 부풀고 팔뚝이 짧다.
+  */
+  for (const s of [-1, 1]) {
+    inkShape(ctx, wobbleCircle(s * w * 0.44, cy + h * 0.16, w * 0.20, 31 + s, w * 0.02, 9),
+      color, lw);
+  }
+}
+
+/** 옆구리 돌기 — 뚱보 전용. 기본형에는 없다. */
+function fatNub(ctx, cy, w, h, color, lw) {
+  inkShape(ctx, wobbleCircle(-w * 0.50, cy + h * 0.10, w * 0.11, 5, w * 0.02, 7), color, lw * 0.9);
+}
+
+/** 흰자가 보이는 큰 눈 — 거구 전용. 멀리서도 "센 놈" 이 읽혀야 한다. */
+function eyesWide(ctx, cx, cy, dx, r, lw) {
+  for (const s of [-1, 1]) {
+    inkShape(ctx, wobbleCircle(cx + s * dx, cy, r, 11 + s, r * 0.10, 9), '#FFFFFF', lw * 0.7);
+    ctx.save();
+    ctx.fillStyle = PALETTE.ink;
+    ctx.beginPath();
+    ctx.arc(cx + s * dx, cy + r * 0.10, r * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+/** 벌린 입 + 이빨 — 거구 전용. */
+function mouthRoar(ctx, cx, cy, w, lw) {
+  inkShape(ctx, wobbleCircle(cx, cy, w * 0.26, 21, w * 0.04, 9), PALETTE.ink, lw * 0.5);
+  ctx.save();
+  ctx.fillStyle = '#FFFFFF';
+  for (let i = 0; i < 3; i += 1) {
+    const tx = cx + (i - 1) * w * 0.16;
+    ctx.beginPath();
+    ctx.moveTo(tx - w * 0.055, cy - w * 0.22);
+    ctx.lineTo(tx + w * 0.055, cy - w * 0.22);
+    ctx.lineTo(tx, cy - w * 0.06);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 const PRESET = {
   boyz:    { color: PALETTE.boyz,    eyes: 'dot',   band: false, teeth: 3, gun: null },
   demonz:  { color: PALETTE.demonz,  eyes: 'cross', band: false, teeth: 3, gun: null },
   machinz: { color: PALETTE.machinz, eyes: 'dot',   band: true,  teeth: 0, gun: 'rifle' },   // 잡몹은 소총 고정
+  /*
+    방패병 — 몸은 잡병 살구색 그대로 두고, **방패만 금속색**으로 뺀다.
+    몸까지 금속색으로 칠했더니 방패가 몸에 묻혀서 별개 물건으로 안 읽혔다.
+    이 적의 실루엣은 몸이 아니라 **앞에 든 호(弧)** 가 만든다 (render.js).
+  */
+  shieldz: { color: PALETTE.boyz,    eyes: 'dot',   band: true,  teeth: 2, gun: null },
   dude:    { color: PALETTE.dude,    eyes: 'dot',   band: false, teeth: 3, gun: 'rifle' },   // spec.gunShape 로 덮어쓴다
   // 보스 3종 — 색·눈·무기·표식이 전부 다르다. 실루엣만 보고 누군지 알아야 한다.
   boss_sergent: { color: PALETTE.dude,    eyes: 'cross', band: false, teeth: 4, gun: 'lmg',   mark: 'sergent' },
@@ -3317,11 +3980,24 @@ function drawCharacter(ctx, spec) {
     pose = null, shadow = false,
   } = spec;
 
-  const w = size;
-  const h = size * 1.15;
-  const legH = size * 0.22;
-  const lw = Math.max(1.5, size * 0.052);
   const preset = PRESET[kind] ?? PRESET.boyz;
+  /*
+    【체형 × 부착물】 docs/ART_CHARACTERS.md
+    적을 하나씩 새로 그리지 않는다 — 체형에 부착물을 갈아 끼운다.
+    spec 이 preset 을 이긴다: 같은 종류라도 개체마다 모자·방패가 다를 수 있다.
+  */
+  const bd = BUILD[spec.build ?? preset.build ?? 'grunt'] ?? BUILD.grunt;
+  const shieldKind = spec.shield ?? preset.shield ?? null;   // 'plain' | 'spike' | null
+  const hasHat = spec.hat ?? preset.hat ?? false;
+  const mount = spec.mount ?? preset.mount ?? null;          // 'rocket' | 'dude' | null
+  const dual = spec.dual ?? preset.dual ?? null;             // 거구 전용 쌍 무기
+  const shieldWear = Math.max(0, Math.min(1, spec.shieldWear ?? 0));
+  const hatWear = Math.max(0, Math.min(1, spec.hatWear ?? 0));
+
+  const w = size * bd.wMul;
+  const h = size * bd.hMul;
+  const legH = size * 0.22 * bd.legMul;
+  const lw = Math.max(1.5, size * 0.052);
 
   const walk = pose?.walk ?? 0;
   const moving = pose?.moving ?? false;
@@ -3337,26 +4013,85 @@ function drawCharacter(ctx, spec) {
   ctx.translate(x, y);
   if (ap.push !== 0) ctx.translate(facing * ap.push, 0);
 
-  // 다리는 몸통보다 먼저(뒤에) 그린다
-  drawLegs(ctx, 0, 0, w, legH, walk, moving, preset.color, seed, lw);
+  /*
+    탈것은 다리보다 **먼저** 그린다 — 몸이 그 위에 얹혀야 한다.
+    탈것이 있으면 다리는 안 그린다. 시안에서 탄 놈은 다리가 안 보인다.
+  */
+  if (mount === 'rocket') {
+    drawRocketMount(ctx, 0, -size * 0.22, size, lw, seed);
+  } else if (mount === 'dude') {
+    // 사람 탈것은 **개체 둘**이다. 아래가 사라지면 위 놈이 땅에 내려온다
+    ctx.save();
+    ctx.translate(0, size * 0.02);
+    drawLegs(ctx, 0, 0, size, size * 0.22, walk, moving, PALETTE.boyz, seed + 41, lw);
+    drawBody(ctx, 0, -size * 0.22 - size * 0.575, size, size * 1.15, PALETTE.boyz, seed + 41, lw);
+    eyesDot(ctx, 0, -size * 0.22 - size * 0.575 - size * 0.23, size * 0.235, size * 0.042);
+    ctx.restore();
+  } else {
+    drawLegs(ctx, 0, 0, w, legH, walk, moving, preset.color, seed, lw);
+  }
 
   ctx.rotate((ap.rot * facing) + lean * 0.10);
   ctx.scale(ap.sx, ap.sy);
 
-  const cy = -legH - h / 2 + bob;
+  // 업힌 둘은 **붙어 있어야** 한다. 뜨면 두 개체가 아니라 두 그림으로 보인다
+  const lift = mount === 'rocket' ? size * 0.34 : (mount === 'dude' ? size * 1.12 : 0);
+  const cy = -legH - h / 2 + bob - lift;
+
+  // 거구의 굵은 팔은 몸보다 먼저(뒤에) — 몸이 팔 위에 얹혀야 어깨가 자연스럽다
+  if (bd.arms === 'thick') bruteArms(ctx, cy, w, h, preset.color, lw);
   drawBody(ctx, 0, cy, w, h, preset.color, seed, lw);
+  if (bd.arms === 'nub') fatNub(ctx, cy, w, h, preset.color, lw);
 
+  /*
+    얼굴은 **몸 폭이 아니라 기본 크기**를 따른다.
+    뚱보에서 몸과 같이 늘였더니 "다른 적" 이 아니라 "찌그러진 적" 으로 보였다.
+  */
+  const fw = size;
   const faceY = cy - h * 0.20;
-  if (preset.eyes === 'cross') eyesCross(ctx, 0, faceY, w * 0.235, w * 0.068, lw * 0.95);
-  else eyesDot(ctx, 0, faceY, w * 0.235, w * 0.042);
+  if (bd.face === 'rage') {
+    eyesWide(ctx, 0, faceY, fw * 0.26, fw * 0.10, lw);
+    mouthRoar(ctx, 0, cy + h * 0.10, fw, lw);
+  } else {
+    if (preset.eyes === 'cross') eyesCross(ctx, 0, faceY, fw * 0.235, fw * 0.068, lw * 0.95);
+    else eyesDot(ctx, 0, faceY, fw * 0.235, fw * 0.042);
+    if (preset.band) bodyBand(ctx, 0, cy + h * 0.06, w, seed, lw * 0.8);
+    else if (preset.teeth > 0) mouthFrown(ctx, 0, cy + h * 0.06, fw * 0.70, seed, preset.teeth, preset.color);
+  }
 
-  if (preset.band) bodyBand(ctx, 0, cy + h * 0.06, w, seed, lw * 0.8);
-  else if (preset.teeth > 0) mouthFrown(ctx, 0, cy + h * 0.06, w * 0.70, seed, preset.teeth, preset.color);
+  // 모자는 얼굴 위. 벗겨졌으면 안 그린다 — 흔적은 눌린 머리(=아무것도 없음)로 읽힌다
+  if (hasHat && hatWear < 1) drawHelmet(ctx, 0, cy - h * 0.5, fw, lw, hatWear);
 
   if (preset.mark === 'siren') antenna(ctx, 0, cy - h * 0.5, w, lw);
 
-  const gunKind = spec.gunShape ?? preset.gun;
-  if (gunKind) {
+  /*
+    쌍 무기 — **거구 전용.** 벌어진 두 팔 끝에 하나씩 붙는다.
+    다른 체형은 팔이 안 보이므로 무기가 허공에 뜬다.
+  */
+  if (dual && bd.arms === 'thick') {
+    for (const sgn of [-1, 1]) {
+      ctx.save();
+      ctx.translate(sgn * w * 0.52, cy + h * 0.22);
+      if (dual === 'blunder') drawBlunder(ctx, 0, 0, w * 0.52, sgn, seed + sgn, lw * 0.7);
+      else drawGun(ctx, 0, 0, w * 0.58, sgn, seed + sgn, lw * 0.7, dual);
+      ctx.restore();
+    }
+  }
+
+  const gunKind = dual ? null : (spec.gunShape ?? preset.gun);
+  if (gunKind === 'blunder') {
+    // 나팔총은 몸 앞으로 곧게 내민다. 나팔이 실루엣의 전부라 각을 안 준다
+    ctx.save();
+    ctx.translate(0, cy + h * 0.14);
+    if (spec.aimA !== undefined && spec.aimA !== null) {
+      ctx.rotate(spec.aimA);
+      if (Math.cos(spec.aimA) < 0) ctx.scale(1, -1);
+      drawBlunder(ctx, w * 0.52, 0, w * 1.05, 1, seed, lw * 0.75);
+    } else {
+      drawBlunder(ctx, facing * w * 0.52, 0, w * 1.05, facing, seed, lw * 0.75);
+    }
+    ctx.restore();
+  } else if (gunKind) {
     // 총은 조준 방향을 향한다. 몸 방향만 따르면 탄이 총구에서 나가는 것처럼 안 보인다.
     // 총은 어깨를 축으로 조준 방향을 향한다.
     // 발밑을 축으로 돌리면 총이 몸 아래로 처진다 (실측으로 확인).
@@ -3373,6 +4108,28 @@ function drawCharacter(ctx, spec) {
     } else {
       drawGun(ctx, facing * w * 0.30, 0, w * 1.20, facing, seed, lw * 0.75, gunKind);
     }
+    ctx.restore();
+  }
+
+  /*
+    방패는 몸 위에 그린다. 다만 **총보다는 뒤**다 —
+    시안에서 나팔 총구가 방패를 뚫고 앞으로 나온다. 방패로 총을 덮어 버렸더니
+    무장을 안 한 놈으로 보였다. 방패는 몸을 가리고, 총은 방패를 뚫는다.
+
+    회전은 부르는 쪽이 준다 (render.js 가 shieldA 를 넘긴다).
+    안 주면 몸이 보는 쪽을 정면으로 삼는다 — 보드·상점 같은 정지 화면용이다.
+  */
+  if (shieldKind && shieldWear < 1) {
+    ctx.save();
+    ctx.translate(0, cy + h * 0.10);
+    ctx.rotate(spec.shieldA ?? (facing >= 0 ? 0 : Math.PI));
+    drawShieldPanel(ctx, w, lw, shieldWear, shieldKind === 'spike');
+    ctx.restore();
+  } else if (shieldKind) {
+    ctx.save();
+    ctx.translate(0, cy + h * 0.10);
+    ctx.rotate(spec.shieldA ?? (facing >= 0 ? 0 : Math.PI));
+    drawShieldStub(ctx, w, lw);
     ctx.restore();
   }
 
@@ -4641,6 +5398,93 @@ function drawEnemy(ctx, world, e) {
     flash: e.hitFlash,
   });
 
+  /*
+    【방패 — 각도와 남은 양이 둘 다 보여야 한다】
+    각도가 안 보이면 어디로 돌아야 할지 모른다. 남은 양이 안 보이면
+    "몇 대 더 때리면 깨지나" 를 못 세고, 탄창을 붓다 재장전 중에 죽고 나서도
+    **왜 죽었는지 모른다** (설계 기둥 2 — 죽음에는 읽을 수 있는 이유가 있어야 한다).
+
+    남은 양은 두 가지로 동시에 말한다 — 금이 늘고, 호가 짧아진다.
+    하나만 쓰면 작은 화면에서 놓친다.
+  */
+  if (e.shield > 0 && e.state !== ST.FALL && e.state !== ST.DROP) {
+    const k2 = B.kinds[e.kind];
+    const arc = k2 && k2.shieldArc ? k2.shieldArc : 1.05;
+    const left = Math.max(0, Math.min(1, e.shield / (e.maxShield || 1)));
+    /*
+      **몸 바깥으로 빼야 한다.** 처음엔 e.r * 1.45 에 뒀는데 캐릭터가
+      e.r * 1.75 크기로 그려져서 방패가 몸에 통째로 묻혔다 —
+      화면에서는 발밑의 작은 초승달로만 보였고, 어디를 막고 있는지 안 읽혔다.
+    */
+    const rr = e.r * 1.9;
+    const half = arc * (0.55 + left * 0.45);          // 닳으면 호가 짧아진다
+    const a0 = e.shieldA - half;
+    const a1 = e.shieldA + half;
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, rr, a0, a1);
+    ctx.arc(e.x, e.y, rr - e.r * 0.52, a1, a0, true);
+    ctx.closePath();
+    ctx.fillStyle = e.shieldFlash > 0 ? '#FFFFFF' : PALETTE.slate;
+    ctx.fill();
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // 금 — 닳은 만큼 늘어난다. 0 개에서 시작해 깨지기 직전 3 개
+    const cracks = Math.round((1 - left) * 3.4);
+    if (cracks > 0) {
+      ctx.strokeStyle = PALETTE.ink;
+      ctx.lineWidth = 2;
+      for (let i = 0; i < cracks; i += 1) {
+        const a = a0 + (half * 2) * ((i + 1) / (cracks + 1));
+        const w = 0.13 + hash01(e.seed, i) * 0.10;
+        ctx.beginPath();
+        ctx.moveTo(e.x + Math.cos(a) * rr, e.y + Math.sin(a) * rr);
+        ctx.lineTo(e.x + Math.cos(a + w) * (rr - e.r * 0.30),
+          e.y + Math.sin(a + w) * (rr - e.r * 0.30));
+        ctx.lineTo(e.x + Math.cos(a - w * 0.6) * (rr - e.r * 0.52),
+          e.y + Math.sin(a - w * 0.6) * (rr - e.r * 0.52));
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  /*
+    **깨진 방패의 그루터기.**
+    방패가 사라지면 몸만 남아 Boyz 와 똑같이 보인다. 그런데 깨진 놈은 **더 빠르다** —
+    같아 보이는데 다르게 움직이는 적은 죽고 나서 이유를 못 읽게 만든다 (기둥 2).
+    부러진 자국을 남겨서 "저건 방패가 깨진 놈" 이 한눈에 서게 한다.
+  */
+  if (e.maxShield > 0 && e.shield <= 0 && e.state !== ST.FALL && e.state !== ST.DROP) {
+    const rr = e.r * 1.9;
+    ctx.save();
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.lineWidth = 3.5;
+    ctx.fillStyle = PALETTE.slate;
+    ctx.lineJoin = 'round';
+    /*
+      각은 **반드시 작은 쪽 → 큰 쪽** 으로 준다.
+      뒤집어 주면 arc 가 반대로 한 바퀴를 돌아 **온전한 링**이 그려진다.
+      실제로 그렇게 나왔고, 화면에서는 방패가 멀쩡한 것처럼 보였다.
+    */
+    for (const side of [-1, 1]) {
+      const mid = e.shieldA + side * 0.86;
+      const a0 = mid - 0.20;
+      const a1 = mid + 0.20;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, rr, a0, a1);
+      ctx.arc(e.x, e.y, rr - e.r * 0.52, a1, a0, true);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   if (e.summoned && e.state !== ST.FALL) {
     ctx.save();
     ctx.globalAlpha = 0.5;
@@ -4951,6 +5795,30 @@ function drawFx(ctx, world) {
       ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
       const r = f.r * (0.4 + k * 0.7);
       inkShape(ctx, wobbleCircle(f.x, f.y, r, 11, r * 0.16, 11), '#FFE08A', 4);
+    } else if (f.type === 'shieldBreak') {
+      /*
+        방패가 깨지는 순간. **이 적은 여기서 빨라진다** — 그러니 그 변화가
+        눈에 확 들어와야 한다. 조각이 방패가 보던 쪽으로 흩어진다.
+        이게 안 보이면 갑자기 빨라진 적에게 죽고 나서 이유를 모른다 (기둥 2).
+      */
+      ctx.globalAlpha = 1 - k;
+      ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 4;
+      ctx.fillStyle = PALETTE.slate;
+      for (let i = 0; i < 5; i += 1) {
+        const a = f.a + (i - 2) * 0.34;
+        const d = f.r * (1.3 + k * 1.9);
+        const sz = f.r * 0.52 * (1 - k * 0.4);
+        const cx = f.x + Math.cos(a) * d;
+        const cy = f.y + Math.sin(a) * d;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(a + k * 5.2);
+        ctx.beginPath();
+        ctx.moveTo(-sz, -sz * 0.7); ctx.lineTo(sz, -sz * 0.4);
+        ctx.lineTo(sz * 0.6, sz * 0.8); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      }
     } else if (f.type === 'hit') {
       ctx.globalAlpha = 1 - k;
       ctx.strokeStyle = PALETTE.ink; ctx.lineWidth = 3;
@@ -7432,6 +8300,8 @@ function createInput(canvas, getViewport, layout, onTap = null, onPan = null) {
 
 
 
+
+
 /**
  * 흐름: 타이틀 → 쉘터 → (문) 런 → (웨이브 돌파) 보급소 → 런 → (사망) 쉘터
  *
@@ -7474,6 +8344,28 @@ async function loadLayoutPatch() {
     const res = await fetch('data/layout.json', { cache: 'no-store' });
     if (!res.ok) return;
     setLayoutOverrides(await res.json());
+  } catch {
+    /* 없으면 코드 기본값으로 간다 */
+  }
+}
+
+/**
+ * data/tuning.json 을 읽어 **보드에서 바꾼 수치**를 얹는다.
+ *
+ * 【배포본에는 일부러 안 넣는다】
+ * 배치(layout.json)와 달리 이건 아티팩트에 인라인하지 않는다. 자동 배포가 밤에도
+ * 돌기 때문에, 만지다 만 밸런스가 그대로 공개본에 나가면 디렉터가 자고 일어나
+ * 모르는 게임을 만난다. 값이 마음에 들면 보드의 [배포에 적용하기] 로 이슈를 낸다.
+ *
+ * 아티팩트에서는 fetch 가 막혀 있어 이 함수는 조용히 아무 일도 안 한다 — 의도한 결과다.
+ */
+async function loadTuningPatch() {
+  // 아티팩트는 이 층을 끈다. 상대경로 404 를 남기지 않으려고 아예 안 부른다.
+  if (globalThis.__NO_TUNING__) return;
+  try {
+    const res = await fetch('data/tuning.json', { cache: 'no-store' });
+    if (!res.ok) return;
+    setTuning(await res.json(), { B, WEAPONS });
   } catch {
     /* 없으면 코드 기본값으로 간다 */
   }
@@ -7523,6 +8415,8 @@ async function boot() {
   // 레이아웃 패치 — 디렉터가 보드에서 옮긴 배치.
   // **없으면 코드가 그대로 진실이다.** 못 읽어도 게임은 멀쩡히 돌아야 한다.
   await loadLayoutPatch();
+  // 수치 패치 — 디렉터가 보드에서 고친 숫자. 로컬에서만 얹히고 배포본에는 안 들어간다.
+  await loadTuningPatch();
   const save = migrateSave(raw);
   let lastPersisted = migrateSave(raw);
 
