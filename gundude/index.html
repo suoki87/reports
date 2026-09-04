@@ -43,6 +43,7 @@
 <script type="module">
 globalThis.__NO_TUNING__ = true;
 globalThis.__LAYOUT__ = {"hud":{"pause":{"x":634,"y":198,"w":84,"h":74}}};
+globalThis.__BUILD__ = "09-05 · 3535abd";
 
 /* ===== src/game/art/palette.js ===== */
 /**
@@ -784,6 +785,69 @@ function attachCount(spec) {
 /** 게임에 아직 안 선 조합. 보드의 "대기" 칸이 이걸 센다. */
 function waiting() {
   return COMBOS.filter((c) => !c.usedBy);
+}
+
+
+/* ===== src/core/build.js ===== */
+/**
+ * 빌드 표시 — **지금 보는 게 최신인가**에 답하는 유일한 것.
+ *
+ * 【왜 있나 — 디렉터의 물음】
+ * *"옛날같은지 아닌지 뭘로 판단?"*
+ *
+ * 배포한 뒤 폰에서 열었을 때, 그게 방금 올린 판인지 브라우저가 물고 있는 옛 판인지
+ * **화면만 봐서는 알 길이 없었다.** 유일하게 눈으로 갈리는 차이가
+ * "웨이브 1에서 Boyz 두 대를 버티나" 하나뿐이었고, 그건 판별법이라기엔 너무 비싸다.
+ * 게다가 밸런스를 안 건드리는 배포(그림·연출·문구)는 그 차이조차 안 생긴다.
+ *
+ * 【어떻게 채워지나】
+ * 아티팩트 빌드가 `globalThis.__BUILD__` 에 값을 심는다 (layout.json 을 심는 것과 같은 방식).
+ * 심는 쪽은 tools/build-artifact.js 다. 안 심겨 있으면 **개발판**이라는 뜻이므로 'dev' 다.
+ * 그래서 맥에서 도는 판과 배포본이 화면에서 바로 갈린다.
+ *
+ * 【더러운 트리는 별표가 붙는다】
+ * 커밋 안 한 변경이 있는 채로 구우면 커밋 번호가 거짓말을 한다 —
+ * 번호는 그 커밋을 가리키는데 내용은 다르기 때문이다. `*` 로 그 사실을 남긴다.
+ */
+
+/** 개발판 표시. 아티팩트가 아니면 항상 이것이다. */
+const DEV_STAMP = 'dev';
+
+/**
+ * 빌드 표시 문자열을 만든다. **순수 함수** — 같은 입력이면 같은 출력이다.
+ *
+ * @param {Date|null} date  구운 시각. 없으면 날짜를 안 붙인다
+ * @param {string|null} sha 커밋 번호(짧은 것). 없으면 커밋을 안 붙인다
+ * @param {boolean} dirty   커밋 안 한 변경이 있었나
+ * @returns {string} 예: `09-05 · 3d1e913` · `09-05 · 3d1e913*` · `dev`
+ */
+function formatStamp(date, sha, dirty = false) {
+  const parts = [];
+  if (date instanceof Date && !Number.isNaN(date.getTime())) {
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    parts.push(`${mm}-${dd}`);
+  }
+  if (typeof sha === 'string' && sha.trim()) parts.push(sha.trim() + (dirty ? '*' : ''));
+  // 날짜도 커밋도 없으면 빌드라고 부를 근거가 없다. 개발판으로 본다.
+  return parts.length ? parts.join(' · ') : DEV_STAMP;
+}
+
+/**
+ * 지금 판의 빌드 표시.
+ *
+ * **매번 읽는다** — 상수로 굳히면 아티팩트에서 모듈 순서가 바뀌었을 때
+ * `__BUILD__` 가 심기기 전에 읽혀 조용히 'dev' 가 된다. 그러면 배포본이
+ * 자기를 개발판이라고 말하는데, 이 표시가 존재하는 이유가 바로 그걸 막는 것이다.
+ */
+function buildStamp() {
+  const v = globalThis.__BUILD__;
+  return typeof v === 'string' && v.trim() ? v.trim() : DEV_STAMP;
+}
+
+/** 개발판인가. 화면이 이 값으로 색을 정한다 — 개발판은 더 흐리게 둔다. */
+function isDevBuild() {
+  return buildStamp() === DEV_STAMP;
 }
 
 
@@ -6565,6 +6629,7 @@ function renderWorld(ctx, world, images, t, stick, cam = null) {
 
 
 
+
 /**
  * 게임 밖 화면들 — 타이틀 · 홈(쉘터) · 유전자 조작(영구 성장) · 보급소(인게임 무기).
  *
@@ -6599,6 +6664,12 @@ function titleLayout(b = B) {
     best:    { x: b.designW / 2 - 150, y: 760, w: 300, h: 58 },
     start:   { x: 84, y: 872, w: b.designW - 168, h: 118 },
     mobs:    { x: 0, y: 1090, w: b.designW, h: 100 },
+    /*
+      빌드 표시. **종이 안쪽 맨 아래 오른쪽.**
+      결정에 안 쓰는 정보라 위계의 가장 아래(라벨 급)에 두고, 시선이 마지막에 닿는
+      자리로 보낸다. 로고·시작 버튼과 세로로 겹치지 않게 잡몹 띠(~1190) 아래에 둔다.
+    */
+    stamp:   { x: 22, y: 1200, w: b.designW - 66, h: 30 },
   });
 }
 
@@ -6667,6 +6738,26 @@ function renderTitle(ctx, state, t, b = B) {
     ctx.fillStyle = PALETTE.woodDark;
     ctx.fillText(`최고 기록  ${formatTime(state.best)}`, bp.x + bp.w / 2, bp.y + bp.h / 2);
   }
+
+  /*
+    빌드 표시 — 디렉터가 "지금 보는 게 최신인가" 를 확인하는 유일한 자리.
+
+    **일부러 눈에 안 띄게 둔다.** 이건 플레이어를 위한 정보가 아니라 만드는 사람을 위한
+    것이라, 표지의 위계를 흔들면 안 된다 (UI 규범 §2 — 가장 큰 글자는 결정에 쓰는 정보여야 한다).
+    라벨 급 14px, 오른쪽 정렬. 색은 **팔레트에 있는 것만 쓴다** (UI 규범 §1) —
+    새 색을 만들면 색이 정보를 잃는다. 종이 위 흐린 잉크로 `wood` 를 투명도와 함께 쓴다.
+
+    개발판은 한 단계 더 흐리다. 배포본이 'dev' 로 보이는 사고를 눈으로도 잡기 위해서다 —
+    맥에서 도는 판과 폰에서 여는 판이 화면에서 갈려야 한다.
+  */
+  const st = L.stamp;
+  ctx.save();
+  ctx.textAlign = 'right';
+  ctx.font = '14px system-ui, sans-serif';
+  ctx.fillStyle = PALETTE.wood;
+  ctx.globalAlpha = isDevBuild() ? 0.38 : 0.62;
+  ctx.fillText(buildStamp(), st.x + st.w, st.y + st.h / 2);
+  ctx.restore();
 
   const pulse = 1 + Math.sin(t * 3.2) * 0.014;
   ctx.save();
