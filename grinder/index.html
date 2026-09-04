@@ -37,6 +37,11 @@
   }
   @media (max-width: 480px) {
     #bar span { display: none; }   /* 좁은 화면에서는 설명을 숨긴다 */
+    /* 폰에서는 선택지를 아래로 내린다 — 위쪽 버튼은 엄지가 안 닿는다 */
+    #overlay { align-items: flex-end; padding-bottom: 18px; }
+    .sheet h2 { font-size: 22px; }
+    .perk strong { font-size: 15px; }
+    .perk .desc { font-size: 13px; }
   }
   button.tool:hover { background: #2e2e3c; }
 
