@@ -43,7 +43,8 @@
 <script type="module">
 globalThis.__NO_TUNING__ = true;
 globalThis.__LAYOUT__ = {"hud":{"pause":{"x":634,"y":198,"w":84,"h":74}}};
-globalThis.__BUILD__ = "09-05 · 3535abd";
+globalThis.__BUILD_AT__ = 1788564691249;
+globalThis.__BUILD_DIRTY__ = false;
 
 /* ===== src/game/art/palette.js ===== */
 /**
@@ -796,58 +797,101 @@ function waiting() {
  * *"옛날같은지 아닌지 뭘로 판단?"*
  *
  * 배포한 뒤 폰에서 열었을 때, 그게 방금 올린 판인지 브라우저가 물고 있는 옛 판인지
- * **화면만 봐서는 알 길이 없었다.** 유일하게 눈으로 갈리는 차이가
- * "웨이브 1에서 Boyz 두 대를 버티나" 하나뿐이었고, 그건 판별법이라기엔 너무 비싸다.
- * 게다가 밸런스를 안 건드리는 배포(그림·연출·문구)는 그 차이조차 안 생긴다.
+ * **화면만 봐서는 알 길이 없었다.**
+ *
+ * 【왜 커밋 번호가 아니라 시각인가 — 디렉터의 두 번째 물음】
+ * *"09-05 · 3535abd 는 사람이 인지하기 쉬운 버전 식별자가 아닌데?"* — 맞는 말이다.
+ * 사람은 `3535abd` 와 `aa8ce86` 을 눈으로 비교하지 못한다. 무작위 16진수라 순서도
+ * 없고 기억도 안 된다. 게다가 **비교 대상을 누가 알려 줘야** 한다.
+ *
+ * 시각은 다르다. **비교 대상이 이미 보는 사람 머릿속에 있다** — 지금 몇 시인지는
+ * 항상 아니까. "방금 배포했다는데 어제 시각이네" 가 혼자 판단된다.
+ * 거기에 경과 시간(`20분 전`)을 붙이면 그 뺄셈조차 안 해도 된다.
+ *
+ * 그래서 심는 값은 **글자가 아니라 시각(epoch ms)** 이다. 경과는 글로 굳힐 수 없다 —
+ * 구울 때 "0분 전" 이라고 적어 두면 한 달 뒤에도 그렇게 말한다.
  *
  * 【어떻게 채워지나】
- * 아티팩트 빌드가 `globalThis.__BUILD__` 에 값을 심는다 (layout.json 을 심는 것과 같은 방식).
- * 심는 쪽은 tools/build-artifact.js 다. 안 심겨 있으면 **개발판**이라는 뜻이므로 'dev' 다.
- * 그래서 맥에서 도는 판과 배포본이 화면에서 바로 갈린다.
- *
- * 【더러운 트리는 별표가 붙는다】
- * 커밋 안 한 변경이 있는 채로 구우면 커밋 번호가 거짓말을 한다 —
- * 번호는 그 커밋을 가리키는데 내용은 다르기 때문이다. `*` 로 그 사실을 남긴다.
+ * 아티팩트 빌드가 `globalThis.__BUILD_AT__` 에 심는다 (layout.json 을 심는 것과 같은 방식).
+ * 안 심겨 있으면 **개발판**이라는 뜻이므로 'dev' 다.
  */
 
 /** 개발판 표시. 아티팩트가 아니면 항상 이것이다. */
 const DEV_STAMP = 'dev';
 
+const MIN = 60 * 1000;
+const HOUR = 60 * MIN;
+const DAY = 24 * HOUR;
+
 /**
- * 빌드 표시 문자열을 만든다. **순수 함수** — 같은 입력이면 같은 출력이다.
- *
- * @param {Date|null} date  구운 시각. 없으면 날짜를 안 붙인다
- * @param {string|null} sha 커밋 번호(짧은 것). 없으면 커밋을 안 붙인다
- * @param {boolean} dirty   커밋 안 한 변경이 있었나
- * @returns {string} 예: `09-05 · 3d1e913` · `09-05 · 3d1e913*` · `dev`
+ * `09-05 14:32` — 구운 시각.
+ * 월·일·시·분을 **두 자리로 채운다.** 자릿수가 흔들리면 오른쪽 정렬이 떨린다.
  */
-function formatStamp(date, sha, dirty = false) {
-  const parts = [];
-  if (date instanceof Date && !Number.isNaN(date.getTime())) {
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    parts.push(`${mm}-${dd}`);
-  }
-  if (typeof sha === 'string' && sha.trim()) parts.push(sha.trim() + (dirty ? '*' : ''));
-  // 날짜도 커밋도 없으면 빌드라고 부를 근거가 없다. 개발판으로 본다.
-  return parts.length ? parts.join(' · ') : DEV_STAMP;
+function formatBuildTime(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return null;
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(date.getMonth() + 1)}-${p(date.getDate())} ${p(date.getHours())}:${p(date.getMinutes())}`;
+}
+
+/**
+ * `20분 전` — 구운 뒤 얼마나 지났나.
+ *
+ * @param {number} ms 지난 밀리초
+ * @returns {string|null} null 이면 **말하지 않는다** (아래 참조)
+ *
+ * 【음수면 아무 말도 안 한다】
+ * 폰 시계가 빌드 시각보다 뒤에 있으면 음수가 나온다. 그때 "0분 전" 이라고 적으면
+ * 방금 만든 판처럼 보인다 — 이 표시가 막으려던 바로 그 거짓말이다.
+ * 1분까지는 시계 오차로 보고 '방금' 으로 두고, 그보다 크게 어긋나면 경과를 아예 뺀다.
+ * 시각은 그대로 남으므로 사람이 직접 견줄 수는 있다.
+ */
+function formatElapsed(ms) {
+  if (!Number.isFinite(ms)) return null;
+  if (ms < -MIN) return null;              // 시계가 크게 어긋났다 — 추측하지 않는다
+  if (ms < MIN) return '방금';
+  if (ms < HOUR) return `${Math.floor(ms / MIN)}분 전`;
+  if (ms < DAY) return `${Math.floor(ms / HOUR)}시간 전`;
+  return `${Math.floor(ms / DAY)}일 전`;
+}
+
+/**
+ * 화면에 뜨는 한 줄을 만든다. **순수 함수** — 같은 입력이면 같은 출력이다.
+ *
+ * @param {number|null} builtAt 구운 시각 (epoch ms). 없으면 개발판이다
+ * @param {number} now          지금 (epoch ms)
+ * @param {boolean} dirty       커밋 안 한 변경이 있는 채로 구웠나
+ * @returns {string} 예: `09-05 14:32 · 20분 전` · `09-05 14:32 · 2일 전 *` · `dev`
+ */
+function formatStamp(builtAt, now, dirty = false) {
+  const t = formatBuildTime(Number.isFinite(builtAt) ? new Date(builtAt) : null);
+  if (!t) return DEV_STAMP;
+  const ago = formatElapsed(now - builtAt);
+  /*
+    별표는 **커밋 안 한 변경으로 구웠다**는 뜻이다. 그 판은 저장소의 어느 상태와도
+    일치하지 않으므로, 나중에 "그때 뭐가 들어 있었지" 를 되짚을 수 없다.
+    앞에 공백을 둬서 시각과 붙어 읽히지 않게 한다.
+  */
+  return [t, ago].filter(Boolean).join(' · ') + (dirty ? ' *' : '');
 }
 
 /**
  * 지금 판의 빌드 표시.
  *
  * **매번 읽는다** — 상수로 굳히면 아티팩트에서 모듈 순서가 바뀌었을 때
- * `__BUILD__` 가 심기기 전에 읽혀 조용히 'dev' 가 된다. 그러면 배포본이
- * 자기를 개발판이라고 말하는데, 이 표시가 존재하는 이유가 바로 그걸 막는 것이다.
+ * 값이 심기기 전에 읽혀 조용히 'dev' 가 된다. 그러면 배포본이 자기를 개발판이라고
+ * 말하는데, 이 표시가 존재하는 이유가 바로 그걸 막는 것이다.
+ *
+ * @param {number} now 지금 (epoch ms). 테스트가 시간을 고정할 수 있게 인자로 받는다
  */
-function buildStamp() {
-  const v = globalThis.__BUILD__;
-  return typeof v === 'string' && v.trim() ? v.trim() : DEV_STAMP;
+function buildStamp(now = Date.now()) {
+  const at = globalThis.__BUILD_AT__;
+  if (!Number.isFinite(at)) return DEV_STAMP;
+  return formatStamp(at, now, globalThis.__BUILD_DIRTY__ === true);
 }
 
-/** 개발판인가. 화면이 이 값으로 색을 정한다 — 개발판은 더 흐리게 둔다. */
+/** 개발판인가. 화면이 이 값으로 진하기를 정한다 — 개발판은 더 흐리게 둔다. */
 function isDevBuild() {
-  return buildStamp() === DEV_STAMP;
+  return !Number.isFinite(globalThis.__BUILD_AT__);
 }
 
 
