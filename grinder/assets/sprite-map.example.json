@@ -1,0 +1,30 @@
+{
+  "_읽는법": "Tiny Swords 를 내려받아 assets/tiny-swords/ 에 풀고, 이 파일을 sprite-map.json 으로 복사한 뒤 경로를 맞추세요. 파일이 없으면 게임은 도형으로 그립니다 — 그래도 정상 동작합니다.",
+  "_출처": "https://pixelfrog-assets.itch.io/tiny-swords (상업적 사용 허용, 재배포 금지)",
+  "_주의": "에셋 원본을 이 저장소에 커밋하지 마세요. 재배포 금지 조항에 걸립니다. .gitignore 에 assets/tiny-swords/ 가 들어 있습니다.",
+
+  "player": {
+    "src": "./assets/tiny-swords/Factions/Knights/Troops/Warrior/Blue/Warrior_Blue.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "cols": 6,
+    "row": 0,
+    "frames": 6
+  },
+  "enemy": {
+    "src": "./assets/tiny-swords/Factions/Goblins/Troops/Torch/Red/Torch_Red.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "cols": 7,
+    "row": 0,
+    "frames": 7
+  },
+  "boss": {
+    "src": "./assets/tiny-swords/Factions/Goblins/Troops/TNT/Red/TNT_Red.png",
+    "frameWidth": 192,
+    "frameHeight": 192,
+    "cols": 7,
+    "row": 0,
+    "frames": 7
+  }
+}

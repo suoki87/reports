@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d0d12">
+<title>더 그라인더 — 프로토타입</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    /* 100vh 는 모바일에서 주소창 높이만큼 잘린다. dvh 를 쓰고 구형은 vh 로 떨어뜨린다. */
+    height: 100vh; height: 100dvh;
+    background: #0d0d12; color: #f0f0f4;
+    font-family: system-ui, -apple-system, "Apple SD Gothic Neo", sans-serif;
+    overflow: hidden;
+    /* 더블탭 확대·길게 눌러 선택·당겨서 새로고침 전부 막는다 */
+    touch-action: manipulation;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+  #wrap {
+    height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+    padding: calc(4px + env(safe-area-inset-top)) 6px calc(4px + env(safe-area-inset-bottom));
+  }
+  #stage { position: relative; flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; border-radius: 10px; box-shadow: 0 8px 40px rgba(0,0,0,.6); }
+  #bar { display: flex; gap: 8px; align-items: center; }
+  button.tool {
+    background: #23232e; color: #f0f0f4; border: 1px solid #3a3a48;
+    border-radius: 8px; padding: 8px 18px; font-size: 14px; cursor: pointer;
+  }
+  @media (max-width: 480px) {
+    #bar span { display: none; }   /* 좁은 화면에서는 설명을 숨긴다 */
+  }
+  button.tool:hover { background: #2e2e3c; }
+
+  /* 오버레이 — 퍽 선택 / 사망 / 클리어 */
+  #overlay {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center;
+    background: rgba(6,6,10,.82); border-radius: 10px; padding: 16px;
+  }
+  #overlay.on { display: flex; }
+  .sheet { width: 100%; max-width: 330px; text-align: center; }
+  .sheet h2 { margin: 0 0 4px; font-size: 20px; }
+  .sheet h2.dead { color: #ff7a7a; }
+  .sheet h2.clear { color: #ffd24a; }
+  .sub { margin: 0 0 14px; color: #9a9aa8; font-size: 12px; }
+
+  .perk {
+    display: block; width: 100%; margin-bottom: 8px; padding: 13px 14px;
+    min-height: 62px;
+    text-align: left; background: #1c1c26; color: #f0f0f4;
+    border: 1px solid #3a3a48; border-left-width: 4px; border-radius: 8px; cursor: pointer;
+  }
+  .perk:hover { background: #262633; }
+  .perk .grade { display: block; font-size: 10px; margin-bottom: 2px; opacity: .8; }
+  .perk strong { display: block; font-size: 14px; margin-bottom: 3px; }
+  .perk .desc { font-size: 12px; color: #b8b8c4; line-height: 1.35; }
+  .grade-일반 { border-left-color: #9a9aa8; } .grade-일반 .grade { color: #9a9aa8; }
+  .grade-희귀 { border-left-color: #5a9ad8; } .grade-희귀 .grade { color: #5a9ad8; }
+  .grade-전설 { border-left-color: #e8b84a; } .grade-전설 .grade { color: #e8b84a; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0; }
+  .stats div {
+    background: #1c1c26; border-radius: 6px; padding: 8px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .stats span { font-size: 10px; color: #9a9aa8; }
+  .stats b { font-size: 15px; }
+  .perklist { font-size: 11px; color: #8a8a98; line-height: 1.5; margin: 8px 0; }
+  .again {
+    width: 100%; margin-top: 10px; padding: 15px;
+    background: #e8b84a; color: #1a1a22; border: 0; border-radius: 8px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+  .again:hover { background: #f0c860; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <canvas id="game"></canvas>
+    <div id="overlay"></div>
+  </div>
+  <div id="bar">
+    <button class="tool" id="speed">x1</button>
+    <span style="font-size:11px;color:#6a6a78">
+      자동 전투 · 레벨업 때만 고르면 됩니다 · 죽으면 챕터 처음부터
+    </span>
+  </div>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
